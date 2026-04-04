@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/google/uuid"
 	"github.com/preuni/pkg/logger"
@@ -176,5 +177,5 @@ func (h *RegisterHandler) sendEmail(ctx context.Context, emailType, to string, p
 
 // getInternalToken reads from env at call-time (lazily) to avoid import cycles.
 func getInternalToken() string {
-	return require("INTERNAL_SERVICE_TOKEN")
+	return os.Getenv("INTERNAL_SERVICE_TOKEN")
 }
