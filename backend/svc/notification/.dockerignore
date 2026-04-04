@@ -1,0 +1,5 @@
+*_test.go
+**/*_test.go
+vendor/
+.git/
+*.md
