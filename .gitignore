@@ -1,0 +1,67 @@
+# ─── Universal ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+*.swo
+.vscode/
+.idea/
+*.log
+
+# ─── Environment ─────────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ─── Kotlin / KMP / Android ──────────────────────────────────────────────────
+.gradle/
+build/
+out/
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+*.iml
+local.properties
+android/app/release/
+mobile/.kotlin/
+mobile/androidApp/build/
+mobile/shared/build/
+mobile/webApp/build/
+mobile/iosApp/build/
+mobile/iosApp/Pods/
+mobile/iosApp/DerivedData/
+mobile/iosApp/*.xcworkspace/xcuserdata/
+
+# ─── Go ──────────────────────────────────────────────────────────────────────
+backend/vendor/
+*.exe
+*.exe~
+*.test
+*.out
+backend/bin/
+backend/dist/
+
+# ─── Elixir / Phoenix ────────────────────────────────────────────────────────
+backend/svc/mail/_build/
+backend/svc/mail/deps/
+backend/svc/mail/.fetch
+backend/svc/mail/erl_crash.dump
+backend/svc/mail/*.ez
+backend/svc/mail/priv/static/cache_manifest.json
+backend/svc/mail/.mix/
+*.beam
+
+# ─── Docker ──────────────────────────────────────────────────────────────────
+infra/.env
+
+# ─── Infra secrets ───────────────────────────────────────────────────────────
+infra/secrets/
+
+# ─── Secrets / Credentials ───────────────────────────────────────────────────
+*.pem
+*.key
+*.p12
+*.p8
+*.keystore
+google-services.json
+GoogleService-Info.plist
