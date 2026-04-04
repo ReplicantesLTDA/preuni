@@ -1,8 +1,12 @@
 # preuni.com.br Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-04-03
+Auto-generated from all feature plans. Last updated: 2026-04-04
 
 ## Active Technologies
+- Kotlin 2.1.20 + Compose Multiplatform 1.8.0 + Decompose 3.3.0, MVIKotlin 4.2.0, Compose canvas rendering (Skiko), webpack 5 (002-fix-web-compilation)
+- sessionStorage (web), SQLDelight/WebWorkerDriver (not yet activated) (002-fix-web-compilation)
+- Kotlin 2.1.20 (Compose Multiplatform 1.8.0) + Material Design 3 (already in classpath), Decompose 3.3.0, MVIKotlin 4.2.0 (003-ui-polish)
+- N/A (UI layer only — no persistence changes) (003-ui-polish)
 
 **Frontend (001-enem-prep-platform)**
 - Kotlin 2.x + Compose Multiplatform 1.8+ (Android/iOS/Web)
@@ -74,6 +78,8 @@ cd mobile/shared && ./gradlew desktopTest
 **SQL**: lowercase keywords, snake_case identifiers; all new queries need EXPLAIN plan reviewed
 
 ## Recent Changes
+- 003-ui-polish: Added Kotlin 2.1.20 (Compose Multiplatform 1.8.0) + Material Design 3 (already in classpath), Decompose 3.3.0, MVIKotlin 4.2.0
+- 002-fix-web-compilation: Added Kotlin 2.1.20 + Compose Multiplatform 1.8.0 + Decompose 3.3.0, MVIKotlin 4.2.0, Compose canvas rendering (Skiko), webpack 5
 
 - 001-enem-prep-platform: Full stack added (KMP + Go microservices + Elixir mail)
 

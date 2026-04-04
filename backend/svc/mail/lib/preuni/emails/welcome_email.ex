@@ -16,11 +16,11 @@ defmodule Preuni.Emails.WelcomeEmail do
     |> from({@from_name, @from_email})
     |> to(to_email)
     |> subject("Welcome to PreUni, #{display_name}! Verify your email")
-    |> html_body(html_body(display_name, verification_link))
-    |> text_body(text_body(display_name, verification_link))
+    |> html_body(render_html(display_name, verification_link))
+    |> text_body(render_text(display_name, verification_link))
   end
 
-  defp html_body(display_name, verification_link) do
+  defp render_html(display_name, verification_link) do
     """
     <!DOCTYPE html>
     <html>
@@ -47,7 +47,7 @@ defmodule Preuni.Emails.WelcomeEmail do
     """
   end
 
-  defp text_body(display_name, verification_link) do
+  defp render_text(display_name, verification_link) do
     """
     Bem-vindo ao PreUni, #{display_name}!
 

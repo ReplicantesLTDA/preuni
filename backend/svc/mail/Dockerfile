@@ -6,7 +6,7 @@ WORKDIR /app
 RUN mix local.hex --force && mix local.rebar --force
 
 # Install deps first (cache-friendly layer)
-COPY mix.exs mix.lock ./
+COPY mix.exs ./
 RUN MIX_ENV=prod mix deps.get --only prod
 
 # Compile deps
@@ -15,7 +15,6 @@ RUN MIX_ENV=prod mix deps.compile
 # Copy application source
 COPY lib/ ./lib/
 COPY config/ ./config/
-COPY priv/ ./priv/
 
 # Compile application
 RUN MIX_ENV=prod mix compile

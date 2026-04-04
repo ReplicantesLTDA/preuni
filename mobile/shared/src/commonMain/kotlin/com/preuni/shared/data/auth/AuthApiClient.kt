@@ -13,6 +13,19 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
+data class VerifyEmailRequest(
+    val email: String,
+    val otp: String,
+)
+
+@Serializable
+data class RegisterRequest(
+    val email: String,
+    val password: String,
+    @SerialName("display_name") val displayName: String,
+)
+
+@Serializable
 data class LoginRequest(
     val email: String,
     val password: String,
@@ -32,6 +45,35 @@ data class RefreshRequest(
 )
 
 class AuthApiClient(private val httpClient: HttpClient) {
+
+    suspend fun verifyEmail(email: String, otp: String): Result<Unit> {
+        return runCatching {
+            val response: HttpResponse = httpClient.post("v1/auth/email/verify") {
+                setBody(VerifyEmailRequest(email, otp))
+            }
+            if (!response.status.isSuccess()) {
+                throw response.toAppError()
+            }
+        }.mapFailure()
+    }
+
+    suspend fun register(email: String, password: String, displayName: String): Result<AuthSession> {
+        return runCatching {
+            val response: HttpResponse = httpClient.post("v1/auth/register") {
+                setBody(RegisterRequest(email, password, displayName))
+            }
+            if (!response.status.isSuccess()) {
+                throw response.toAppError()
+            }
+            val body: AuthResponse = response.body()
+            AuthSession(
+                userId = body.studentId,
+                userEmail = email,
+                accessToken = body.accessToken,
+                refreshToken = body.refreshToken,
+            )
+        }.mapFailure()
+    }
 
     suspend fun login(email: String, password: String): Result<AuthSession> {
         return runCatching {

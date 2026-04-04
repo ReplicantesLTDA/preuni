@@ -15,11 +15,11 @@ defmodule Preuni.Emails.VerificationEmail do
     |> from({@from_name, @from_email})
     |> to(to_email)
     |> subject("Your PreUni verification code: #{otp}")
-    |> html_body(html_body(otp))
-    |> text_body(text_body(otp))
+    |> html_body(render_html(otp))
+    |> text_body(render_text(otp))
   end
 
-  defp html_body(otp) do
+  defp render_html(otp) do
     """
     <!DOCTYPE html>
     <html>
@@ -40,7 +40,7 @@ defmodule Preuni.Emails.VerificationEmail do
     """
   end
 
-  defp text_body(otp) do
+  defp render_text(otp) do
     """
     Código de verificação PreUni: #{otp}
 

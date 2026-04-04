@@ -4,7 +4,9 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.window.CanvasBasedWindow
 import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
+import com.arkivanov.essenty.lifecycle.resume
 import com.arkivanov.mvikotlin.main.store.DefaultStoreFactory
+import kotlinx.browser.window
 import com.preuni.shared.PreuniApp
 import com.preuni.shared.data.auth.AuthApiClient
 import com.preuni.shared.data.auth.AuthRepositoryImpl
@@ -15,7 +17,7 @@ import com.preuni.shared.data.user.UserApiClient
 import com.preuni.shared.data.user.UserRepositoryImpl
 import com.preuni.shared.presentation.RootComponent
 
-private fun browserOrigin(): String = js("window.location.origin")
+private fun browserOrigin(): String = window.location.origin
 
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
@@ -31,6 +33,7 @@ fun main() {
     val userRepository = UserRepositoryImpl(userApiClient)
 
     val lifecycle = LifecycleRegistry()
+    lifecycle.resume()
     val componentContext = DefaultComponentContext(lifecycle = lifecycle)
     val storeFactory = DefaultStoreFactory()
 
