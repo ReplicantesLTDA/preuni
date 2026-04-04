@@ -22,6 +22,13 @@ kotlin {
         val wasmJsMain by getting {
             dependencies {
                 implementation(project(":shared"))
+                implementation(compose.runtime)
+                implementation(compose.ui)
+                implementation(compose.foundation)
+                implementation(libs.decompose)
+                implementation(libs.mvikotlin)
+                implementation(libs.mvikotlin.main)
+                implementation(libs.ktor.client.core)
             }
         }
     }

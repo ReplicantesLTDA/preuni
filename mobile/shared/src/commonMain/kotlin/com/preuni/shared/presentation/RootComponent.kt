@@ -50,9 +50,11 @@ class RootComponent(
                 }
             )
             Config.Onboarding -> Child.Onboarding(
-                OnboardingComponent(context, storeFactory) {
-                    navigation.replaceAll(Config.Main)
-                }
+                OnboardingComponent(
+                    componentContext = context,
+                    storeFactory = storeFactory,
+                    onCompleted = { navigation.replaceAll(Config.Main) },
+                )
             )
             Config.Main -> Child.Main(
                 MainComponent(context, storeFactory, authRepository, tokenStore, userRepository) {

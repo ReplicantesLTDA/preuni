@@ -77,7 +77,11 @@ stop-backend:
 ##   Start the Kotlin/Wasm web app in the browser (requires JDK 17+ and Node.js 20+).
 ##   The app opens at http://localhost:8080.
 run-web:
-	cd mobile && ./gradlew :webApp:wasmJsBrowserDevelopmentRun
+	@JAVA_HOME_CANDIDATE=$$(/usr/libexec/java_home -v 23 2>/dev/null || /usr/libexec/java_home -v 21 2>/dev/null || /usr/libexec/java_home -v 17 2>/dev/null || true); \
+	if [ -z "$$JAVA_HOME_CANDIDATE" ]; then \
+		echo "No compatible JDK found. Install JDK 17, 21, or 23."; exit 1; \
+	fi; \
+	cd mobile && JAVA_HOME="$$JAVA_HOME_CANDIDATE" PATH="$$JAVA_HOME_CANDIDATE/bin:$$PATH" ./gradlew :webApp:wasmJsBrowserDevelopmentRun
 
 ## run-android
 ##   Install and launch the debug APK on a connected device or running emulator.

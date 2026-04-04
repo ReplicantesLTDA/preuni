@@ -1,26 +1,25 @@
 package com.preuni.web
 
-import androidx.compose.runtime.remember
 import androidx.compose.ui.ExperimentalComposeUiApi
-import androidx.compose.ui.window.ComposeViewport
+import androidx.compose.ui.window.CanvasBasedWindow
 import com.arkivanov.decompose.DefaultComponentContext
+import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.mvikotlin.main.store.DefaultStoreFactory
 import com.preuni.shared.PreuniApp
+import com.preuni.shared.data.auth.AuthApiClient
 import com.preuni.shared.data.auth.AuthRepositoryImpl
 import com.preuni.shared.data.auth.SecureStorage
 import com.preuni.shared.data.auth.TokenStore
-import com.preuni.shared.data.auth.AuthApiClient
-import com.preuni.shared.data.db.createSqlDriver
 import com.preuni.shared.data.network.buildHttpClient
 import com.preuni.shared.data.user.UserApiClient
 import com.preuni.shared.data.user.UserRepositoryImpl
 import com.preuni.shared.presentation.RootComponent
-import kotlinx.browser.document
-import com.arkivanov.essenty.lifecycle.LifecycleRegistry
+
+private fun browserOrigin(): String = js("window.location.origin")
 
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
-    val baseUrl = js("window.location.origin").toString()
+    val baseUrl = browserOrigin()
     val httpClient = buildHttpClient(baseUrl)
 
     val secureStorage = SecureStorage()
@@ -43,7 +42,7 @@ fun main() {
         userRepository = userRepository,
     )
 
-    ComposeViewport(document.body!!) {
+    CanvasBasedWindow("Preuni") {
         PreuniApp(root)
     }
 }

@@ -4,6 +4,7 @@ import com.preuni.shared.data.network.toAppError
 import com.preuni.shared.domain.auth.AuthSession
 import com.preuni.shared.domain.error.AppError
 import io.ktor.client.HttpClient
+import io.ktor.client.call.body
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
@@ -40,7 +41,7 @@ class AuthApiClient(private val httpClient: HttpClient) {
             if (!response.status.isSuccess()) {
                 throw response.toAppError()
             }
-            val body = io.ktor.client.call.body<AuthResponse>(response)
+            val body: AuthResponse = response.body()
             AuthSession(
                 userId = body.studentId,
                 userEmail = email,
@@ -58,7 +59,7 @@ class AuthApiClient(private val httpClient: HttpClient) {
             if (!response.status.isSuccess()) {
                 throw response.toAppError()
             }
-            val body = io.ktor.client.call.body<AuthResponse>(response)
+            val body: AuthResponse = response.body()
             Pair(body.accessToken, body.refreshToken)
         }.mapFailure()
     }

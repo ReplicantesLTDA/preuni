@@ -89,7 +89,7 @@ class OnboardingStoreFactory(
             Msg.NextPage -> copy(pageIndex = (pageIndex + 1).coerceAtMost(TOTAL_PAGES - 1))
             Msg.PreviousPage -> copy(pageIndex = (pageIndex - 1).coerceAtLeast(0))
             is Msg.TrackToggled -> copy(
-                selectedTrackIds = if (trackId in selectedTrackIds)
+                selectedTrackIds = if (msg.trackId in selectedTrackIds)
                     selectedTrackIds - msg.trackId
                 else
                     selectedTrackIds + msg.trackId

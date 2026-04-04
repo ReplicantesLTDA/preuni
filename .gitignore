@@ -9,6 +9,7 @@ Thumbs.db
 *.log
 .claude/
 .specify/
+CLAUDE.md
 
 # ─── Environment ─────────────────────────────────────────────────────────────
 .env
