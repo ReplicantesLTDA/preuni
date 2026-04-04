@@ -299,6 +299,98 @@
 
 ---
 
+## Phase 12: Go Service Routing
+
+**Goal**: Wire all implemented handlers into the chi routers so Go services actually serve real traffic (not just `/health`).
+
+**Dependency**: Phase 10 complete (all handlers exist).
+
+**Checkpoint**: `cd backend/svc/auth && PORT=8081 DATABASE_URL=... go run ./cmd/server`; `curl -X POST http://localhost:8081/v1/auth/register -d '{}'` returns `400` (route exists, body validation fails — proves route is registered).
+
+- [ ] T122 Wire all auth-svc handlers into chi router in `backend/svc/auth/cmd/server/main.go`: open pgx connection pool from `DATABASE_URL` env var, create Redis client from `REDIS_URL`, instantiate all repositories (`CredentialsRepository`, `OTPRepository`, `RefreshTokenRepository`), instantiate all handlers, register routes under `/v1/auth`: `POST /register`, `POST /login`, `POST /email/verify`, `POST /otp/request`, `POST /otp/verify`, `POST /token/refresh`, `POST /logout`, `POST /password/change`, `POST /password/reset/request`, `POST /password/reset/confirm`, `POST /email/change/request`, `POST /email/change/confirm`, `DELETE /account`; apply `pkg/middleware` JWT auth where required; add `/health` endpoint
+- [ ] T123 [P] Wire all user-svc handlers into chi router in `backend/svc/user/cmd/server/main.go`: open pgx pool, instantiate `StudentRepository`, instantiate all handlers, apply JWT middleware from `pkg/middleware`, register routes: `POST /internal/students`, `GET /v1/students/me`, `PATCH /v1/students/me`, `GET /v1/students/me/avatar/upload-url`, `POST /v1/students/me/avatar/confirm`, `PATCH /v1/students/me/onboarding`, `GET /v1/students/me/data-export`; add `/health`
+
+---
+
+## Phase 13: Mobile App Entry Points
+
+**Goal**: Create the minimal Kotlin/Swift composable root and per-platform entry points so each target can boot and render the app.
+
+**Checkpoint**: `cd mobile && ./gradlew :webApp:wasmJsBrowserDevelopmentRun` opens `http://localhost:8080` and the login screen renders.
+
+- [ ] T124 Create shared composable root in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/PreuniApp.kt`: `@Composable fun PreuniApp(component: RootComponent)` that subscribes to `component.childStack` and renders `AuthContent`, `OnboardingContent`, or `MainContent` depending on the active child; each content function delegates to the corresponding screen/component composable
+- [ ] T125 [P] Create `mobile/webApp/src/wasmJsMain/kotlin/main.kt`: call `onWasmReady { ComposeViewport(document.body!!) { val root = remember { createDefaultRootComponent() }; PreuniApp(root) } }`; create `mobile/webApp/src/wasmJsMain/kotlin/di/WebAppModule.kt` with Koin module providing wasmJs-specific `HttpClient` (base URL from `js("window.location.origin")`) and `SqlDriver`; call `startKoin { modules(WebAppModule) }` before creating `RootComponent`
+- [ ] T126 [P] Create `mobile/androidApp/src/main/kotlin/com/preuni/android/MainActivity.kt`: `ComponentActivity` subclass, `setContent { val root = remember { DefaultRootComponent(defaultComponentContext()) }; PreuniApp(root) }`; create `mobile/androidApp/src/main/AndroidManifest.xml` declaring `MainActivity` as launcher; create `mobile/androidApp/src/main/res/values/themes.xml` inheriting `Theme.MaterialComponents.DayNight.NoActionBar`; create `mobile/androidApp/src/main/res/drawable/ic_launcher_background.xml` as plain color placeholder
+
+---
+
+## Phase 14: Dockerfiles & Docker Compose
+
+**Goal**: Each Go microservice and the Elixir mail service can be containerized. `docker compose up` boots the full stack.
+
+**Dependency**: Phase 12 complete (handlers wired — binaries must compile).
+
+**Checkpoint**: `docker compose -f infra/docker-compose.yml build auth && docker compose up -d postgres redis auth && curl http://localhost:8081/health` returns `ok`.
+
+- [ ] T127 Create `backend/svc/auth/Dockerfile` — two-stage build: stage 1 `golang:1.23-alpine` AS builder, `WORKDIR /build`, `COPY go.work go.work.sum ./`, `COPY pkg/ ./pkg/`, `COPY svc/auth/ ./svc/auth/`, `RUN cd svc/auth && CGO_ENABLED=0 go build -o /bin/auth-server ./cmd/server`; stage 2 `FROM gcr.io/distroless/static-debian12`, `COPY --from=builder /bin/auth-server /auth-server`, `EXPOSE 8081`, `ENTRYPOINT ["/auth-server"]`; add `backend/svc/auth/.dockerignore` excluding `*_test.go` and `vendor/`; update `infra/docker-compose.yml` auth service to set `build.context: ../backend` and `build.dockerfile: svc/auth/Dockerfile`
+- [ ] T128 [P] Create `backend/svc/user/Dockerfile` — same distroless two-stage pattern, binary name `user-server`, port 8082; update docker-compose user service build config with `context: ../backend` and `build.dockerfile: svc/user/Dockerfile`
+- [ ] T129 [P] Create `backend/svc/content/Dockerfile` — binary `content-server`, port 8083; update docker-compose
+- [ ] T130 [P] Create `backend/svc/learning/Dockerfile` — binary `learning-server`, port 8084; update docker-compose
+- [ ] T131 [P] Create `backend/svc/simulation/Dockerfile` — binary `simulation-server`, port 8085; update docker-compose
+- [ ] T132 [P] Create `backend/svc/dissertation/Dockerfile` — binary `dissertation-server`, port 8086; update docker-compose
+- [ ] T133 [P] Create `backend/svc/notification/Dockerfile` — binary `notification-server`, port 8087; update docker-compose
+- [ ] T134 [P] Create `backend/svc/mail/Dockerfile`: `FROM elixir:1.17-otp-27-alpine`; `RUN mix local.hex --force && mix local.rebar --force`; `COPY mix.exs mix.lock ./`; `RUN MIX_ENV=prod mix deps.get --only prod`; `COPY lib/ ./lib/ config/ ./config/ priv/ ./priv/`; `RUN MIX_ENV=prod mix compile`; `EXPOSE 4000`; `ENV PHX_SERVER=true`; `CMD ["mix", "phx.server"]`; add `backend/svc/mail/.dockerignore`; add `mail` service entry in `infra/docker-compose.yml` with `build.context: ../backend/svc/mail`, `INTERNAL_TOKEN`, `SWOOSH_ADAPTER`, `PHX_HOST` env vars
+- [ ] T135 Audit and fix `infra/docker-compose.yml` completeness: (a) ensure all Go services have `depends_on` with `postgres: {condition: service_healthy}` and `redis: {condition: service_healthy}`; (b) add missing `INTERNAL_SERVICE_TOKEN` env var to every Go service; (c) add `restart: on-failure` to every service; (d) add `networks: [preuni]` to all services and define a shared bridge network `preuni` at the bottom of the file; (e) verify all port mappings match their `PORT` env var
+
+---
+
+## Phase 15: Elixir Local Installation
+
+**Goal**: Elixir 1.17 is available locally on macOS so the mail service can be developed and run without Docker.
+
+**Checkpoint**: `elixir --version` shows `Elixir 1.17.x`; `cd backend/svc/mail && mix deps.get && mix compile` exits 0; `mix phx.server` starts and `curl http://localhost:4000/health` returns 200.
+
+- [ ] T136 Install Elixir on macOS: run `brew install elixir`; if Homebrew is absent first install it via the official script at `https://brew.sh`; after install run `elixir --version` and confirm 1.17+; run `cd backend/svc/mail && mix local.hex --force && mix local.rebar --force && mix deps.get && mix compile`; if `config/runtime.exs` is missing create it reading `INTERNAL_TOKEN`, `PORT`, `PHX_HOST`, `SECRET_KEY_BASE` from env with sensible dev defaults; verify `mix phx.server` starts without errors
+
+---
+
+## Phase 16: iOS Xcode Project (T005)
+
+**Goal**: `mobile/iosApp/` becomes a buildable Xcode project that embeds the KMP shared framework so the iOS Simulator can run the app.
+
+**Dependency**: Phase 13 complete (shared `PreuniApp` composable exists); Xcode 16+ installed.
+
+**Checkpoint**: `cd mobile/iosApp && xcodebuild -scheme iosApp -destination 'platform=iOS Simulator,name=iPhone 16' build` exits 0 and the simulator shows the login screen.
+
+- [ ] T137 Create iOS Xcode project in `mobile/iosApp/`: (a) create `mobile/iosApp/iosApp.xcodeproj/project.pbxproj` — minimal Swift target, deployment target iOS 16, bundle ID `com.preuni.app`, embed the KMP XCFramework produced by `./gradlew :shared:assembleXCFramework` from `mobile/build/XCFrameworks/release/shared.xcframework`; (b) create `mobile/iosApp/iosApp.xcodeproj/project.xcworkspace/contents.xcworkspacedata`; (c) create `mobile/iosApp/iosApp/iOSApp.swift` with `@main struct iOSApp: App { var body: some Scene { WindowGroup { ContentView() } } }`; (d) create `mobile/iosApp/iosApp/ContentView.swift` wrapping `MainViewController` from the shared framework via `UIViewControllerRepresentable`; (e) add `embedAndSignAppleFrameworkForXcode` as a pre-build script phase in the Xcode project; (f) create `mobile/iosApp/iosApp/Info.plist` with display name `Preuni` and required fields
+
+---
+
+## Phase 17: Makefile Run Targets
+
+**Goal**: Developer can start any platform target and the backend with a single `make` command.
+
+**Checkpoint**: `make help` lists all new targets; `make run-infra` starts postgres+redis; `make run-web` opens the Kotlin/Wasm app in a browser.
+
+- [ ] T138 Add `run-infra` and `stop-infra` targets to `Makefile`: `run-infra` runs `docker compose -f infra/docker-compose.yml up -d postgres redis`; `stop-infra` runs `docker compose -f infra/docker-compose.yml stop postgres redis`; update `help` target regex to pick up new `## ` prefixed comments
+- [ ] T139 [P] Add `run-backend` and `stop-backend` targets to `Makefile`: `run-backend` runs `docker compose -f infra/docker-compose.yml up --build -d auth user content learning simulation dissertation notification gateway`; `stop-backend` stops those services; add `## run-backend` doc comment
+- [ ] T140 [P] Add `run-web` target to `Makefile`: `cd mobile && ./gradlew :webApp:wasmJsBrowserDevelopmentRun`; add prerequisite comment noting JDK 17+ and Node.js 20+ are required
+- [ ] T141 [P] Add `run-android` target to `Makefile`: `cd mobile && ./gradlew :androidApp:installDebug`; add comment noting a connected device or running emulator is required; add `build-android` target: `./gradlew :androidApp:assembleDebug`
+- [ ] T142 [P] Add `run-ios` target to `Makefile`: `cd mobile && ./gradlew :shared:assembleXCFramework && cd iosApp && xcodebuild -scheme iosApp -destination "platform=iOS Simulator,name=iPhone 16" -allowProvisioningUpdates build`; add `open-ios` shortcut that opens `mobile/iosApp/iosApp.xcodeproj` in Xcode; add comment noting Xcode 16+ is required
+
+---
+
+## Phase 18: Git Remote Setup & Sync
+
+**Goal**: The local branch history is pushed to `git@github.com:dwbessa/preuni.com.br.git` and the remote mirrors local.
+
+**Checkpoint**: `git remote -v` shows `origin  git@github.com:dwbessa/preuni.com.br.git`; `git push` succeeds; GitHub shows all commits on `001-enem-prep-platform`.
+
+- [ ] T143 Add the git remote: `git remote add origin git@github.com:dwbessa/preuni.com.br.git`; verify SSH access with `ssh -T git@github.com` (expect "Hi dwbessa!"); push the feature branch: `git push -u origin 001-enem-prep-platform`
+- [ ] T144 [P] Push `main` branch: `git push -u origin main`; if `main` does not exist locally create it pointing to the initial commit: `git branch main $(git rev-list --max-parents=0 HEAD)` then push; confirm on GitHub that both `main` and `001-enem-prep-platform` appear under branches
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -315,6 +407,13 @@
   - Phase 9 (US7 Onboarding) depends on Phase 8 (MainComponent exists) + Phase 6 (track enrollment endpoint)
 - **Phase 10 (Polish)**: Depends on all user story phases complete
 - **Phase 11 (Git Versioning)**: Depends on Phase 10 (or a stable checkpoint) — run once the primary implementation is at a good state
+- **Phase 12 (Go Routing)**: Depends on Phase 10 (all handlers exist); T122 and T123 are independent [P]
+- **Phase 13 (Mobile Entry Points)**: Depends on Phase 3–9 (all stores and components exist); T124 must precede T125/T126
+- **Phase 14 (Dockerfiles)**: Depends on Phase 12 (services must compile with handlers wired); all Dockerfile tasks [P] once T127 pattern is established
+- **Phase 15 (Elixir Install)**: No code dependency — can run any time on the developer machine
+- **Phase 16 (iOS Xcode)**: Depends on Phase 13 (PreuniApp composable must exist); requires Xcode 16+ installed
+- **Phase 17 (Makefile Targets)**: Depends on Phases 12–16 being complete (targets invoke these systems); T138–T142 are independent [P]
+- **Phase 18 (Git Remote)**: No code dependency — can run immediately; T143 must precede T144
 
 ### Within Each Phase
 
@@ -386,7 +485,14 @@ After MVP: complete Phases 4–9 in order, validating each independently.
 | 9 US7 Onboarding | 9 | Item 10 |
 | 10 Polish | 6 | — |
 | 11 Git Versioning | 8 | — |
-| **Total** | **121** | |
+| 12 Go Service Routing | 2 | — |
+| 13 Mobile Entry Points | 3 | — |
+| 14 Dockerfiles & Docker Compose | 9 | — |
+| 15 Elixir Local Install | 1 | — |
+| 16 iOS Xcode Project | 1 | — |
+| 17 Makefile Run Targets | 5 | — |
+| 18 Git Remote & Sync | 2 | — |
+| **Total** | **144** | |
 
 ---
 
