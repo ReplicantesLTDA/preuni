@@ -7,8 +7,6 @@ Thumbs.db
 .vscode/
 .idea/
 *.log
-.claude/
-.specify/
 CLAUDE.md
 
 # ─── Environment ─────────────────────────────────────────────────────────────
