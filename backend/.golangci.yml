@@ -1,0 +1,30 @@
+version: "2"
+
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - gofmt
+    - goimports
+    - misspell
+    - unconvert
+    - godot
+    - noctx
+    - bodyclose
+    - sqlclosecheck
+
+linters-settings:
+  goimports:
+    local-prefixes: github.com/preuni
+
+issues:
+  exclude-rules:
+    # Test files: allow longer functions and unexported test helpers
+    - path: "_test\\.go"
+      linters:
+        - funlen
+        - godot

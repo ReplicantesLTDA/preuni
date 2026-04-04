@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+if command -v npx >/dev/null 2>&1; then
+  npx --no -- commitlint --edit "$1"
+else
+  echo "⚠ npx not found — skipping commitlint. Install Node.js and run: npm install"
+fi

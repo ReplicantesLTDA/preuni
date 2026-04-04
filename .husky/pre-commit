@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# ── Kotlin: run ktlint on staged .kt files ─────────────────────────────────
+STAGED_KT=$(git diff --cached --name-only --diff-filter=ACMR | grep '\.kt$' || true)
+if [ -n "$STAGED_KT" ]; then
+  echo "Running ktlint on staged Kotlin files..."
+  if command -v ktlint >/dev/null 2>&1; then
+    echo "$STAGED_KT" | xargs ktlint --format
+    echo "$STAGED_KT" | xargs git add
+  else
+    echo "⚠ ktlint not found — skipping Kotlin linting. Install: https://pinterest.github.io/ktlint/install/cli/"
+  fi
+fi
+
+# ── Go: run golangci-lint on staged .go files ──────────────────────────────
+STAGED_GO=$(git diff --cached --name-only --diff-filter=ACMR | grep '\.go$' || true)
+if [ -n "$STAGED_GO" ]; then
+  echo "Running golangci-lint on backend..."
+  if command -v golangci-lint >/dev/null 2>&1; then
+    (cd backend && golangci-lint run ./...)
+  else
+    echo "⚠ golangci-lint not found — skipping Go linting. Install: https://golangci-lint.run/usage/install/"
+  fi
+fi
