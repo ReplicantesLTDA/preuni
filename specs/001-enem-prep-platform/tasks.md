@@ -191,7 +191,7 @@
 
 ### Tests for US5 (write first, verify FAIL before T082)
 
-- [ ] T078 [P] [US5] Unit tests for `ProfileStore` in `mobile/shared/src/commonTest/presentation/profile/ProfileStoreTest.kt`: initial load emits student data; username update intent runs validator before network call; delete account intent shows confirmation state before dispatch
+- [X] T078 [P] [US5] Unit tests for `ProfileStore` in `mobile/shared/src/commonTest/presentation/profile/ProfileStoreTest.kt`: initial load emits student data; username update intent runs validator before network call; delete account intent shows confirmation state before dispatch
 
 ### Implementation for US5
 
@@ -220,7 +220,7 @@
 
 ### Tests for US6 (write first, verify FAIL before T095)
 
-- [ ] T091 [P] [US6] Unit tests for `HomeStore` in `mobile/shared/src/commonTest/presentation/home/HomeStoreTest.kt`: successful load emits state with student data; network error emits error state; retry intent re-fetches
+- [X] T091 [P] [US6] Unit tests for `HomeStore` in `mobile/shared/src/commonTest/presentation/home/HomeStoreTest.kt`: successful load emits state with student data; network error emits error state; retry intent re-fetches
 
 ### Implementation for US6
 
@@ -245,7 +245,7 @@
 ### Tests for US7 (write first, verify FAIL before T103)
 
 - [ ] T099 [P] [US7] Integration test for onboarding endpoint in `backend/svc/user/handler/onboarding_test.go`: unauthenticated 401; authenticated PATCH sets `onboarding_completed = true`; second call returns 200 idempotently
-- [ ] T100 [P] [US7] Unit tests for `OnboardingStore` in `mobile/shared/src/commonTest/presentation/onboarding/OnboardingStoreTest.kt`: next page intent advances page index; selecting tracks updates selected set; completing with 0 tracks emits validation error; completing with ≥ 1 tracks calls repository then emits Complete
+- [X] T100 [P] [US7] Unit tests for `OnboardingStore` in `mobile/shared/src/commonTest/presentation/onboarding/OnboardingStoreTest.kt`: next page intent advances page index; selecting tracks updates selected set; completing with 0 tracks emits validation error; completing with ≥ 1 tracks calls repository then emits Complete
 
 ### Implementation for US7
 
