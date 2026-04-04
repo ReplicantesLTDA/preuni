@@ -1,6 +1,7 @@
 .PHONY: bump-version changelog tag help \
         run-infra stop-infra run-backend stop-backend \
-        run-web run-android build-android run-ios open-ios
+        run-web stop-web migrate \
+        run-android build-android run-ios open-ios
 
 ## bump-version patch|minor|major
 ##   Increments the version, tags the repo, and updates version.txt.
@@ -65,13 +66,24 @@ stop-infra:
 ##   Run 'make run-infra' first to ensure postgres + redis are healthy.
 run-backend:
 	docker compose -f infra/docker-compose.yml up --build -d \
-		auth user content learning simulation dissertation notification gateway
+		auth user content learning simulation dissertation notification mail gateway
 
 ## stop-backend
 ##   Stop all backend services.
 stop-backend:
 	docker compose -f infra/docker-compose.yml stop \
-		auth user content learning simulation dissertation notification gateway
+		auth user content learning simulation dissertation notification mail gateway
+
+## migrate
+##   Run all SQL migrations against the local postgres instance.
+##   Requires 'make run-infra' to be running first.
+migrate:
+	@find infra/migrations -name "*.sql" | sort | while read f; do \
+		echo "→ $$f"; \
+		docker compose -f infra/docker-compose.yml exec -T postgres \
+			psql -U preuni -d preuni < "$$f" || exit 1; \
+	done
+	@echo "Migrations complete."
 
 ## run-web
 ##   Start the Kotlin/Wasm web app in the browser (requires JDK 17+ and Node.js 20+).
@@ -82,6 +94,11 @@ run-web:
 		echo "No compatible JDK found. Install JDK 17, 21, or 23."; exit 1; \
 	fi; \
 	cd mobile && JAVA_HOME="$$JAVA_HOME_CANDIDATE" PATH="$$JAVA_HOME_CANDIDATE/bin:$$PATH" ./gradlew :webApp:wasmJsBrowserDevelopmentRun
+
+## stop-web
+##   Kill the webpack-dev-server started by run-web.
+stop-web:
+	@pkill -f "webpack-dev-server" 2>/dev/null && echo "Web server stopped." || echo "No web server running."
 
 ## run-android
 ##   Install and launch the debug APK on a connected device or running emulator.
