@@ -8,6 +8,15 @@ class AuthRepositoryImpl(
     private val tokenStore: TokenStore,
 ) : AuthRepository {
 
+    override suspend fun verifyEmail(email: String, otp: String): Result<Unit> =
+        apiClient.verifyEmail(email, otp)
+
+    override suspend fun register(email: String, password: String, displayName: String): Result<AuthSession> {
+        val result = apiClient.register(email, password, displayName)
+        result.onSuccess { session -> tokenStore.save(session) }
+        return result
+    }
+
     override suspend fun login(emailOrUsername: String, password: String): Result<AuthSession> {
         val result = apiClient.login(emailOrUsername, password)
         result.onSuccess { session -> tokenStore.save(session) }
