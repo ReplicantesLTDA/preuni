@@ -253,3 +253,70 @@ go test ./... -coverprofile=coverage.out && go tool cover -func=coverage.out
 ### Updating the FSRS parameters per user (v2 prep)
 
 The `review_logs` table in `learning-svc` captures every review with full FSRS state. When a student accumulates ≥ 1,000 reviews, a background job can run gradient-descent optimization using `go-fsrs` and update the student's personal FSRS parameters in a `student_fsrs_params` table (not yet created — defer to v2).
+
+---
+
+## Release Process
+
+### Bumping the version
+
+The project uses semantic versioning (`MAJOR.MINOR.PATCH`) stored in `version.txt`. The `Makefile` automates the entire release cycle:
+
+```bash
+# Patch release (bug fixes)
+make bump-version patch
+
+# Minor release (new backward-compatible features)
+make bump-version minor
+
+# Major release (breaking changes)
+make bump-version major
+```
+
+`bump-version` will:
+1. Read the current version from `version.txt`
+2. Increment the requested component
+3. Write the new version back to `version.txt`
+4. Update `appVersion` in `mobile/gradle/libs.versions.toml` to keep the Android/iOS build in sync
+5. Create a signed git commit `chore(release): bump version to X.Y.Z`
+6. Create an annotated tag `vX.Y.Z`
+
+### Generating the CHANGELOG
+
+[git-cliff](https://git-cliff.org/) reads the conventional commit history and produces a structured `CHANGELOG.md`:
+
+```bash
+# (Re)generate CHANGELOG.md from the full history
+make changelog
+
+# Preview the next release entry without writing the file
+git cliff --unreleased
+```
+
+The `.cliff.toml` at the repo root groups commits by type:
+
+| Commit type | CHANGELOG section |
+|-------------|-------------------|
+| `feat`      | Features          |
+| `fix`       | Bug Fixes         |
+| `refactor`  | Refactoring       |
+| `chore`     | Maintenance       |
+
+Breaking changes (commits with `!` or a `BREAKING CHANGE:` footer) are marked with ⚠️ and listed at the top of the entry.
+
+### Pushing a release
+
+```bash
+# Push commits and the new tag together
+git push origin main --follow-tags
+```
+
+CI will pick up the tag and trigger the release pipeline (Docker image build, Play Store / App Store submission, etc.).
+
+### Hotfix workflow
+
+1. Branch off the tag: `git checkout -b hotfix/v1.0.1 v1.0.0`
+2. Apply the fix and commit with `fix(scope): ...`
+3. Run `make bump-version patch` to cut `v1.0.1`
+4. Cherry-pick the fix commit to `main` if needed
+5. Push with `--follow-tags`

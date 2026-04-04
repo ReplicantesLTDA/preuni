@@ -286,14 +286,14 @@
 
 **Dependency**: All Phase 1–10 tasks must be complete (or at a stable checkpoint) before committing history.
 
-- [ ] T114 [P] Verify `.gitignore` covers all generated artifacts: `build/`, `.gradle/`, `*.class`, `_build/`, `deps/`, `.mix/`, `*.beam`, Go binaries, `node_modules/`, `.DS_Store`, `.env*`, `infra/secrets/`; update if any patterns are missing
-- [ ] T115 [P] Add `commitlint.config.js` at repo root: enforce Conventional Commits (`feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `ci`) with scope rules matching service names (`auth`, `user`, `mail`, `mobile`, `infra`)
-- [ ] T116 [P] Add `.husky/` pre-commit hook: runs `ktlint --format` on staged `.kt` files and `golangci-lint run` on staged `.go` files; blocks commit if either fails
-- [ ] T117 [P] Add `.husky/commit-msg` hook: runs `commitlint` to validate message format before commit is recorded
-- [ ] T118 Create `CHANGELOG.md` at repo root using `git-cliff` config in `.cliff.toml`: groups by type (`feat` → Features, `fix` → Bug Fixes, `chore` → Maintenance), links to commit hashes, marks breaking changes with ⚠️
-- [ ] T119 Add `version.txt` at repo root with initial version `0.1.0`; add `Makefile` target `bump-version` that: reads `version.txt`, increments semver (patch/minor/major based on arg), updates `version.txt`, updates `mobile/gradle/libs.versions.toml` `appVersion` entry, and creates a git tag `v{new_version}`
-- [ ] T120 Create the initial git commit: stage all implementation files (exclude secrets and generated artifacts); write commit message `feat(init): bootstrap Sprint 1 — auth, onboarding, home`; this becomes the `v0.1.0` baseline
-- [ ] T121 [P] Document versioning workflow in `specs/001-enem-prep-platform/quickstart.md` under a new "Release Process" section: how to run `make bump-version patch`, how to generate CHANGELOG, and how to push tags
+- [X] T114 [P] Verify `.gitignore` covers all generated artifacts: `build/`, `.gradle/`, `*.class`, `_build/`, `deps/`, `.mix/`, `*.beam`, Go binaries, `node_modules/`, `.DS_Store`, `.env*`, `infra/secrets/`; update if any patterns are missing
+- [X] T115 [P] Add `commitlint.config.js` at repo root: enforce Conventional Commits (`feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `ci`) with scope rules matching service names (`auth`, `user`, `mail`, `mobile`, `infra`)
+- [X] T116 [P] Add `.husky/` pre-commit hook: runs `ktlint --format` on staged `.kt` files and `golangci-lint run` on staged `.go` files; blocks commit if either fails
+- [X] T117 [P] Add `.husky/commit-msg` hook: runs `commitlint` to validate message format before commit is recorded
+- [X] T118 Create `CHANGELOG.md` at repo root using `git-cliff` config in `.cliff.toml`: groups by type (`feat` → Features, `fix` → Bug Fixes, `chore` → Maintenance), links to commit hashes, marks breaking changes with ⚠️
+- [X] T119 Add `version.txt` at repo root with initial version `0.1.0`; add `Makefile` target `bump-version` that: reads `version.txt`, increments semver (patch/minor/major based on arg), updates `version.txt`, updates `mobile/gradle/libs.versions.toml` `appVersion` entry, and creates a git tag `v{new_version}`
+- [X] T120 Create the initial git commit: stage all implementation files (exclude secrets and generated artifacts); write commit message `feat(init): bootstrap Sprint 1 — auth, onboarding, home`; this becomes the `v0.1.0` baseline
+- [X] T121 [P] Document versioning workflow in `specs/001-enem-prep-platform/quickstart.md` under a new "Release Process" section: how to run `make bump-version patch`, how to generate CHANGELOG, and how to push tags
 
 **Checkpoint**: `git log --oneline` shows a clean initial commit; `git tag` shows `v0.1.0`; `git cliff --current` generates a valid CHANGELOG entry; staging a badly formatted commit message is rejected by the commit-msg hook.
 
