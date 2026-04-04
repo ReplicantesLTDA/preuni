@@ -6,7 +6,10 @@ import com.preuni.shared.domain.auth.AuthRepository
 
 class RegisterComponent(
     componentContext: ComponentContext,
-    private val storeFactory: StoreFactory,
-    private val authRepository: AuthRepository,
-    private val onBack: () -> Unit,
-) : ComponentContext by componentContext
+    storeFactory: StoreFactory,
+    authRepository: AuthRepository,
+    val onBack: () -> Unit,
+) : ComponentContext by componentContext {
+
+    val store: RegisterStore = RegisterStoreFactory(storeFactory, authRepository).create()
+}
