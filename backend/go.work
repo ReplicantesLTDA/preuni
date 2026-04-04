@@ -1,0 +1,12 @@
+go 1.24
+
+use (
+	./pkg
+	./svc/auth
+	./svc/user
+	./svc/content
+	./svc/learning
+	./svc/simulation
+	./svc/dissertation
+	./svc/notification
+)
