@@ -4,18 +4,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -26,6 +22,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.arkivanov.mvikotlin.extensions.coroutines.stateFlow
+import com.preuni.shared.ui.components.PreuniButton
+import com.preuni.shared.ui.components.PreuniTextField
 
 @Composable
 fun OtpLoginScreen(
@@ -42,83 +40,71 @@ fun OtpLoginScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         IconButton(onClick = onBack, modifier = Modifier.align(Alignment.Start)) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
         }
 
         Spacer(Modifier.height(24.dp))
 
         if (!state.codeSent) {
-            // Step 1: Enter email
-            Text("Sign in with email code", style = MaterialTheme.typography.headlineMedium)
+            Text("🔑", style = MaterialTheme.typography.displayMedium)
+            Spacer(Modifier.height(16.dp))
+            Text("Entre sem senha", style = MaterialTheme.typography.headlineMedium)
             Spacer(Modifier.height(12.dp))
             Text(
-                text = "We'll send a 6-digit code to your email.",
+                text = "Enviaremos um código de 6 dígitos para o seu email.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(32.dp))
 
-            OutlinedTextField(
+            PreuniTextField(
                 value = state.email,
                 onValueChange = { store.accept(OtpLoginStore.Intent.UpdateEmail(it)) },
-                label = { Text("Email") },
-                singleLine = true,
+                label = "Email",
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(24.dp))
 
-            Button(
+            PreuniButton(
+                text = "Enviar código",
                 onClick = { store.accept(OtpLoginStore.Intent.RequestCode) },
-                enabled = state.email.isNotBlank() && !state.isLoading,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                if (state.isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.height(20.dp), strokeWidth = 2.dp)
-                } else {
-                    Text("Send code")
-                }
-            }
+                enabled = state.email.isNotBlank(),
+                isLoading = state.isLoading,
+            )
         } else {
-            // Step 2: Enter OTP
-            Text("Enter your code", style = MaterialTheme.typography.headlineMedium)
+            Text("🔑", style = MaterialTheme.typography.displayMedium)
+            Spacer(Modifier.height(16.dp))
+            Text("Digite seu código", style = MaterialTheme.typography.headlineMedium)
             Spacer(Modifier.height(12.dp))
             Text(
-                text = "Enter the code sent to\n${state.email}",
+                text = "Enviamos o código para\n${state.email}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(32.dp))
 
-            OutlinedTextField(
+            PreuniTextField(
                 value = state.otp,
                 onValueChange = { v ->
                     if (v.length <= 6 && v.all { it.isDigit() }) {
                         store.accept(OtpLoginStore.Intent.UpdateOtp(v))
                     }
                 },
-                label = { Text("6-digit code") },
-                singleLine = true,
+                label = "Código de 6 dígitos",
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                 isError = state.error != null,
-                supportingText = { state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) } },
-                modifier = Modifier.fillMaxWidth(),
+                errorMessage = state.error,
             )
             Spacer(Modifier.height(24.dp))
 
-            Button(
+            PreuniButton(
+                text = "Entrar",
                 onClick = { store.accept(OtpLoginStore.Intent.VerifyCode) },
-                enabled = state.otp.length == 6 && !state.isLoading,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                if (state.isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.height(20.dp), strokeWidth = 2.dp)
-                } else {
-                    Text("Sign in")
-                }
-            }
+                enabled = state.otp.length == 6,
+                isLoading = state.isLoading,
+            )
         }
     }
 }

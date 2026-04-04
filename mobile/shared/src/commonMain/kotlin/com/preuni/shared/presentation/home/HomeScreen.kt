@@ -10,10 +10,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -26,6 +24,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.arkivanov.mvikotlin.extensions.coroutines.stateFlow
+import com.preuni.shared.ui.components.PreuniButton
+import com.preuni.shared.ui.components.SubjectTrackCard
+import com.preuni.shared.ui.theme.SubjectTracks
 
 @Composable
 fun HomeScreen(
@@ -46,17 +47,19 @@ fun HomeScreen(
     ) {
         when {
             state.isLoading -> {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                androidx.compose.material3.CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
             }
 
             state.error != null -> {
                 Text(
-                    "Something went wrong",
+                    "Algo deu errado",
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 TextButton(onClick = { store.accept(HomeStore.Intent.Retry) }) {
-                    Text("Retry")
+                    Text("Tentar novamente")
                 }
             }
 
@@ -70,6 +73,12 @@ fun HomeScreen(
                     fontWeight = FontWeight.Bold,
                 )
                 Spacer(Modifier.height(4.dp))
+                Text(
+                    "Vamos estudar hoje?",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(16.dp))
 
                 // Stats row: streak + XP
                 Row(
@@ -88,23 +97,25 @@ fun HomeScreen(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer,
                     ),
+                    shape = MaterialTheme.shapes.medium,
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
                         Text(
-                            if ((student?.xpTotal ?: 0) > 0) "Continue studying" else "Start learning",
+                            if ((student?.xpTotal ?: 0) > 0) "Continue estudando" else "Comece a estudar",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            "Keep your streak alive! Study a little every day.",
+                            "Mantenha sua sequência! Estude um pouco todo dia.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
                         Spacer(Modifier.height(16.dp))
-                        Button(onClick = onStartLearning) {
-                            Text("Aprender agora")
-                        }
+                        PreuniButton(
+                            text = "Aprender agora",
+                            onClick = onStartLearning,
+                        )
                     }
                 }
 
@@ -117,10 +128,11 @@ fun HomeScreen(
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.secondaryContainer,
                         ),
+                        shape = MaterialTheme.shapes.medium,
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
                             Text(
-                                "Readiness Score",
+                                "Prontidão para o ENEM",
                                 style = MaterialTheme.typography.titleSmall,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                             )
@@ -133,6 +145,20 @@ fun HomeScreen(
                         }
                     }
                 }
+
+                // Subject tracks
+                Spacer(Modifier.height(24.dp))
+                Text(
+                    "Matérias",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(Modifier.height(12.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SubjectTracks.forEach { track ->
+                        SubjectTrackCard(track = track, onClick = {})
+                    }
+                }
             }
         }
     }
@@ -140,17 +166,20 @@ fun HomeScreen(
 
 @Composable
 private fun StreakBadge(count: Int) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
-        Row(
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        shape = MaterialTheme.shapes.extraSmall,
+    ) {
+        Column(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text("🔥", style = MaterialTheme.typography.titleSmall)
+            Text("🔥 Sequência", style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onPrimaryContainer)
             Text(
-                "$count",
+                "$count dias",
                 style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
                 fontWeight = FontWeight.Bold,
             )
         }
@@ -159,12 +188,15 @@ private fun StreakBadge(count: Int) {
 
 @Composable
 private fun XpPill(xp: Long) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+        shape = MaterialTheme.shapes.extraLarge,
+    ) {
         Text(
             "⭐ $xp XP",
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
         )
     }
 }
