@@ -386,8 +386,8 @@
 
 **Checkpoint**: `git remote -v` shows `origin  git@github.com:dwbessa/preuni.com.br.git`; `git push` succeeds; GitHub shows all commits on `001-enem-prep-platform`.
 
-- [ ] T143 Add the git remote: `git remote add origin git@github.com:dwbessa/preuni.com.br.git`; verify SSH access with `ssh -T git@github.com` (expect "Hi dwbessa!"); push the feature branch: `git push -u origin 001-enem-prep-platform`
-- [ ] T144 [P] Push `main` branch: `git push -u origin main`; if `main` does not exist locally create it pointing to the initial commit: `git branch main $(git rev-list --max-parents=0 HEAD)` then push; confirm on GitHub that both `main` and `001-enem-prep-platform` appear under branches
+- [X] T143 Add the git remote: `git remote add origin git@github.com:dwbessa/preuni.com.br.git`; verify SSH access with `ssh -T git@github.com` (expect "Hi dwbessa!"); push the feature branch: `git push -u origin 001-enem-prep-platform`
+- [X] T144 [P] Push `main` branch: `git push -u origin main`; if `main` does not exist locally create it pointing to the initial commit: `git branch main $(git rev-list --max-parents=0 HEAD)` then push; confirm on GitHub that both `main` and `001-enem-prep-platform` appear under branches
 
 ---
 
