@@ -87,12 +87,12 @@
 
 > **TDD**: Add retry test cases to the existing `HomeStoreTest.kt` before modifying `HomeStore.kt`.
 
-- [ ] T018 [US3] Add retry test cases to `commonTest/kotlin/com/preuni/shared/presentation/home/HomeStoreTest.kt` — two new `@Test` functions: (1) `load_transientFailure_retriesAndSucceeds` — fake repo fails first 2 calls then succeeds; dispatch `Load`; `advanceUntilIdle()`; assert `state.student != null` and `state.error == null`; (2) `load_persistentFailure_setsErrorAfterThreeAttempts` — fake repo always fails; dispatch `Load`; `advanceUntilIdle()`; assert `state.error != null` and `state.student == null`
+- [X] T018 [US3] Add retry test cases to `commonTest/kotlin/com/preuni/shared/presentation/home/HomeStoreTest.kt` — two new `@Test` functions: (1) `load_transientFailure_retriesAndSucceeds` — fake repo fails first 2 calls then succeeds; dispatch `Load`; `advanceUntilIdle()`; assert `state.student != null` and `state.error == null`; (2) `load_persistentFailure_setsErrorAfterThreeAttempts` — fake repo always fails; dispatch `Load`; `advanceUntilIdle()`; assert `state.error != null` and `state.student == null`
 
 ### Implementation for User Story 3
 
-- [ ] T019 [US3] Add auto-retry to `commonMain/kotlin/com/preuni/shared/presentation/home/HomeStore.kt` — in the `Executor.load()` private function, add a retry loop (max 3 attempts, `delay(1_000)` between attempts using `kotlinx.coroutines.delay`); only dispatch `Msg.ErrorReceived` after the 3rd failed attempt; all other retry-internal failures are swallowed; `Msg.Loading` is dispatched only once (before the first attempt)
-- [ ] T020 [US3] Confirm green: run `JAVA_HOME=$(/usr/libexec/java_home -v 23) ./gradlew :shared:desktopTest --tests "*HomeStoreTest*"` from `mobile/` — all tests including the two new retry tests must PASS
+- [X] T019 [US3] Add auto-retry to `commonMain/kotlin/com/preuni/shared/presentation/home/HomeStore.kt` — in the `Executor.load()` private function, add a retry loop (max 3 attempts, `delay(1_000)` between attempts using `kotlinx.coroutines.delay`); only dispatch `Msg.ErrorReceived` after the 3rd failed attempt; all other retry-internal failures are swallowed; `Msg.Loading` is dispatched only once (before the first attempt)
+- [X] T020 [US3] Confirm green: run `JAVA_HOME=$(/usr/libexec/java_home -v 23) ./gradlew :shared:desktopTest --tests "*HomeStoreTest*"` from `mobile/` — all tests including the two new retry tests must PASS
 
 **Checkpoint**: US3 complete. Newly registered users who hit a brief user-service lag no longer see an error state on Home.
 
@@ -100,9 +100,9 @@
 
 ## Phase 5: Polish & Cross-Cutting Concerns
 
-- [ ] T021 Run full `JAVA_HOME=$(/usr/libexec/java_home -v 23) ./gradlew :shared:desktopTest` from `mobile/` — entire desktopTest suite must be green (no regressions in LoginStoreTest, OnboardingStoreTest, ProfileStoreTest, etc.)
-- [ ] T022 [P] Verify `RootComponent` serialization — ensure `Config.Welcome` has `@Serializable data object` annotation and Decompose's `childStack` retains correct state across process death (check by reading `RootComponent.kt` and confirming the `Config.serializer()` call compiles)
-- [ ] T023 [P] Update `mobile/webApp/webpack.config.d/dev-proxy.js` comment if needed — confirm proxy still routes `/v1/*` to NGINX on `:8080` with no change needed (no-op verification)
+- [X] T021 Run full `JAVA_HOME=$(/usr/libexec/java_home -v 23) ./gradlew :shared:desktopTest` from `mobile/` — entire desktopTest suite must be green (no regressions in LoginStoreTest, OnboardingStoreTest, ProfileStoreTest, etc.)
+- [X] T022 [P] Verify `RootComponent` serialization — ensure `Config.Welcome` has `@Serializable data object` annotation and Decompose's `childStack` retains correct state across process death (check by reading `RootComponent.kt` and confirming the `Config.serializer()` call compiles)
+- [X] T023 [P] Update `mobile/webApp/webpack.config.d/dev-proxy.js` comment if needed — confirm proxy still routes `/v1/*` to NGINX on `:8080` with no change needed (no-op verification)
 
 ---
 

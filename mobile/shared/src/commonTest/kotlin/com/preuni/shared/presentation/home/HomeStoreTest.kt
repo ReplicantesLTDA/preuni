@@ -103,4 +103,43 @@ class HomeStoreTest {
         val state = store.stateFlow.first()
         assertEquals(fakeStudent, state.student)
     }
+
+    // ── Auto-retry ────────────────────────────────────────────────────────────
+
+    @Test
+    fun `load_transientFailure_retriesAndSucceeds`() = runTest {
+        var callCount = 0
+        val repo = fakeRepo(getMeResult = Result.failure(AppError.NetworkError()))
+        val transientRepo = object : UserRepository by repo {
+            override suspend fun getMe(): Result<Student> {
+                callCount++
+                return if (callCount < 3) Result.failure(AppError.NetworkError())
+                else Result.success(fakeStudent)
+            }
+        }
+        val store = buildStore(transientRepo)
+        store.accept(HomeStore.Intent.Load)
+        advanceUntilIdle()
+
+        assertNull(store.stateFlow.first().error)
+        assertEquals(fakeStudent, store.stateFlow.first().student)
+    }
+
+    @Test
+    fun `load_persistentFailure_setsErrorAfterThreeAttempts`() = runTest {
+        var callCount = 0
+        val repo = object : UserRepository by fakeRepo() {
+            override suspend fun getMe(): Result<Student> {
+                callCount++
+                return Result.failure(AppError.NetworkError())
+            }
+        }
+        val store = buildStore(repo)
+        store.accept(HomeStore.Intent.Load)
+        advanceUntilIdle()
+
+        assertIs<AppError>(store.stateFlow.first().error)
+        assertNull(store.stateFlow.first().student)
+        assertEquals(3, callCount)
+    }
 }
