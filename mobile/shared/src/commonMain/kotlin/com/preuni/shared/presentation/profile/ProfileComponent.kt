@@ -1,6 +1,7 @@
 package com.preuni.shared.presentation.profile
 
 import com.arkivanov.decompose.ComponentContext
+import com.arkivanov.decompose.DelicateDecomposeApi
 import com.arkivanov.decompose.router.stack.ChildStack
 import com.arkivanov.decompose.router.stack.StackNavigation
 import com.arkivanov.decompose.router.stack.childStack
@@ -31,6 +32,7 @@ class ProfileComponent(
             childFactory = ::createChild,
         )
 
+    @OptIn(DelicateDecomposeApi::class)
     private fun createChild(config: Config, context: ComponentContext): Child =
         when (config) {
             Config.Profile -> Child.Profile(

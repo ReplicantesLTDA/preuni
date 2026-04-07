@@ -10,15 +10,12 @@ import kotlinx.coroutines.launch
 interface OnboardingStore : Store<OnboardingStore.Intent, OnboardingStore.State, OnboardingStore.Label> {
 
     data class State(
-        val pageIndex: Int = 0,
         val selectedTrackIds: Set<String> = emptySet(),
         val isLoading: Boolean = false,
         val error: AppError? = null,
     )
 
     sealed interface Intent {
-        data object NextPage : Intent
-        data object PreviousPage : Intent
         data class ToggleTrack(val trackId: String) : Intent
         data object Complete : Intent
     }
@@ -44,8 +41,6 @@ class OnboardingStoreFactory(
         ) {}
 
     private sealed interface Msg {
-        data object NextPage : Msg
-        data object PreviousPage : Msg
         data class TrackToggled(val trackId: String) : Msg
         data object Loading : Msg
         data object DoneLoading : Msg
@@ -57,8 +52,6 @@ class OnboardingStoreFactory(
 
         override fun executeIntent(intent: OnboardingStore.Intent) {
             when (intent) {
-                OnboardingStore.Intent.NextPage -> dispatch(Msg.NextPage)
-                OnboardingStore.Intent.PreviousPage -> dispatch(Msg.PreviousPage)
                 is OnboardingStore.Intent.ToggleTrack -> dispatch(Msg.TrackToggled(intent.trackId))
                 OnboardingStore.Intent.Complete -> complete()
             }
@@ -83,11 +76,7 @@ class OnboardingStoreFactory(
     }
 
     private object ReducerImpl : Reducer<OnboardingStore.State, Msg> {
-        private const val TOTAL_PAGES = 4
-
         override fun OnboardingStore.State.reduce(msg: Msg): OnboardingStore.State = when (msg) {
-            Msg.NextPage -> copy(pageIndex = (pageIndex + 1).coerceAtMost(TOTAL_PAGES - 1))
-            Msg.PreviousPage -> copy(pageIndex = (pageIndex - 1).coerceAtLeast(0))
             is Msg.TrackToggled -> copy(
                 selectedTrackIds = if (msg.trackId in selectedTrackIds)
                     selectedTrackIds - msg.trackId

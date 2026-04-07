@@ -14,6 +14,7 @@ import com.preuni.shared.domain.user.UserRepository
 import com.preuni.shared.presentation.auth.AuthComponent
 import com.preuni.shared.presentation.main.MainComponent
 import com.preuni.shared.presentation.onboarding.OnboardingComponent
+import com.preuni.shared.presentation.welcome.WelcomeComponent
 import kotlinx.serialization.Serializable
 
 class RootComponent(
@@ -28,11 +29,10 @@ class RootComponent(
     private val navigation = StackNavigation<Config>()
 
     private val initialConfig: Config
-        get() {
-            val session = tokenStore.load() ?: return Config.Auth
-            // If logged in: check onboarding flag (stored after first onboarding complete)
-            // For now we route to Onboarding — MainComponent sets the flag
-            return if (onboardingCompleted()) Config.Main else Config.Onboarding
+        get() = when {
+            !tokenStore.welcomeSeen() -> Config.Welcome
+            tokenStore.load() == null -> Config.Auth
+            else -> Config.Main
         }
 
     val childStack: Value<ChildStack<*, Child>> =
@@ -46,6 +46,12 @@ class RootComponent(
 
     private fun createChild(config: Config, context: ComponentContext): Child =
         when (config) {
+            Config.Welcome -> Child.Welcome(
+                WelcomeComponent(context, storeFactory) {
+                    tokenStore.markWelcomeSeen()
+                    navigation.replaceAll(Config.Auth)
+                }
+            )
             Config.Auth -> Child.Auth(
                 AuthComponent(context, storeFactory, authRepository) {
                     navigation.replaceAll(Config.Onboarding)
@@ -56,27 +62,26 @@ class RootComponent(
                     componentContext = context,
                     storeFactory = storeFactory,
                     onCompleted = { navigation.replaceAll(Config.Main) },
+                    completeOnboarding = { trackIds -> userRepository.updateTracks(trackIds) },
                 )
             )
             Config.Main -> Child.Main(
                 MainComponent(context, storeFactory, authRepository, tokenStore, userRepository, contentRepository) {
-                    // On logout
                     navigation.replaceAll(Config.Auth)
                 }
             )
         }
 
-    private fun onboardingCompleted(): Boolean =
-        tokenStore.load() != null // Will be refined when OnboardingStore persists its flag
-
     @Serializable
     sealed interface Config {
+        @Serializable data object Welcome : Config
         @Serializable data object Auth : Config
         @Serializable data object Onboarding : Config
         @Serializable data object Main : Config
     }
 
     sealed interface Child {
+        data class Welcome(val component: WelcomeComponent) : Child
         data class Auth(val component: AuthComponent) : Child
         data class Onboarding(val component: OnboardingComponent) : Child
         data class Main(val component: MainComponent) : Child

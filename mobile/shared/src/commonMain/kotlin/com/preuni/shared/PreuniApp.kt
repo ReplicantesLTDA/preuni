@@ -25,6 +25,7 @@ import com.preuni.shared.presentation.main.MainComponent
 import com.preuni.shared.presentation.navigation.BottomNavigation
 import com.preuni.shared.presentation.navigation.BottomTab
 import com.preuni.shared.presentation.onboarding.OnboardingScreen
+import com.preuni.shared.presentation.welcome.WelcomeScreen
 import com.preuni.shared.presentation.profile.ChangeEmailScreen
 import com.preuni.shared.presentation.profile.ChangeTrackScreen
 import com.preuni.shared.presentation.profile.ConfirmNewEmailScreen
@@ -45,6 +46,10 @@ fun PreuniApp(component: RootComponent) {
 
     PreuniTheme {
         when (val child = childStack.active.instance) {
+            is RootComponent.Child.Welcome -> WelcomeScreen(
+                store = child.component.store,
+                onCompleted = child.component.onCompleted,
+            )
             is RootComponent.Child.Auth -> AuthContent(child.component)
             is RootComponent.Child.Onboarding -> OnboardingScreen(
                 store = child.component.store,
