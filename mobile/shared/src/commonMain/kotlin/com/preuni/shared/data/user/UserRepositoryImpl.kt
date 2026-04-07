@@ -8,6 +8,9 @@ class UserRepositoryImpl(private val apiClient: UserApiClient) : UserRepository 
 
     override suspend fun getMe(): Result<Student> = apiClient.getMe()
 
+    override suspend fun updateTracks(trackIds: List<String>): Result<Unit> =
+        apiClient.updateTracks(trackIds)
+
     override suspend fun updateProfile(displayName: String?, username: String?): Result<Student> =
         apiClient.updateProfile(displayName, username)
 

@@ -47,6 +47,7 @@ class HomeStoreTest {
         getMeResult: Result<Student> = Result.success(fakeStudent),
     ): UserRepository = object : UserRepository {
         override suspend fun getMe() = getMeResult
+        override suspend fun updateTracks(trackIds: List<String>): Result<Unit> = Result.success(Unit)
         override suspend fun updateProfile(displayName: String?, username: String?) = Result.success(fakeStudent)
         override suspend fun getAvatarUploadUrl() = Result.success(AvatarUploadUrl("url", "key"))
         override suspend fun confirmAvatarUpload(objectKey: String) = Result.success(fakeStudent)

@@ -87,7 +87,7 @@ migrate:
 
 ## run-web
 ##   Start the Kotlin/Wasm web app in the browser (requires JDK 17+ and Node.js 20+).
-##   The app opens at http://localhost:8080.
+##   The app opens at http://localhost:3000 and proxies /v1/* to the NGINX gateway on :8080.
 run-web:
 	@JAVA_HOME_CANDIDATE=$$(/usr/libexec/java_home -v 23 2>/dev/null || /usr/libexec/java_home -v 21 2>/dev/null || /usr/libexec/java_home -v 17 2>/dev/null || true); \
 	if [ -z "$$JAVA_HOME_CANDIDATE" ]; then \
@@ -96,9 +96,15 @@ run-web:
 	cd mobile && JAVA_HOME="$$JAVA_HOME_CANDIDATE" PATH="$$JAVA_HOME_CANDIDATE/bin:$$PATH" ./gradlew :webApp:wasmJsBrowserDevelopmentRun
 
 ## stop-web
-##   Kill the webpack-dev-server started by run-web.
+##   Kill the webpack dev server and Gradle daemon started by run-web.
 stop-web:
-	@pkill -f "webpack-dev-server" 2>/dev/null && echo "Web server stopped." || echo "No web server running."
+	@PIDS=$$(lsof -ti TCP:3000 2>/dev/null); \
+	if [ -n "$$PIDS" ]; then \
+		echo "$$PIDS" | xargs kill -9 2>/dev/null; \
+		echo "Web server stopped."; \
+	else \
+		echo "No web server running."; \
+	fi
 
 ## run-android
 ##   Install and launch the debug APK on a connected device or running emulator.

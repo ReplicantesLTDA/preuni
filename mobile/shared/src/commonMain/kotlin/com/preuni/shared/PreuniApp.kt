@@ -26,6 +26,7 @@ import com.preuni.shared.presentation.navigation.BottomNavigation
 import com.preuni.shared.presentation.navigation.BottomTab
 import com.preuni.shared.presentation.onboarding.OnboardingScreen
 import com.preuni.shared.presentation.profile.ChangeEmailScreen
+import com.preuni.shared.presentation.profile.ChangeTrackScreen
 import com.preuni.shared.presentation.profile.ConfirmNewEmailScreen
 import com.preuni.shared.presentation.profile.DeleteAccountScreen
 import com.preuni.shared.presentation.profile.EditPasswordScreen
@@ -135,7 +136,13 @@ private fun ProfileContent(component: ProfileComponent) {
             onEditUsername = component::navigateToEditUsername,
             onEditPassword = component::navigateToEditPassword,
             onChangeEmail = component::navigateToChangeEmail,
+            onChangeTrack = { component.navigateToChangeTrack(emptySet()) },
             onDeleteAccount = component::navigateToDeleteAccount,
+        )
+        is ProfileComponent.Child.ChangeTrack -> ChangeTrackScreen(
+            store = child.store,
+            contentRepository = child.contentRepository,
+            onBack = component::navigateBack,
         )
         ProfileComponent.Child.EditUsername -> EditUsernameScreen(
             currentUsername = "",

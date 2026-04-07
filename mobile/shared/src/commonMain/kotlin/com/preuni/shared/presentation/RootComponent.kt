@@ -9,6 +9,7 @@ import com.arkivanov.decompose.value.Value
 import com.arkivanov.mvikotlin.core.store.StoreFactory
 import com.preuni.shared.data.auth.TokenStore
 import com.preuni.shared.domain.auth.AuthRepository
+import com.preuni.shared.domain.content.ContentRepository
 import com.preuni.shared.domain.user.UserRepository
 import com.preuni.shared.presentation.auth.AuthComponent
 import com.preuni.shared.presentation.main.MainComponent
@@ -21,6 +22,7 @@ class RootComponent(
     private val tokenStore: TokenStore,
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
+    private val contentRepository: ContentRepository,
 ) : ComponentContext by componentContext {
 
     private val navigation = StackNavigation<Config>()
@@ -57,7 +59,7 @@ class RootComponent(
                 )
             )
             Config.Main -> Child.Main(
-                MainComponent(context, storeFactory, authRepository, tokenStore, userRepository) {
+                MainComponent(context, storeFactory, authRepository, tokenStore, userRepository, contentRepository) {
                     // On logout
                     navigation.replaceAll(Config.Auth)
                 }
