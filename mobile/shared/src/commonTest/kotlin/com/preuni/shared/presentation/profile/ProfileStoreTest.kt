@@ -6,18 +6,30 @@ import com.preuni.shared.domain.error.AppError
 import com.preuni.shared.domain.user.AvatarUploadUrl
 import com.preuni.shared.domain.user.Student
 import com.preuni.shared.domain.user.UserRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProfileStoreTest {
+
+    @BeforeTest
+    fun setUp() { Dispatchers.setMain(UnconfinedTestDispatcher()) }
+
+    @AfterTest
+    fun tearDown() { Dispatchers.resetMain() }
 
     private val fakeStudent = Student(
         id = "uid-1",
@@ -52,7 +64,8 @@ class ProfileStoreTest {
     fun `LoadProfile intent emits student data on success`() = runTest {
         val store = buildStore(fakeRepo())
         store.accept(ProfileStore.Intent.LoadProfile)
-        val state = store.stateFlow.first { it.student != null }
+        advanceUntilIdle()
+        val state = store.stateFlow.first()
         assertEquals(fakeStudent, state.student)
         assertFalse(state.isLoading)
     }
@@ -61,7 +74,8 @@ class ProfileStoreTest {
     fun `LoadProfile intent emits error on network failure`() = runTest {
         val store = buildStore(fakeRepo(getMeResult = Result.failure(AppError.NetworkError())))
         store.accept(ProfileStore.Intent.LoadProfile)
-        val state = store.stateFlow.first { it.error != null }
+        advanceUntilIdle()
+        val state = store.stateFlow.first()
         assertIs<AppError.NetworkError>(state.error)
     }
 
@@ -78,7 +92,8 @@ class ProfileStoreTest {
         }
         val store = buildStore(repo)
         store.accept(ProfileStore.Intent.UpdateUsername("UPPERCASE")) // invalid
-        val state = store.stateFlow.first { it.error != null }
+        advanceUntilIdle()
+        val state = store.stateFlow.first()
         assertFalse(repoCalled)
         assertIs<AppError.Validation>(state.error)
     }
@@ -89,7 +104,7 @@ class ProfileStoreTest {
     fun `DeleteAccount intent shows confirmation state`() = runTest {
         val store = buildStore(fakeRepo())
         store.accept(ProfileStore.Intent.DeleteAccount)
-        val state = store.stateFlow.first { it.showDeleteConfirmation }
+        val state = store.stateFlow.first()
         assertTrue(state.showDeleteConfirmation)
     }
 
@@ -97,9 +112,8 @@ class ProfileStoreTest {
     fun `DismissDeleteConfirmation hides confirmation state`() = runTest {
         val store = buildStore(fakeRepo())
         store.accept(ProfileStore.Intent.DeleteAccount)
-        store.stateFlow.first { it.showDeleteConfirmation }
         store.accept(ProfileStore.Intent.DismissDeleteConfirmation)
-        val state = store.stateFlow.first { !it.showDeleteConfirmation }
+        val state = store.stateFlow.first()
         assertFalse(state.showDeleteConfirmation)
     }
 }
