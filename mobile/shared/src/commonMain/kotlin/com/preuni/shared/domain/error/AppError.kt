@@ -12,6 +12,9 @@ sealed class AppError(message: String) : Exception(message) {
     /** The access token is missing, invalid, or expired. The app should redirect to login. */
     data class Unauthorized(override val message: String = "Session expired. Please sign in again.") : AppError(message)
 
+    /** The request was understood but refused (e.g., email not yet verified). */
+    data class Forbidden(override val message: String = "Access denied.") : AppError(message)
+
     /** A conflict with existing state (e.g., email already registered). */
     data class Conflict(override val message: String) : AppError(message)
 

@@ -6,9 +6,17 @@ import com.arkivanov.mvikotlin.main.store.DefaultStoreFactory
 import com.preuni.shared.domain.auth.AuthRepository
 import com.preuni.shared.domain.auth.AuthSession
 import com.preuni.shared.domain.error.AppError
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -18,11 +26,20 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalCoroutinesApi::class)
 class LoginStoreTest {
 
+    @BeforeTest
+    fun setUp() { Dispatchers.setMain(UnconfinedTestDispatcher()) }
+
+    @AfterTest
+    fun tearDown() { Dispatchers.resetMain() }
+
     private fun fakeRepo(
         result: Result<AuthSession> = Result.success(
             AuthSession("user-1", "user@example.com", "access-tok", "refresh-tok")
         ),
     ): AuthRepository = object : AuthRepository {
+        override suspend fun register(email: String, password: String, displayName: String): Result<AuthSession> =
+            Result.failure(AppError.Unknown())
+        override suspend fun verifyEmail(email: String, otp: String): Result<Unit> = Result.success(Unit)
         override suspend fun login(emailOrUsername: String, password: String) = result
         override suspend fun logout() {}
         override fun isLoggedIn() = false
@@ -67,10 +84,13 @@ class LoginStoreTest {
         store.accept(LoginStore.Intent.UpdateEmailOrUsername("student@example.com"))
         store.accept(LoginStore.Intent.UpdatePassword("Abc123"))
 
-        val label = store.labels.first { true }
+        var receivedLabel: LoginStore.Label? = null
+        val job = launch(Dispatchers.Main) { store.labels.collect { receivedLabel = it } }
         store.accept(LoginStore.Intent.Submit)
+        advanceUntilIdle()
+        job.cancel()
 
-        assertIs<LoginStore.Label.LoggedIn>(label.also {})
+        assertIs<LoginStore.Label.LoggedIn>(receivedLabel)
     }
 
     @Test
@@ -79,6 +99,7 @@ class LoginStoreTest {
         store.accept(LoginStore.Intent.UpdateEmailOrUsername("student@example.com"))
         store.accept(LoginStore.Intent.UpdatePassword("Abc123"))
         store.accept(LoginStore.Intent.Submit)
+        advanceUntilIdle()
 
         // After success isLoading must be false
         val state = store.stateFlow.first()
@@ -95,6 +116,7 @@ class LoginStoreTest {
         store.accept(LoginStore.Intent.UpdateEmailOrUsername("student@example.com"))
         store.accept(LoginStore.Intent.UpdatePassword("Abc123"))
         store.accept(LoginStore.Intent.Submit)
+        advanceUntilIdle()
 
         val state = store.stateFlow.first()
         assertFalse(state.isLoading)
@@ -107,6 +129,9 @@ class LoginStoreTest {
     fun `Submit with empty email sets validation error without calling repo`() = runTest {
         var repoCalled = false
         val repo = object : AuthRepository {
+            override suspend fun register(email: String, password: String, displayName: String): Result<AuthSession> =
+                Result.failure(AppError.Unknown())
+            override suspend fun verifyEmail(email: String, otp: String): Result<Unit> = Result.success(Unit)
             override suspend fun login(emailOrUsername: String, password: String): Result<AuthSession> {
                 repoCalled = true
                 return Result.failure(AppError.Unknown())
