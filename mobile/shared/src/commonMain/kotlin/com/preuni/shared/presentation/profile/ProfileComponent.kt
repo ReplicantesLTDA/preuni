@@ -1,6 +1,7 @@
 package com.preuni.shared.presentation.profile
 
 import com.arkivanov.decompose.ComponentContext
+import com.arkivanov.decompose.DelicateDecomposeApi
 import com.arkivanov.decompose.router.stack.ChildStack
 import com.arkivanov.decompose.router.stack.StackNavigation
 import com.arkivanov.decompose.router.stack.childStack
@@ -8,6 +9,7 @@ import com.arkivanov.decompose.router.stack.pop
 import com.arkivanov.decompose.router.stack.push
 import com.arkivanov.decompose.value.Value
 import com.arkivanov.mvikotlin.core.store.StoreFactory
+import com.preuni.shared.domain.content.ContentRepository
 import com.preuni.shared.domain.user.UserRepository
 import kotlinx.serialization.Serializable
 
@@ -15,6 +17,7 @@ class ProfileComponent(
     componentContext: ComponentContext,
     private val storeFactory: StoreFactory,
     private val userRepository: UserRepository,
+    private val contentRepository: ContentRepository,
     private val onLogout: () -> Unit,
 ) : ComponentContext by componentContext {
 
@@ -29,6 +32,7 @@ class ProfileComponent(
             childFactory = ::createChild,
         )
 
+    @OptIn(DelicateDecomposeApi::class)
     private fun createChild(config: Config, context: ComponentContext): Child =
         when (config) {
             Config.Profile -> Child.Profile(
@@ -39,6 +43,14 @@ class ProfileComponent(
             Config.ChangeEmail -> Child.ChangeEmail
             Config.ConfirmNewEmail -> Child.ConfirmNewEmail
             Config.DeleteAccount -> Child.DeleteAccount
+            is Config.ChangeTrack -> Child.ChangeTrack(
+                store = ChangeTrackStoreFactory(storeFactory) { ids ->
+                    userRepository.updateTracks(ids)
+                }.create().also { store ->
+                    store.accept(ChangeTrackStore.Intent.Load(config.initialIds))
+                },
+                contentRepository = contentRepository,
+            )
         }
 
     fun navigateToEditUsername() = navigation.push(Config.EditUsername)
@@ -46,6 +58,7 @@ class ProfileComponent(
     fun navigateToChangeEmail() = navigation.push(Config.ChangeEmail)
     fun navigateToConfirmNewEmail() = navigation.push(Config.ConfirmNewEmail)
     fun navigateToDeleteAccount() = navigation.push(Config.DeleteAccount)
+    fun navigateToChangeTrack(initialIds: Set<String>) = navigation.push(Config.ChangeTrack(initialIds))
     fun navigateBack() = navigation.pop()
 
     @Serializable
@@ -56,6 +69,7 @@ class ProfileComponent(
         @Serializable data object ChangeEmail : Config
         @Serializable data object ConfirmNewEmail : Config
         @Serializable data object DeleteAccount : Config
+        @Serializable data class ChangeTrack(val initialIds: Set<String>) : Config
     }
 
     sealed interface Child {
@@ -65,5 +79,6 @@ class ProfileComponent(
         data object ChangeEmail : Child
         data object ConfirmNewEmail : Child
         data object DeleteAccount : Child
+        data class ChangeTrack(val store: ChangeTrackStore, val contentRepository: ContentRepository) : Child
     }
 }

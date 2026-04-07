@@ -53,6 +53,13 @@ class UserApiClient(private val httpClient: HttpClient) {
         resp.body<StudentDto>().toDomain()
     }
 
+    suspend fun updateTracks(trackIds: List<String>): Result<Unit> = runCatching {
+        val resp = httpClient.patch("v1/students/me/onboarding") {
+            setBody(mapOf("enrolled_track_ids" to trackIds))
+        }
+        if (!resp.status.isSuccess()) throw resp.toAppError()
+    }
+
     suspend fun updateProfile(displayName: String?, username: String?): Result<Student> = runCatching {
         val resp = httpClient.patch("v1/students/me") {
             setBody(UpdateProfileRequest(displayName, username))

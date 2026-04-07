@@ -11,6 +11,7 @@ import com.preuni.shared.data.auth.AuthRepositoryImpl
 import com.preuni.shared.data.auth.SecureStorage
 import com.preuni.shared.data.auth.TokenStore
 import com.preuni.shared.data.auth.AuthApiClient
+import com.preuni.shared.data.content.ContentRepositoryImpl
 import com.preuni.shared.data.network.buildHttpClient
 import com.preuni.shared.data.user.UserApiClient
 import com.preuni.shared.data.user.UserRepositoryImpl
@@ -31,6 +32,7 @@ class MainActivity : ComponentActivity() {
 
         val userApiClient = UserApiClient(httpClient)
         val userRepository = UserRepositoryImpl(userApiClient)
+        val contentRepository = ContentRepositoryImpl(httpClient)
 
         val storeFactory = DefaultStoreFactory()
         val root = RootComponent(
@@ -39,6 +41,7 @@ class MainActivity : ComponentActivity() {
             tokenStore = tokenStore,
             authRepository = authRepository,
             userRepository = userRepository,
+            contentRepository = contentRepository,
         )
 
         setContent {

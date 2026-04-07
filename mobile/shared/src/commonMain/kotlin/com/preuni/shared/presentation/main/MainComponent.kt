@@ -4,6 +4,7 @@ import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.mvikotlin.core.store.StoreFactory
 import com.preuni.shared.data.auth.TokenStore
 import com.preuni.shared.domain.auth.AuthRepository
+import com.preuni.shared.domain.content.ContentRepository
 import com.preuni.shared.domain.user.UserRepository
 import com.preuni.shared.presentation.home.HomeStoreFactory
 import com.preuni.shared.presentation.navigation.BottomTab
@@ -17,6 +18,7 @@ class MainComponent(
     private val authRepository: AuthRepository,
     private val tokenStore: TokenStore,
     private val userRepository: UserRepository,
+    private val contentRepository: ContentRepository,
     private val onLogout: () -> Unit,
 ) : ComponentContext by componentContext {
 
@@ -29,6 +31,7 @@ class MainComponent(
         componentContext = componentContext,
         storeFactory = storeFactory,
         userRepository = userRepository,
+        contentRepository = contentRepository,
         onLogout = onLogout,
     )
 

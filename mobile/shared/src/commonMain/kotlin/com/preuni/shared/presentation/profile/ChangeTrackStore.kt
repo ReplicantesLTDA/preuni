@@ -1,4 +1,4 @@
-package com.preuni.shared.presentation.onboarding
+package com.preuni.shared.presentation.profile
 
 import com.arkivanov.mvikotlin.core.store.Reducer
 import com.arkivanov.mvikotlin.core.store.Store
@@ -7,7 +7,7 @@ import com.arkivanov.mvikotlin.extensions.coroutines.CoroutineExecutor
 import com.preuni.shared.domain.error.AppError
 import kotlinx.coroutines.launch
 
-interface OnboardingStore : Store<OnboardingStore.Intent, OnboardingStore.State, OnboardingStore.Label> {
+interface ChangeTrackStore : Store<ChangeTrackStore.Intent, ChangeTrackStore.State, ChangeTrackStore.Label> {
 
     data class State(
         val selectedTrackIds: Set<String> = emptySet(),
@@ -16,31 +16,32 @@ interface OnboardingStore : Store<OnboardingStore.Intent, OnboardingStore.State,
     )
 
     sealed interface Intent {
+        data class Load(val initialIds: Set<String>) : Intent
         data class ToggleTrack(val trackId: String) : Intent
-        data object Complete : Intent
+        data object Save : Intent
     }
 
     sealed interface Label {
-        data object Completed : Label
+        data object Saved : Label
         data class ValidationError(val message: String) : Label
     }
 }
 
-class OnboardingStoreFactory(
+class ChangeTrackStoreFactory(
     private val storeFactory: StoreFactory,
-    private val completeOnboarding: suspend (trackIds: List<String>) -> Result<Unit>,
+    private val updateTracks: suspend (List<String>) -> Result<Unit>,
 ) {
-
-    fun create(): OnboardingStore =
-        object : OnboardingStore, Store<OnboardingStore.Intent, OnboardingStore.State, OnboardingStore.Label>
+    fun create(): ChangeTrackStore =
+        object : ChangeTrackStore, Store<ChangeTrackStore.Intent, ChangeTrackStore.State, ChangeTrackStore.Label>
         by storeFactory.create(
-            name = "OnboardingStore",
-            initialState = OnboardingStore.State(),
+            name = "ChangeTrackStore",
+            initialState = ChangeTrackStore.State(),
             executorFactory = { Executor() },
             reducer = ReducerImpl,
         ) {}
 
     private sealed interface Msg {
+        data class TracksLoaded(val ids: Set<String>) : Msg
         data class TrackToggled(val trackId: String) : Msg
         data object Loading : Msg
         data object DoneLoading : Msg
@@ -48,26 +49,26 @@ class OnboardingStoreFactory(
     }
 
     private inner class Executor :
-        CoroutineExecutor<OnboardingStore.Intent, Nothing, OnboardingStore.State, Msg, OnboardingStore.Label>() {
+        CoroutineExecutor<ChangeTrackStore.Intent, Nothing, ChangeTrackStore.State, Msg, ChangeTrackStore.Label>() {
 
-        override fun executeIntent(intent: OnboardingStore.Intent) {
+        override fun executeIntent(intent: ChangeTrackStore.Intent) {
             when (intent) {
-                is OnboardingStore.Intent.ToggleTrack -> dispatch(Msg.TrackToggled(intent.trackId))
-                OnboardingStore.Intent.Complete -> complete()
+                is ChangeTrackStore.Intent.Load -> dispatch(Msg.TracksLoaded(intent.initialIds))
+                is ChangeTrackStore.Intent.ToggleTrack -> dispatch(Msg.TrackToggled(intent.trackId))
+                ChangeTrackStore.Intent.Save -> save()
             }
         }
 
-        private fun complete() {
-            val s = state()
-            // Page 3 is track selection — require at least 1 track
-            if (s.selectedTrackIds.isEmpty()) {
-                publish(OnboardingStore.Label.ValidationError("Select at least one subject track to continue"))
+        private fun save() {
+            val ids = state().selectedTrackIds
+            if (ids.isEmpty()) {
+                publish(ChangeTrackStore.Label.ValidationError("Selecione ao menos uma matéria."))
                 return
             }
             dispatch(Msg.Loading)
             scope.launch {
-                completeOnboarding(s.selectedTrackIds.toList()).fold(
-                    onSuccess = { publish(OnboardingStore.Label.Completed) },
+                updateTracks(ids.toList()).fold(
+                    onSuccess = { publish(ChangeTrackStore.Label.Saved) },
                     onFailure = { dispatch(Msg.ErrorReceived(it as? AppError ?: AppError.Unknown())) },
                 )
                 dispatch(Msg.DoneLoading)
@@ -75,8 +76,9 @@ class OnboardingStoreFactory(
         }
     }
 
-    private object ReducerImpl : Reducer<OnboardingStore.State, Msg> {
-        override fun OnboardingStore.State.reduce(msg: Msg): OnboardingStore.State = when (msg) {
+    private object ReducerImpl : Reducer<ChangeTrackStore.State, Msg> {
+        override fun ChangeTrackStore.State.reduce(msg: Msg): ChangeTrackStore.State = when (msg) {
+            is Msg.TracksLoaded -> copy(selectedTrackIds = msg.ids)
             is Msg.TrackToggled -> copy(
                 selectedTrackIds = if (msg.trackId in selectedTrackIds)
                     selectedTrackIds - msg.trackId

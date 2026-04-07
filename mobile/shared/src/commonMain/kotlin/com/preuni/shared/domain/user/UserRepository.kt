@@ -2,6 +2,7 @@ package com.preuni.shared.domain.user
 
 interface UserRepository {
     suspend fun getMe(): Result<Student>
+    suspend fun updateTracks(trackIds: List<String>): Result<Unit>
     suspend fun updateProfile(displayName: String? = null, username: String? = null): Result<Student>
     suspend fun getAvatarUploadUrl(): Result<AvatarUploadUrl>
     suspend fun confirmAvatarUpload(objectKey: String): Result<Student>

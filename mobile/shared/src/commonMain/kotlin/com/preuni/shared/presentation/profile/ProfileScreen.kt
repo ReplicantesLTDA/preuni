@@ -34,6 +34,7 @@ fun ProfileScreen(
     onEditUsername: () -> Unit,
     onEditPassword: () -> Unit,
     onChangeEmail: () -> Unit,
+    onChangeTrack: () -> Unit,
     onDeleteAccount: () -> Unit,
 ) {
     val state by store.stateFlow.collectAsState(ProfileStore.State())
@@ -90,6 +91,10 @@ fun ProfileScreen(
         Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = onChangeEmail, modifier = Modifier.fillMaxWidth()) {
             Text("Change email")
+        }
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(onClick = onChangeTrack, modifier = Modifier.fillMaxWidth()) {
+            Text("Alterar matérias")
         }
 
         Spacer(Modifier.height(32.dp))

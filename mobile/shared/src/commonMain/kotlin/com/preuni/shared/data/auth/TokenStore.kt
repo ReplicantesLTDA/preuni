@@ -3,6 +3,7 @@ package com.preuni.shared.data.auth
 import com.preuni.shared.domain.auth.AuthSession
 
 private const val KEY_USER_ID = "user_id"
+private const val KEY_WELCOME_SEEN = "welcome_seen"
 private const val KEY_USER_EMAIL = "user_email"
 private const val KEY_ACCESS_TOKEN = "access_token"
 private const val KEY_REFRESH_TOKEN = "refresh_token"
@@ -27,6 +28,9 @@ class TokenStore(private val storage: SecureStorage) {
     fun clear() = storage.clear()
 
     fun isLoggedIn(): Boolean = storage.get(KEY_ACCESS_TOKEN) != null
+
+    fun welcomeSeen(): Boolean = storage.get(KEY_WELCOME_SEEN) != null
+    fun markWelcomeSeen() = storage.put(KEY_WELCOME_SEEN, "true")
 
     fun accessToken(): String? = storage.get(KEY_ACCESS_TOKEN)
 
