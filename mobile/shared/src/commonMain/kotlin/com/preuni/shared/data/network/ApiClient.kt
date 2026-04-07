@@ -54,6 +54,7 @@ suspend fun HttpResponse.toAppError(): AppError {
 
     return when (status) {
         HttpStatusCode.Unauthorized -> AppError.Unauthorized()
+        HttpStatusCode.Forbidden -> AppError.Forbidden(body?.message ?: "Access denied.")
         HttpStatusCode.Conflict -> AppError.Conflict(body?.message ?: "Conflict")
         HttpStatusCode.UnprocessableEntity ->
             AppError.Validation(
