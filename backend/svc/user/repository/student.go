@@ -61,7 +61,7 @@ func (r *StudentRepository) Create(ctx context.Context, s *Student) error {
 func (r *StudentRepository) FindByID(ctx context.Context, id string) (*Student, error) {
 	row := r.db.QueryRow(ctx, `
 		SELECT id, display_name, username, email, avatar_url,
-		       xp_total, streak_count, readiness_score, onboarding_completed,
+		       xp_total, streak_count, COALESCE(readiness_score, 0), onboarding_completed,
 		       created_at, updated_at
 		FROM users.students
 		WHERE id = $1
