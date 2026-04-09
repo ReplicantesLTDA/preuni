@@ -7,7 +7,6 @@ Thumbs.db
 .vscode/
 .idea/
 *.log
-CLAUDE.md
 
 # ─── Environment ─────────────────────────────────────────────────────────────
 .env
@@ -29,6 +28,7 @@ mobile/androidApp/build/
 mobile/shared/build/
 mobile/webApp/build/
 mobile/iosApp/build/
+mobile/iosApp/.build/
 mobile/iosApp/Pods/
 mobile/iosApp/DerivedData/
 mobile/iosApp/*.xcworkspace/xcuserdata/

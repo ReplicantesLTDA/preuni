@@ -6,8 +6,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -31,6 +36,7 @@ fun ConfirmNewEmailScreen(
     newEmail: String,
     onSubmit: (otp: String) -> Unit,
     onResend: () -> Unit,
+    onBack: () -> Unit,
     isLoading: Boolean = false,
     error: String? = null,
 ) {
@@ -47,9 +53,13 @@ fun ConfirmNewEmailScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .padding(horizontal = 24.dp, vertical = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        IconButton(onClick = onBack, modifier = Modifier.align(Alignment.Start)) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+        }
         Text("Verify new email", style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(12.dp))
         Text(

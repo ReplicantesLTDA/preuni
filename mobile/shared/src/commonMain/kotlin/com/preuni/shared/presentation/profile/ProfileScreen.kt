@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -34,7 +35,9 @@ fun ProfileScreen(
     onEditUsername: () -> Unit,
     onEditPassword: () -> Unit,
     onChangeEmail: () -> Unit,
+    onChangeTrack: () -> Unit,
     onDeleteAccount: () -> Unit,
+    onLogout: () -> Unit,
 ) {
     val state by store.stateFlow.collectAsState(ProfileStore.State())
     val student = state.student
@@ -46,6 +49,7 @@ fun ProfileScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -91,10 +95,20 @@ fun ProfileScreen(
         OutlinedButton(onClick = onChangeEmail, modifier = Modifier.fillMaxWidth()) {
             Text("Change email")
         }
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(onClick = onChangeTrack, modifier = Modifier.fillMaxWidth()) {
+            Text("Alterar matérias")
+        }
 
         Spacer(Modifier.height(32.dp))
         HorizontalDivider()
         Spacer(Modifier.height(16.dp))
+
+        OutlinedButton(onClick = onLogout, modifier = Modifier.fillMaxWidth()) {
+            Text("Sair")
+        }
+
+        Spacer(Modifier.height(8.dp))
 
         Button(
             onClick = onDeleteAccount,

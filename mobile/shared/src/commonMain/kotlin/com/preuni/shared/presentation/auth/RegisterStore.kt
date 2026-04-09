@@ -8,6 +8,7 @@ import com.preuni.shared.domain.auth.AuthRepository
 import com.preuni.shared.domain.auth.AuthValidator
 import com.preuni.shared.domain.auth.ValidationResult
 import com.preuni.shared.domain.error.AppError
+import com.preuni.shared.domain.error.AppError.Unknown
 import kotlinx.coroutines.launch
 
 interface RegisterStore : Store<RegisterStore.Intent, RegisterStore.State, RegisterStore.Label> {
@@ -100,9 +101,11 @@ class RegisterStoreFactory(
 
             dispatch(Msg.Loading)
             scope.launch {
-                // Registration API call will be wired once AuthApiClient.register() is added
-                dispatch(Msg.DoneLoading)
-                publish(RegisterStore.Label.Registered)
+                repo.register(s.email, s.password, s.displayName)
+                    .onSuccess { publish(RegisterStore.Label.Registered) }
+                    .onFailure { e ->
+                        dispatch(Msg.GlobalError(e as? AppError ?: Unknown(e.message ?: "Registration failed")))
+                    }
             }
         }
     }

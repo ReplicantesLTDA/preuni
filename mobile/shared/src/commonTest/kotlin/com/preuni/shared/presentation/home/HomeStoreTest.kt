@@ -6,9 +6,16 @@ import com.preuni.shared.domain.error.AppError
 import com.preuni.shared.domain.user.AvatarUploadUrl
 import com.preuni.shared.domain.user.Student
 import com.preuni.shared.domain.user.UserRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -17,6 +24,12 @@ import kotlin.test.assertNull
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeStoreTest {
+
+    @BeforeTest
+    fun setUp() { Dispatchers.setMain(UnconfinedTestDispatcher()) }
+
+    @AfterTest
+    fun tearDown() { Dispatchers.resetMain() }
 
     private val fakeStudent = Student(
         id = "uid-1",
@@ -34,6 +47,7 @@ class HomeStoreTest {
         getMeResult: Result<Student> = Result.success(fakeStudent),
     ): UserRepository = object : UserRepository {
         override suspend fun getMe() = getMeResult
+        override suspend fun updateTracks(trackIds: List<String>): Result<Unit> = Result.success(Unit)
         override suspend fun updateProfile(displayName: String?, username: String?) = Result.success(fakeStudent)
         override suspend fun getAvatarUploadUrl() = Result.success(AvatarUploadUrl("url", "key"))
         override suspend fun confirmAvatarUpload(objectKey: String) = Result.success(fakeStudent)
@@ -49,7 +63,8 @@ class HomeStoreTest {
     fun `Load intent emits student data on success`() = runTest {
         val store = buildStore(fakeRepo())
         store.accept(HomeStore.Intent.Load)
-        val state = store.stateFlow.first { it.student != null }
+        advanceUntilIdle()
+        val state = store.stateFlow.first()
         assertEquals(fakeStudent, state.student)
         assertFalse(state.isLoading)
         assertNull(state.error)
@@ -61,7 +76,8 @@ class HomeStoreTest {
     fun `Load intent emits error state on network failure`() = runTest {
         val store = buildStore(fakeRepo(getMeResult = Result.failure(AppError.NetworkError())))
         store.accept(HomeStore.Intent.Load)
-        val state = store.stateFlow.first { it.error != null }
+        advanceUntilIdle()
+        val state = store.stateFlow.first()
         assertIs<AppError.NetworkError>(state.error)
         assertFalse(state.isLoading)
     }
@@ -80,10 +96,50 @@ class HomeStoreTest {
         }
         val store = buildStore(repo)
         store.accept(HomeStore.Intent.Load)
-        store.stateFlow.first { it.error != null }
+        advanceUntilIdle()
 
         store.accept(HomeStore.Intent.Retry)
-        val state = store.stateFlow.first { it.student != null }
+        advanceUntilIdle()
+        val state = store.stateFlow.first()
         assertEquals(fakeStudent, state.student)
+    }
+
+    // ── Auto-retry ────────────────────────────────────────────────────────────
+
+    @Test
+    fun `load_transientFailure_retriesAndSucceeds`() = runTest {
+        var callCount = 0
+        val repo = fakeRepo(getMeResult = Result.failure(AppError.NetworkError()))
+        val transientRepo = object : UserRepository by repo {
+            override suspend fun getMe(): Result<Student> {
+                callCount++
+                return if (callCount < 3) Result.failure(AppError.NetworkError())
+                else Result.success(fakeStudent)
+            }
+        }
+        val store = buildStore(transientRepo)
+        store.accept(HomeStore.Intent.Load)
+        advanceUntilIdle()
+
+        assertNull(store.stateFlow.first().error)
+        assertEquals(fakeStudent, store.stateFlow.first().student)
+    }
+
+    @Test
+    fun `load_persistentFailure_setsErrorAfterThreeAttempts`() = runTest {
+        var callCount = 0
+        val repo = object : UserRepository by fakeRepo() {
+            override suspend fun getMe(): Result<Student> {
+                callCount++
+                return Result.failure(AppError.NetworkError())
+            }
+        }
+        val store = buildStore(repo)
+        store.accept(HomeStore.Intent.Load)
+        advanceUntilIdle()
+
+        assertIs<AppError>(store.stateFlow.first().error)
+        assertNull(store.stateFlow.first().student)
+        assertEquals(3, callCount)
     }
 }

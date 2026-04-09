@@ -3,110 +3,109 @@ package com.preuni.shared.presentation.onboarding
 import com.arkivanov.mvikotlin.extensions.coroutines.labels
 import com.arkivanov.mvikotlin.extensions.coroutines.stateFlow
 import com.arkivanov.mvikotlin.main.store.DefaultStoreFactory
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertIs
-import kotlin.test.assertTrue
+import kotlin.test.assertNull
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class OnboardingStoreTest {
 
+    @BeforeTest
+    fun setUp() { Dispatchers.setMain(UnconfinedTestDispatcher()) }
+
+    @AfterTest
+    fun tearDown() { Dispatchers.resetMain() }
+
     private fun buildStore(
-        completeResult: Result<Unit> = Result.success(Unit),
-    ): OnboardingStore {
-        return OnboardingStoreFactory(
+        setActiveTrackId: (String) -> Unit = {},
+        completeOnboarding: suspend (List<String>) -> Result<Unit> = { Result.success(Unit) },
+    ): OnboardingStore =
+        OnboardingStoreFactory(
             storeFactory = DefaultStoreFactory(),
-            completeOnboarding = { _ -> completeResult },
+            setActiveTrackId = setActiveTrackId,
+            completeOnboarding = completeOnboarding,
         ).create()
-    }
-
-    // ── Page navigation ───────────────────────────────────────────────────────
-
-    @Test
-    fun `NextPage intent advances page index`() = runTest {
-        val store = buildStore()
-        assertEquals(0, store.stateFlow.first().pageIndex)
-        store.accept(OnboardingStore.Intent.NextPage)
-        assertEquals(1, store.stateFlow.first { it.pageIndex > 0 }.pageIndex)
-    }
-
-    @Test
-    fun `PreviousPage intent decrements page index`() = runTest {
-        val store = buildStore()
-        store.accept(OnboardingStore.Intent.NextPage)
-        store.stateFlow.first { it.pageIndex == 1 }
-        store.accept(OnboardingStore.Intent.PreviousPage)
-        assertEquals(0, store.stateFlow.first { it.pageIndex == 0 }.pageIndex)
-    }
-
-    @Test
-    fun `PreviousPage does not go below 0`() = runTest {
-        val store = buildStore()
-        store.accept(OnboardingStore.Intent.PreviousPage)
-        assertEquals(0, store.stateFlow.first().pageIndex)
-    }
-
-    @Test
-    fun `NextPage does not exceed 3`() = runTest {
-        val store = buildStore()
-        repeat(10) { store.accept(OnboardingStore.Intent.NextPage) }
-        assertEquals(3, store.stateFlow.first { it.pageIndex == 3 }.pageIndex)
-    }
 
     // ── Track selection ───────────────────────────────────────────────────────
 
     @Test
-    fun `ToggleTrack adds track to selectedTrackIds`() = runTest {
+    fun `SelectTrack sets selectedTrackId`() = runTest {
         val store = buildStore()
-        store.accept(OnboardingStore.Intent.ToggleTrack("track-math"))
-        assertTrue("track-math" in store.stateFlow.first { it.selectedTrackIds.isNotEmpty() }.selectedTrackIds)
+        store.accept(OnboardingStore.Intent.SelectTrack("track-math"))
+        assertEquals("track-math", store.stateFlow.first().selectedTrackId)
     }
 
     @Test
-    fun `ToggleTrack toggles track off when already selected`() = runTest {
+    fun `SelectTrack replaces previous selection`() = runTest {
         val store = buildStore()
-        store.accept(OnboardingStore.Intent.ToggleTrack("track-math"))
-        store.stateFlow.first { "track-math" in it.selectedTrackIds }
-        store.accept(OnboardingStore.Intent.ToggleTrack("track-math"))
-        assertTrue(store.stateFlow.first { "track-math" !in it.selectedTrackIds }.selectedTrackIds.isEmpty())
+        store.accept(OnboardingStore.Intent.SelectTrack("track-math"))
+        store.accept(OnboardingStore.Intent.SelectTrack("track-port"))
+        assertEquals("track-port", store.stateFlow.first().selectedTrackId)
     }
 
-    // ── Complete with 0 tracks → validation label ─────────────────────────────
+    // ── Complete with no track → validation label ─────────────────────────────
 
     @Test
-    fun `Complete with no tracks selected emits ValidationError label`() = runTest {
+    fun `Complete with no track selected emits ValidationError`() = runTest {
         val store = buildStore()
-        val label = store.labels.first { true }
-        // Navigate to last page
-        repeat(3) { store.accept(OnboardingStore.Intent.NextPage) }
+        var label: OnboardingStore.Label? = null
+        val job = launch(Dispatchers.Main) { store.labels.collect { label = it } }
+
         store.accept(OnboardingStore.Intent.Complete)
-        assertIs<OnboardingStore.Label.ValidationError>(label.also {})
+        advanceUntilIdle()
+        job.cancel()
+
+        assertIs<OnboardingStore.Label.ValidationError>(label)
     }
 
-    // ── Complete with tracks → Completed label ────────────────────────────────
+    // ── Complete success → saves locally and emits Completed immediately ───────
 
     @Test
-    fun `Complete with tracks selected calls completeOnboarding and emits Completed label`() = runTest {
-        var calledWith: List<String>? = null
-        val store = OnboardingStoreFactory(
-            storeFactory = DefaultStoreFactory(),
-            completeOnboarding = { ids ->
-                calledWith = ids
-                Result.success(Unit)
-            },
-        ).create()
+    fun `Complete saves activeTrackId locally and emits Completed`() = runTest {
+        var savedTrackId: String? = null
+        val store = buildStore(setActiveTrackId = { savedTrackId = it })
 
-        store.accept(OnboardingStore.Intent.ToggleTrack("track-math"))
-        store.accept(OnboardingStore.Intent.ToggleTrack("track-port"))
-        val label = store.labels.first { true }
+        var label: OnboardingStore.Label? = null
+        val job = launch(Dispatchers.Main) { store.labels.collect { label = it } }
+
+        store.accept(OnboardingStore.Intent.SelectTrack("track-math"))
         store.accept(OnboardingStore.Intent.Complete)
+        advanceUntilIdle()
+        job.cancel()
 
-        assertIs<OnboardingStore.Label.Completed>(label.also {})
-        assertFalse(calledWith.isNullOrEmpty())
-        assertTrue("track-math" in calledWith!!)
+        assertEquals("track-math", savedTrackId)
+        assertIs<OnboardingStore.Label.Completed>(label)
+    }
+
+    // ── Complete with backend failure → still emits Completed (fire-and-forget) ─
+
+    @Test
+    fun `Complete emits Completed even when backend call fails`() = runTest {
+        val store = buildStore(
+            completeOnboarding = { Result.failure(RuntimeException("network error")) },
+        )
+
+        var label: OnboardingStore.Label? = null
+        val job = launch(Dispatchers.Main) { store.labels.collect { label = it } }
+
+        store.accept(OnboardingStore.Intent.SelectTrack("track-math"))
+        store.accept(OnboardingStore.Intent.Complete)
+        advanceUntilIdle()
+        job.cancel()
+
+        assertIs<OnboardingStore.Label.Completed>(label)
+        assertNull(store.stateFlow.first().error, "error should NOT be shown on backend failure")
     }
 }

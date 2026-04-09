@@ -69,6 +69,16 @@ kotlin {
         commonTest.dependencies {
             implementation(kotlin("test"))
             implementation(libs.kotlinx.coroutines.core)
+            implementation(libs.kotlinx.coroutines.test)
+            implementation(libs.ktor.client.mock)
+            implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.serialization.kotlinx.json)
+        }
+
+        val desktopMain by getting {
+            dependencies {
+                implementation(libs.sqldelight.sqlite.driver)
+            }
         }
 
         androidMain.dependencies {
@@ -77,6 +87,7 @@ kotlin {
             implementation(libs.koin.android)
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.lifecycle.viewmodel)
+            implementation(libs.androidx.security.crypto)
         }
 
         iosMain.dependencies {

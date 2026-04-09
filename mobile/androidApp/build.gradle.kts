@@ -42,4 +42,8 @@ dependencies {
     implementation(project(":shared"))
     implementation(libs.androidx.activity.compose)
     implementation(libs.koin.android)
+    implementation(libs.decompose)
+    implementation(libs.mvikotlin)
+    implementation(libs.mvikotlin.main)
+    implementation(libs.ktor.client.android)
 }

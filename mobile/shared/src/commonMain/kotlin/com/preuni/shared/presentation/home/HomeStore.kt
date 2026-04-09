@@ -7,6 +7,7 @@ import com.arkivanov.mvikotlin.extensions.coroutines.CoroutineExecutor
 import com.preuni.shared.domain.error.AppError
 import com.preuni.shared.domain.user.Student
 import com.preuni.shared.domain.user.UserRepository
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 interface HomeStore : Store<HomeStore.Intent, HomeStore.State, Nothing> {
@@ -55,13 +56,22 @@ class HomeStoreFactory(
         private fun load() {
             dispatch(Msg.Loading)
             scope.launch {
-                repo.getMe().fold(
-                    onSuccess = { dispatch(Msg.StudentLoaded(it)) },
-                    onFailure = { dispatch(Msg.ErrorReceived(it as? AppError ?: AppError.Unknown())) },
-                )
+                var lastError: AppError = AppError.Unknown()
+                repeat(3) { attempt ->
+                    if (attempt > 0) delay(1_000L)
+                    val result = repo.getMe()
+                    if (result.isSuccess) {
+                        dispatch(Msg.StudentLoaded(result.getOrThrow()))
+                        dispatch(Msg.DoneLoading)
+                        return@launch
+                    }
+                    lastError = result.exceptionOrNull() as? AppError ?: AppError.Unknown()
+                }
+                dispatch(Msg.ErrorReceived(lastError))
                 dispatch(Msg.DoneLoading)
             }
         }
+
     }
 
     private object ReducerImpl : Reducer<HomeStore.State, Msg> {

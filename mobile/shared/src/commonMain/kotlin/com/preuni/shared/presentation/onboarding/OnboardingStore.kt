@@ -7,19 +7,17 @@ import com.arkivanov.mvikotlin.extensions.coroutines.CoroutineExecutor
 import com.preuni.shared.domain.error.AppError
 import kotlinx.coroutines.launch
 
+
 interface OnboardingStore : Store<OnboardingStore.Intent, OnboardingStore.State, OnboardingStore.Label> {
 
     data class State(
-        val pageIndex: Int = 0,
-        val selectedTrackIds: Set<String> = emptySet(),
+        val selectedTrackId: String? = null,
         val isLoading: Boolean = false,
         val error: AppError? = null,
     )
 
     sealed interface Intent {
-        data object NextPage : Intent
-        data object PreviousPage : Intent
-        data class ToggleTrack(val trackId: String) : Intent
+        data class SelectTrack(val trackId: String) : Intent
         data object Complete : Intent
     }
 
@@ -31,6 +29,7 @@ interface OnboardingStore : Store<OnboardingStore.Intent, OnboardingStore.State,
 
 class OnboardingStoreFactory(
     private val storeFactory: StoreFactory,
+    private val setActiveTrackId: (String) -> Unit,
     private val completeOnboarding: suspend (trackIds: List<String>) -> Result<Unit>,
 ) {
 
@@ -44,12 +43,7 @@ class OnboardingStoreFactory(
         ) {}
 
     private sealed interface Msg {
-        data object NextPage : Msg
-        data object PreviousPage : Msg
-        data class TrackToggled(val trackId: String) : Msg
-        data object Loading : Msg
-        data object DoneLoading : Msg
-        data class ErrorReceived(val error: AppError) : Msg
+        data class TrackSelected(val trackId: String) : Msg
     }
 
     private inner class Executor :
@@ -57,46 +51,30 @@ class OnboardingStoreFactory(
 
         override fun executeIntent(intent: OnboardingStore.Intent) {
             when (intent) {
-                OnboardingStore.Intent.NextPage -> dispatch(Msg.NextPage)
-                OnboardingStore.Intent.PreviousPage -> dispatch(Msg.PreviousPage)
-                is OnboardingStore.Intent.ToggleTrack -> dispatch(Msg.TrackToggled(intent.trackId))
+                is OnboardingStore.Intent.SelectTrack -> dispatch(Msg.TrackSelected(intent.trackId))
                 OnboardingStore.Intent.Complete -> complete()
             }
         }
 
         private fun complete() {
-            val s = state()
-            // Page 3 is track selection — require at least 1 track
-            if (s.selectedTrackIds.isEmpty()) {
-                publish(OnboardingStore.Label.ValidationError("Select at least one subject track to continue"))
+            val trackId = state().selectedTrackId
+            if (trackId == null) {
+                publish(OnboardingStore.Label.ValidationError("Selecione uma matéria para continuar"))
                 return
             }
-            dispatch(Msg.Loading)
+            // Save locally and navigate immediately — resilient to network errors
+            setActiveTrackId(trackId)
+            publish(OnboardingStore.Label.Completed)
+            // Fire-and-forget backend sync
             scope.launch {
-                completeOnboarding(s.selectedTrackIds.toList()).fold(
-                    onSuccess = { publish(OnboardingStore.Label.Completed) },
-                    onFailure = { dispatch(Msg.ErrorReceived(it as? AppError ?: AppError.Unknown())) },
-                )
-                dispatch(Msg.DoneLoading)
+                completeOnboarding(listOf(trackId))
             }
         }
     }
 
     private object ReducerImpl : Reducer<OnboardingStore.State, Msg> {
-        private const val TOTAL_PAGES = 4
-
         override fun OnboardingStore.State.reduce(msg: Msg): OnboardingStore.State = when (msg) {
-            Msg.NextPage -> copy(pageIndex = (pageIndex + 1).coerceAtMost(TOTAL_PAGES - 1))
-            Msg.PreviousPage -> copy(pageIndex = (pageIndex - 1).coerceAtLeast(0))
-            is Msg.TrackToggled -> copy(
-                selectedTrackIds = if (msg.trackId in selectedTrackIds)
-                    selectedTrackIds - msg.trackId
-                else
-                    selectedTrackIds + msg.trackId
-            )
-            Msg.Loading -> copy(isLoading = true, error = null)
-            Msg.DoneLoading -> copy(isLoading = false)
-            is Msg.ErrorReceived -> copy(error = msg.error, isLoading = false)
+            is Msg.TrackSelected -> copy(selectedTrackId = msg.trackId)
         }
     }
 }

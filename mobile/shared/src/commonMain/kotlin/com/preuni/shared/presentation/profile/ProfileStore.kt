@@ -4,6 +4,7 @@ import com.arkivanov.mvikotlin.core.store.Reducer
 import com.arkivanov.mvikotlin.core.store.Store
 import com.arkivanov.mvikotlin.core.store.StoreFactory
 import com.arkivanov.mvikotlin.extensions.coroutines.CoroutineExecutor
+import com.preuni.shared.domain.auth.AuthRepository
 import com.preuni.shared.domain.auth.AuthValidator
 import com.preuni.shared.domain.auth.ValidationResult
 import com.preuni.shared.domain.error.AppError
@@ -37,6 +38,7 @@ interface ProfileStore : Store<ProfileStore.Intent, ProfileStore.State, ProfileS
         data object NavigateToEditPassword : Label
         data object NavigateToChangeEmail : Label
         data object AccountDeleted : Label
+        data object UsernameSaved : Label
         data class AvatarUploadReady(val uploadUrl: String, val objectKey: String) : Label
     }
 }
@@ -44,6 +46,7 @@ interface ProfileStore : Store<ProfileStore.Intent, ProfileStore.State, ProfileS
 class ProfileStoreFactory(
     private val storeFactory: StoreFactory,
     private val userRepository: UserRepository,
+    private val authRepository: AuthRepository,
 ) {
 
     fun create(): ProfileStore =
@@ -51,7 +54,7 @@ class ProfileStoreFactory(
         by storeFactory.create(
             name = "ProfileStore",
             initialState = ProfileStore.State(),
-            executorFactory = { Executor(userRepository) },
+            executorFactory = { Executor(userRepository, authRepository) },
             reducer = ReducerImpl,
         ) {}
 
@@ -65,7 +68,7 @@ class ProfileStoreFactory(
         data object HideDeleteConfirmation : Msg
     }
 
-    private inner class Executor(private val repo: UserRepository) :
+    private inner class Executor(private val repo: UserRepository, private val authRepo: AuthRepository) :
         CoroutineExecutor<ProfileStore.Intent, Nothing, ProfileStore.State, Msg, ProfileStore.Label>() {
 
         override fun executeIntent(intent: ProfileStore.Intent) {
@@ -104,7 +107,10 @@ class ProfileStoreFactory(
             dispatch(Msg.Loading)
             scope.launch {
                 repo.updateProfile(displayName, username).fold(
-                    onSuccess = { dispatch(Msg.StudentLoaded(it)) },
+                    onSuccess = {
+                        dispatch(Msg.StudentLoaded(it))
+                        if (username != null) publish(ProfileStore.Label.UsernameSaved)
+                    },
                     onFailure = { dispatch(Msg.ErrorReceived(it as? AppError ?: AppError.Unknown())) },
                 )
                 dispatch(Msg.DoneLoading)
@@ -132,7 +138,7 @@ class ProfileStoreFactory(
         private fun deleteAccount() {
             dispatch(Msg.Loading)
             scope.launch {
-                repo.anonymize().fold(
+                authRepo.deleteAccount().fold(
                     onSuccess = { publish(ProfileStore.Label.AccountDeleted) },
                     onFailure = { dispatch(Msg.ErrorReceived(it as? AppError ?: AppError.Unknown())) },
                 )

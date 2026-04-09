@@ -4,15 +4,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -30,6 +26,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.arkivanov.mvikotlin.extensions.coroutines.stateFlow
 import com.preuni.shared.domain.error.AppError
+import com.preuni.shared.ui.components.PreuniButton
+import com.preuni.shared.ui.components.PreuniTextField
 
 @Composable
 fun LoginScreen(
@@ -47,41 +45,40 @@ fun LoginScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        // Brand header
         Text(
             text = "PreUni",
-            style = MaterialTheme.typography.headlineLarge,
+            style = MaterialTheme.typography.displaySmall,
             color = MaterialTheme.colorScheme.primary,
         )
+        Text(
+            text = "Prepare-se para o ENEM.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
 
-        Spacer(Modifier.height(40.dp))
+        Spacer(Modifier.height(48.dp))
 
-        OutlinedTextField(
+        PreuniTextField(
             value = state.emailOrUsername,
             onValueChange = { store.accept(LoginStore.Intent.UpdateEmailOrUsername(it)) },
-            label = { Text("Email or username") },
-            singleLine = true,
+            label = "Email ou usuário",
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Email,
                 imeAction = ImeAction.Next,
             ),
             isError = state.error is AppError.Validation &&
                 (state.error as AppError.Validation).field == "emailOrUsername",
-            supportingText = {
-                val err = state.error
-                if (err is AppError.Validation && err.field == "emailOrUsername") {
-                    Text(err.message, color = MaterialTheme.colorScheme.error)
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
+            errorMessage = (state.error as? AppError.Validation)
+                ?.takeIf { it.field == "emailOrUsername" }?.message,
         )
 
         Spacer(Modifier.height(8.dp))
 
-        OutlinedTextField(
+        PreuniTextField(
             value = state.password,
             onValueChange = { store.accept(LoginStore.Intent.UpdatePassword(it)) },
-            label = { Text("Password") },
-            singleLine = true,
+            label = "Senha",
             visualTransformation = if (passwordVisible) VisualTransformation.None
                                    else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(
@@ -91,29 +88,23 @@ fun LoginScreen(
             keyboardActions = KeyboardActions(onDone = { store.accept(LoginStore.Intent.Submit) }),
             trailingIcon = {
                 TextButton(onClick = { passwordVisible = !passwordVisible }) {
-                    Text(if (passwordVisible) "Hide" else "Show")
+                    Text(if (passwordVisible) "Ocultar" else "Mostrar")
                 }
             },
             isError = state.error is AppError.Validation &&
                 (state.error as AppError.Validation).field == "password",
-            supportingText = {
-                val err = state.error
-                if (err is AppError.Validation && err.field == "password") {
-                    Text(err.message, color = MaterialTheme.colorScheme.error)
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
+            errorMessage = (state.error as? AppError.Validation)
+                ?.takeIf { it.field == "password" }?.message,
         )
 
-        // Generic (non-field) error banner
         val err = state.error
         if (err != null && err !is AppError.Validation) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(4.dp))
             Text(
                 text = when (err) {
-                    is AppError.Unauthorized -> "Invalid credentials. Please try again."
-                    is AppError.NetworkError -> "No internet connection."
-                    else -> "Something went wrong. Please try again."
+                    is AppError.Unauthorized -> "Credenciais inválidas. Tente novamente."
+                    is AppError.NetworkError -> "Sem conexão com a internet."
+                    else -> "Algo deu errado. Tente novamente."
                 },
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
@@ -122,29 +113,20 @@ fun LoginScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        Button(
+        PreuniButton(
+            text = "Entrar",
             onClick = { store.accept(LoginStore.Intent.Submit) },
-            enabled = !state.isLoading,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            if (state.isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.height(20.dp),
-                    strokeWidth = 2.dp,
-                )
-            } else {
-                Text("Sign in")
-            }
-        }
+            isLoading = state.isLoading,
+        )
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(8.dp))
 
         TextButton(onClick = onSignInWithCode) {
-            Text("Sign in with email code")
+            Text("Entrar com código")
         }
 
         TextButton(onClick = onCreateAccount) {
-            Text("Create account")
+            Text("Criar conta")
         }
     }
 }

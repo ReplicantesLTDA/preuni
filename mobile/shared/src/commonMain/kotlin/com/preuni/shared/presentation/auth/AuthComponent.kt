@@ -6,6 +6,7 @@ import com.arkivanov.decompose.router.stack.StackNavigation
 import com.arkivanov.decompose.router.stack.childStack
 import com.arkivanov.decompose.router.stack.pop
 import com.arkivanov.decompose.router.stack.push
+import com.arkivanov.decompose.router.stack.replaceAll
 import com.arkivanov.decompose.value.Value
 import com.arkivanov.mvikotlin.core.store.StoreFactory
 import com.preuni.shared.domain.auth.AuthRepository
@@ -32,21 +33,21 @@ class AuthComponent(
     private fun createChild(config: Config, context: ComponentContext): Child =
         when (config) {
             Config.Login -> Child.Login(
-                LoginStoreFactory(storeFactory, authRepository).create().also { store ->
-                    // Observe the LoggedIn label to propagate navigation
-                    // Note: label subscription is wired in the parent composable
-                }
+                LoginStoreFactory(storeFactory, authRepository).create()
             )
             Config.Register -> Child.Register(
                 RegisterComponent(context, storeFactory, authRepository) {
                     navigation.pop()
                 }
             )
-            Config.VerifyEmail -> Child.VerifyEmail(
-                VerifyEmailComponent(context, storeFactory) {
-                    // On verified, navigate back to login
-                    navigation.pop()
-                }
+            is Config.VerifyEmail -> Child.VerifyEmail(
+                VerifyEmailComponent(
+                    componentContext = context,
+                    storeFactory = storeFactory,
+                    authRepository = authRepository,
+                    email = config.email,
+                    onVerified = { navigation.replaceAll(Config.Login) },
+                )
             )
             Config.OtpLogin -> Child.OtpLogin(
                 OtpLoginComponent(context, storeFactory, authRepository) {
@@ -57,15 +58,15 @@ class AuthComponent(
 
     fun onLoginSuccess() = onLoggedIn()
     fun navigateToRegister() = navigation.push(Config.Register)
+    fun navigateToVerifyEmail(email: String) = navigation.push(Config.VerifyEmail(email))
     fun navigateToOtpLogin() = navigation.push(Config.OtpLogin)
-    fun navigateToVerifyEmail() = navigation.push(Config.VerifyEmail)
     fun navigateBack() = navigation.pop()
 
     @Serializable
     sealed interface Config {
         @Serializable data object Login : Config
         @Serializable data object Register : Config
-        @Serializable data object VerifyEmail : Config
+        @Serializable data class VerifyEmail(val email: String) : Config
         @Serializable data object OtpLogin : Config
     }
 
