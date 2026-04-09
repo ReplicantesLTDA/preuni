@@ -51,10 +51,10 @@ fun TrackSelectionScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top,
     ) {
-        Text("Quais matérias você quer estudar?", style = MaterialTheme.typography.titleLarge)
+        Text("Qual matéria você quer estudar?", style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(8.dp))
         Text(
-            "Escolha ao menos uma. Você pode mudar depois.",
+            "Escolha uma matéria. Você pode mudar depois.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -70,8 +70,8 @@ fun TrackSelectionScreen(
             ) {
                 tracks.forEach { track ->
                     FilterChip(
-                        selected = track.id in state.selectedTrackIds,
-                        onClick = { store.accept(OnboardingStore.Intent.ToggleTrack(track.id)) },
+                        selected = track.id == state.selectedTrackId,
+                        onClick = { store.accept(OnboardingStore.Intent.SelectTrack(track.id)) },
                         label = { Text(track.name) },
                     )
                 }
@@ -82,7 +82,7 @@ fun TrackSelectionScreen(
 
         Button(
             onClick = { store.accept(OnboardingStore.Intent.Complete) },
-            enabled = state.selectedTrackIds.isNotEmpty() && !state.isLoading,
+            enabled = state.selectedTrackId != null && !state.isLoading,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text("Começar")

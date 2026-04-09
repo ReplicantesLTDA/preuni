@@ -7,6 +7,7 @@ import com.preuni.shared.domain.auth.AuthRepository
 import com.preuni.shared.domain.content.ContentRepository
 import com.preuni.shared.domain.user.UserRepository
 import com.preuni.shared.presentation.home.HomeStoreFactory
+import com.preuni.shared.presentation.learn.LearnStoreFactory
 import com.preuni.shared.presentation.navigation.BottomTab
 import com.preuni.shared.presentation.profile.ProfileComponent
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,10 +23,16 @@ class MainComponent(
     private val onLogout: () -> Unit,
 ) : ComponentContext by componentContext {
 
-    private val _selectedTab = MutableStateFlow(BottomTab.HOME)
+    private val _selectedTab = MutableStateFlow(BottomTab.LEARN)
     val selectedTab: StateFlow<BottomTab> = _selectedTab
 
     val homeStore = HomeStoreFactory(storeFactory, userRepository).create()
+
+    val learnStore = LearnStoreFactory(
+        storeFactory = storeFactory,
+        getActiveTrackId = { tokenStore.getActiveTrackId() },
+        getTracks = { contentRepository.getTracks() },
+    ).create()
 
     val profileComponent = ProfileComponent(
         componentContext = componentContext,
@@ -33,6 +40,8 @@ class MainComponent(
         userRepository = userRepository,
         contentRepository = contentRepository,
         onLogout = onLogout,
+        onSwitchToLearn = { _selectedTab.value = BottomTab.LEARN },
+        setActiveTrackId = { tokenStore.setActiveTrackId(it) },
     )
 
     fun selectTab(tab: BottomTab) {

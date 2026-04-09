@@ -34,6 +34,7 @@ fun ChangeTrackScreen(
     store: ChangeTrackStore,
     contentRepository: ContentRepository,
     onBack: () -> Unit,
+    onSaved: () -> Unit = onBack,
 ) {
     val state by store.stateFlow.collectAsState(ChangeTrackStore.State())
     var tracks by remember { mutableStateOf<List<Track>>(emptyList()) }
@@ -49,7 +50,7 @@ fun ChangeTrackScreen(
     LaunchedEffect(store) {
         store.labels.collect { label ->
             when (label) {
-                is ChangeTrackStore.Label.Saved -> onBack()
+                is ChangeTrackStore.Label.Saved -> onSaved()
                 is ChangeTrackStore.Label.ValidationError -> Unit
             }
         }
@@ -62,10 +63,10 @@ fun ChangeTrackScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top,
     ) {
-        Text("Alterar matérias", style = MaterialTheme.typography.titleLarge)
+        Text("Alterar matéria", style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(8.dp))
         Text(
-            "Escolha ao menos uma.",
+            "Escolha uma matéria.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -90,8 +91,8 @@ fun ChangeTrackScreen(
             ) {
                 tracks.forEach { track ->
                     FilterChip(
-                        selected = track.id in state.selectedTrackIds,
-                        onClick = { store.accept(ChangeTrackStore.Intent.ToggleTrack(track.id)) },
+                        selected = track.id == state.selectedTrackId,
+                        onClick = { store.accept(ChangeTrackStore.Intent.SelectTrack(track.id)) },
                         label = { Text(track.name) },
                     )
                 }
@@ -102,7 +103,7 @@ fun ChangeTrackScreen(
 
         Button(
             onClick = { store.accept(ChangeTrackStore.Intent.Save) },
-            enabled = state.selectedTrackIds.isNotEmpty() && !state.isLoading,
+            enabled = state.selectedTrackId != null && !state.isLoading,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(if (state.isLoading) "Salvando…" else "Salvar")
