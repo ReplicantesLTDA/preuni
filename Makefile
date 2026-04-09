@@ -62,9 +62,12 @@ stop-infra:
 	docker compose -f infra/docker-compose.yml stop postgres redis
 
 ## run-backend
-##   Build and start all backend services (requires Docker).
-##   Run 'make run-infra' first to ensure postgres + redis are healthy.
+##   Start infra, run all migrations, then build and start all backend services.
 run-backend:
+	docker compose -f infra/docker-compose.yml up -d postgres redis
+	@echo "Waiting for postgres to be healthy..."
+	@until docker compose -f infra/docker-compose.yml exec -T postgres pg_isready -U preuni -d preuni >/dev/null 2>&1; do sleep 1; done
+	@$(MAKE) migrate
 	docker compose -f infra/docker-compose.yml up --build -d \
 		auth user content learning simulation dissertation notification mail gateway
 
