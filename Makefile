@@ -110,18 +110,30 @@ stop-web:
 ##   Install and launch the debug APK on a connected device or running emulator.
 ##   Start an emulator first: emulator -avd <avd_name> &
 run-android:
-	cd mobile && ./gradlew :androidApp:installDebug
+	@JAVA_HOME_CANDIDATE=$$(/usr/libexec/java_home -v 23 2>/dev/null || /usr/libexec/java_home -v 21 2>/dev/null || /usr/libexec/java_home -v 17 2>/dev/null || true); \
+	if [ -z "$$JAVA_HOME_CANDIDATE" ]; then \
+		echo "No compatible JDK found. Install JDK 17, 21, or 23."; exit 1; \
+	fi; \
+	cd mobile && JAVA_HOME="$$JAVA_HOME_CANDIDATE" PATH="$$JAVA_HOME_CANDIDATE/bin:$$PATH" ./gradlew :androidApp:installDebug
 
 ## build-android
 ##   Build the debug APK without installing (outputs to androidApp/build/outputs/apk/).
 build-android:
-	cd mobile && ./gradlew :androidApp:assembleDebug
+	@JAVA_HOME_CANDIDATE=$$(/usr/libexec/java_home -v 23 2>/dev/null || /usr/libexec/java_home -v 21 2>/dev/null || /usr/libexec/java_home -v 17 2>/dev/null || true); \
+	if [ -z "$$JAVA_HOME_CANDIDATE" ]; then \
+		echo "No compatible JDK found. Install JDK 17, 21, or 23."; exit 1; \
+	fi; \
+	cd mobile && JAVA_HOME="$$JAVA_HOME_CANDIDATE" PATH="$$JAVA_HOME_CANDIDATE/bin:$$PATH" ./gradlew :androidApp:assembleDebug
 
 ## run-ios
 ##   Build the KMP XCFramework then build the iOS app for iPhone 16 simulator.
 ##   Requires Xcode 16+ and the iOS 16 simulator runtime.
 run-ios:
-	cd mobile && ./gradlew :shared:assembleXCFramework
+	@JAVA_HOME_CANDIDATE=$$(/usr/libexec/java_home -v 23 2>/dev/null || /usr/libexec/java_home -v 21 2>/dev/null || /usr/libexec/java_home -v 17 2>/dev/null || true); \
+	if [ -z "$$JAVA_HOME_CANDIDATE" ]; then \
+		echo "No compatible JDK found. Install JDK 17, 21, or 23."; exit 1; \
+	fi; \
+	cd mobile && JAVA_HOME="$$JAVA_HOME_CANDIDATE" PATH="$$JAVA_HOME_CANDIDATE/bin:$$PATH" ./gradlew :shared:assembleXCFramework
 	cd mobile/iosApp && xcodebuild \
 		-scheme iosApp \
 		-destination "platform=iOS Simulator,name=iPhone 16" \

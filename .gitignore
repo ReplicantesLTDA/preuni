@@ -28,6 +28,7 @@ mobile/androidApp/build/
 mobile/shared/build/
 mobile/webApp/build/
 mobile/iosApp/build/
+mobile/iosApp/.build/
 mobile/iosApp/Pods/
 mobile/iosApp/DerivedData/
 mobile/iosApp/*.xcworkspace/xcuserdata/

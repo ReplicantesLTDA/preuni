@@ -87,6 +87,7 @@ kotlin {
             implementation(libs.koin.android)
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.lifecycle.viewmodel)
+            implementation(libs.androidx.security.crypto)
         }
 
         iosMain.dependencies {

@@ -10,6 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.arkivanov.mvikotlin.extensions.coroutines.labels
+import com.arkivanov.mvikotlin.extensions.coroutines.stateFlow
 import com.preuni.shared.presentation.RootComponent
 import com.preuni.shared.ui.theme.PreuniTheme
 import com.preuni.shared.presentation.auth.AuthComponent
@@ -27,6 +28,8 @@ import com.preuni.shared.presentation.navigation.BottomTab
 import com.preuni.shared.presentation.onboarding.OnboardingScreen
 import com.preuni.shared.presentation.welcome.WelcomeScreen
 import com.preuni.shared.presentation.profile.ChangeEmailScreen
+import com.preuni.shared.presentation.profile.ChangeEmailStore
+import com.preuni.shared.presentation.profile.ChangePasswordStore
 import com.preuni.shared.presentation.profile.ChangeTrackScreen
 import com.preuni.shared.presentation.profile.ConfirmNewEmailScreen
 import com.preuni.shared.presentation.profile.DeleteAccountScreen
@@ -34,6 +37,7 @@ import com.preuni.shared.presentation.profile.EditPasswordScreen
 import com.preuni.shared.presentation.profile.EditUsernameScreen
 import com.preuni.shared.presentation.profile.ProfileComponent
 import com.preuni.shared.presentation.profile.ProfileScreen
+import com.preuni.shared.presentation.profile.ProfileStore
 import com.preuni.shared.presentation.simulate.SimulateScreen
 
 /**
@@ -143,32 +147,76 @@ private fun ProfileContent(component: ProfileComponent) {
             onChangeEmail = component::navigateToChangeEmail,
             onChangeTrack = { component.navigateToChangeTrack(emptySet()) },
             onDeleteAccount = component::navigateToDeleteAccount,
+            onLogout = component::logout,
         )
         is ProfileComponent.Child.ChangeTrack -> ChangeTrackScreen(
             store = child.store,
             contentRepository = child.contentRepository,
             onBack = component::navigateBack,
         )
-        ProfileComponent.Child.EditUsername -> EditUsernameScreen(
-            currentUsername = "",
-            onSave = { component.navigateBack() },
-            onBack = component::navigateBack,
-        )
-        ProfileComponent.Child.EditPassword -> EditPasswordScreen(
-            onSave = { _, _ -> component.navigateBack() },
-            onBack = component::navigateBack,
-        )
-        ProfileComponent.Child.ChangeEmail -> ChangeEmailScreen(
-            onSubmit = { component.navigateToConfirmNewEmail() },
-        )
-        ProfileComponent.Child.ConfirmNewEmail -> ConfirmNewEmailScreen(
-            newEmail = "",
-            onSubmit = { component.navigateBack() },
-            onResend = {},
-        )
-        ProfileComponent.Child.DeleteAccount -> DeleteAccountScreen(
-            onConfirm = {},
-            onBack = component::navigateBack,
-        )
+        is ProfileComponent.Child.EditUsername -> {
+            val state by child.store.stateFlow.collectAsState()
+            LaunchedEffect(child.store) {
+                child.store.labels.collect { label ->
+                    if (label is ProfileStore.Label.UsernameSaved) component.navigateBack()
+                }
+            }
+            EditUsernameScreen(
+                currentUsername = state.student?.username ?: "",
+                onSave = { username -> child.store.accept(ProfileStore.Intent.UpdateUsername(username)) },
+                onBack = component::navigateBack,
+            )
+        }
+        is ProfileComponent.Child.EditPassword -> {
+            val state by child.store.stateFlow.collectAsState()
+            LaunchedEffect(child.store) {
+                child.store.labels.collect { label ->
+                    if (label is ChangePasswordStore.Label.Saved) component.navigateBack()
+                }
+            }
+            EditPasswordScreen(
+                onSave = { current, new -> child.store.accept(ChangePasswordStore.Intent.Submit(current, new)) },
+                onBack = component::navigateBack,
+                error = state.error,
+            )
+        }
+        is ProfileComponent.Child.ChangeEmail -> {
+            val state by child.store.stateFlow.collectAsState()
+            LaunchedEffect(child.store) {
+                child.store.labels.collect { label ->
+                    if (label is ChangeEmailStore.Label.EmailChanged) component.navigateBack()
+                }
+            }
+            if (state.phase == ChangeEmailStore.Phase.REQUEST) {
+                ChangeEmailScreen(
+                    onSubmit = { email -> child.store.accept(ChangeEmailStore.Intent.RequestCode(email)) },
+                    onBack = component::navigateBack,
+                    isLoading = state.isLoading,
+                    error = state.error,
+                )
+            } else {
+                ConfirmNewEmailScreen(
+                    newEmail = state.newEmail,
+                    onSubmit = { otp -> child.store.accept(ChangeEmailStore.Intent.ConfirmCode(otp)) },
+                    onResend = { child.store.accept(ChangeEmailStore.Intent.ResendCode) },
+                    onBack = component::navigateBack,
+                    isLoading = state.isLoading,
+                    error = state.error,
+                )
+            }
+        }
+        is ProfileComponent.Child.DeleteAccount -> {
+            val state by child.store.stateFlow.collectAsState()
+            LaunchedEffect(child.store) {
+                child.store.labels.collect { label ->
+                    if (label is ProfileStore.Label.AccountDeleted) component.logout()
+                }
+            }
+            DeleteAccountScreen(
+                onConfirm = { child.store.accept(ProfileStore.Intent.ConfirmDeleteAccount) },
+                onBack = component::navigateBack,
+                isLoading = state.isLoading,
+            )
+        }
     }
 }

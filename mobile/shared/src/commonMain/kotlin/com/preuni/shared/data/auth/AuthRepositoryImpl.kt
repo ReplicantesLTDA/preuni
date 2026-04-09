@@ -32,4 +32,16 @@ class AuthRepositoryImpl(
     }
 
     override fun isLoggedIn(): Boolean = tokenStore.isLoggedIn()
+
+    override suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit> =
+        apiClient.changePassword(currentPassword, newPassword)
+
+    override suspend fun changeEmailRequest(newEmail: String): Result<Unit> =
+        apiClient.changeEmailRequest(newEmail)
+
+    override suspend fun changeEmailConfirm(newEmail: String, otp: String): Result<Unit> =
+        apiClient.changeEmailConfirm(newEmail, otp)
+
+    override suspend fun deleteAccount(): Result<Unit> =
+        apiClient.deleteAccount()
 }

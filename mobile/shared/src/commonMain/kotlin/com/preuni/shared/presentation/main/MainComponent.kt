@@ -32,10 +32,14 @@ class MainComponent(
         storeFactory = storeFactory,
         userRepository = userRepository,
         contentRepository = contentRepository,
+        authRepository = authRepository,
         onLogout = onLogout,
     )
 
     fun selectTab(tab: BottomTab) {
+        if (_selectedTab.value == BottomTab.PROFILE && tab != BottomTab.PROFILE) {
+            profileComponent.resetToRoot()
+        }
         _selectedTab.value = tab
     }
 

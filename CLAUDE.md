@@ -9,6 +9,10 @@ Auto-generated from all feature plans. Last updated: 2026-04-07
 - N/A (UI layer only — no persistence changes) (003-ui-polish)
 - Kotlin 2.1.20 / Compose Multiplatform 1.8.0 + Decompose 3.3.0 (navigation), MVIKotlin 4.2.0 (state), Ktor Client (HTTP) (005-onboarding-ux-fixes)
 - `SecureStorage` (expect/actual, already exists) — key-value local store (005-onboarding-ux-fixes)
+- Kotlin 2.1.20 / Compose Multiplatform 1.8.0 + Decompose 3.3.0 (navigation), MVIKotlin 4.2.0 (state), Compose Canvas (path drawing) (006-subject-track-path)
+- `SecureStorage` (expect/actual, already exists) — add `active_track_id` key to `TokenStore` (006-subject-track-path)
+- Kotlin 2.1.20 (KMP shared module), Go 1.23 (backend — no changes) + Compose Multiplatform 1.8.0, Decompose 3.3.0, MVIKotlin 4.2.0, Ktor Client (007-profile-mgmt-fixes)
+- `SecureStorage` / `TokenStore` (local session only); no new persistent storage (007-profile-mgmt-fixes)
 
 **Frontend (001-enem-prep-platform)**
 - Kotlin 2.x + Compose Multiplatform 1.8+ (Android/iOS/Web)
@@ -80,9 +84,9 @@ cd mobile/shared && ./gradlew desktopTest
 **SQL**: lowercase keywords, snake_case identifiers; all new queries need EXPLAIN plan reviewed
 
 ## Recent Changes
+- 007-profile-mgmt-fixes: Added Kotlin 2.1.20 (KMP shared module), Go 1.23 (backend — no changes) + Compose Multiplatform 1.8.0, Decompose 3.3.0, MVIKotlin 4.2.0, Ktor Client
+- 006-subject-track-path: Added Kotlin 2.1.20 / Compose Multiplatform 1.8.0 + Decompose 3.3.0 (navigation), MVIKotlin 4.2.0 (state), Compose Canvas (path drawing)
 - 005-onboarding-ux-fixes: Added Kotlin 2.1.20 / Compose Multiplatform 1.8.0 + Decompose 3.3.0 (navigation), MVIKotlin 4.2.0 (state), Ktor Client (HTTP)
-- 003-ui-polish: Added Kotlin 2.1.20 (Compose Multiplatform 1.8.0) + Material Design 3 (already in classpath), Decompose 3.3.0, MVIKotlin 4.2.0
-- 002-fix-web-compilation: Added Kotlin 2.1.20 + Compose Multiplatform 1.8.0 + Decompose 3.3.0, MVIKotlin 4.2.0, Compose canvas rendering (Skiko), webpack 5
 
 
 <!-- MANUAL ADDITIONS START -->

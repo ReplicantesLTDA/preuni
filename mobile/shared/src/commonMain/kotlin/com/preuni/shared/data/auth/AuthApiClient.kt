@@ -5,6 +5,7 @@ import com.preuni.shared.domain.auth.AuthSession
 import com.preuni.shared.domain.error.AppError
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.request.delete
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
@@ -42,6 +43,23 @@ data class AuthResponse(
 @Serializable
 data class RefreshRequest(
     @SerialName("refresh_token") val refreshToken: String,
+)
+
+@Serializable
+data class ChangePasswordRequest(
+    @SerialName("current_password") val currentPassword: String,
+    @SerialName("new_password") val newPassword: String,
+)
+
+@Serializable
+data class ChangeEmailRequestBody(
+    @SerialName("new_email") val newEmail: String,
+)
+
+@Serializable
+data class ChangeEmailConfirmRequest(
+    @SerialName("new_email") val newEmail: String,
+    val otp: String,
 )
 
 class AuthApiClient(private val httpClient: HttpClient) {
@@ -112,6 +130,40 @@ class AuthApiClient(private val httpClient: HttpClient) {
                 setBody(RefreshRequest(refreshToken))
             }
             Unit
+        }.mapFailure()
+    }
+
+    suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit> {
+        return runCatching {
+            val response: HttpResponse = httpClient.post("v1/auth/password/change") {
+                setBody(ChangePasswordRequest(currentPassword, newPassword))
+            }
+            if (!response.status.isSuccess()) throw response.toAppError()
+        }.mapFailure()
+    }
+
+    suspend fun changeEmailRequest(newEmail: String): Result<Unit> {
+        return runCatching {
+            val response: HttpResponse = httpClient.post("v1/auth/email/change/request") {
+                setBody(ChangeEmailRequestBody(newEmail))
+            }
+            if (!response.status.isSuccess()) throw response.toAppError()
+        }.mapFailure()
+    }
+
+    suspend fun changeEmailConfirm(newEmail: String, otp: String): Result<Unit> {
+        return runCatching {
+            val response: HttpResponse = httpClient.post("v1/auth/email/change/confirm") {
+                setBody(ChangeEmailConfirmRequest(newEmail, otp))
+            }
+            if (!response.status.isSuccess()) throw response.toAppError()
+        }.mapFailure()
+    }
+
+    suspend fun deleteAccount(): Result<Unit> {
+        return runCatching {
+            val response: HttpResponse = httpClient.delete("v1/auth/account")
+            if (!response.status.isSuccess()) throw response.toAppError()
         }.mapFailure()
     }
 }

@@ -47,6 +47,10 @@ class RegisterStoreTest {
         override suspend fun verifyEmail(email: String, otp: String): Result<Unit> = Result.success(Unit)
         override suspend fun logout() {}
         override fun isLoggedIn() = false
+        override suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit> = Result.success(Unit)
+        override suspend fun changeEmailRequest(newEmail: String): Result<Unit> = Result.success(Unit)
+        override suspend fun changeEmailConfirm(newEmail: String, otp: String): Result<Unit> = Result.success(Unit)
+        override suspend fun deleteAccount(): Result<Unit> = Result.success(Unit)
     }
 
     private fun buildStore(repo: AuthRepository): RegisterStore =
@@ -92,6 +96,10 @@ class RegisterStoreTest {
             override suspend fun verifyEmail(email: String, otp: String): Result<Unit> = Result.success(Unit)
             override suspend fun logout() {}
             override fun isLoggedIn() = false
+            override suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit> = Result.success(Unit)
+            override suspend fun changeEmailRequest(newEmail: String): Result<Unit> = Result.success(Unit)
+            override suspend fun changeEmailConfirm(newEmail: String, otp: String): Result<Unit> = Result.success(Unit)
+            override suspend fun deleteAccount(): Result<Unit> = Result.success(Unit)
         }
         val store = buildStore(repo)
         store.accept(RegisterStore.Intent.UpdatePassword("Passw0rd!"))
