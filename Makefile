@@ -126,19 +126,34 @@ build-android:
 	cd mobile && JAVA_HOME="$$JAVA_HOME_CANDIDATE" PATH="$$JAVA_HOME_CANDIDATE/bin:$$PATH" ./gradlew :androidApp:assembleDebug
 
 ## run-ios
-##   Build the KMP XCFramework then build the iOS app for iPhone 16 simulator.
-##   Requires Xcode 16+ and the iOS 16 simulator runtime.
+##   Build and launch the iOS app on the iPhone 17 simulator.
+##   Xcode's build phases handle the KMP framework compilation automatically.
+##   Requires Xcode 16+ and the iOS 18 simulator runtime.
 run-ios:
 	@JAVA_HOME_CANDIDATE=$$(/usr/libexec/java_home -v 23 2>/dev/null || /usr/libexec/java_home -v 21 2>/dev/null || /usr/libexec/java_home -v 17 2>/dev/null || true); \
 	if [ -z "$$JAVA_HOME_CANDIDATE" ]; then \
 		echo "No compatible JDK found. Install JDK 17, 21, or 23."; exit 1; \
 	fi; \
-	cd mobile && JAVA_HOME="$$JAVA_HOME_CANDIDATE" PATH="$$JAVA_HOME_CANDIDATE/bin:$$PATH" ./gradlew :shared:assembleXCFramework
-	cd mobile/iosApp && xcodebuild \
+	IOS_SIMULATOR="iPhone 17"; \
+	IOS_BUNDLE_ID="com.preuni.app"; \
+	DERIVED_DATA_PATH="$$PWD/mobile/iosApp/.build/DerivedData"; \
+	IOS_APP_PATH="$$DERIVED_DATA_PATH/Build/Products/Debug-iphonesimulator/iosApp.app"; \
+	open -a Simulator; \
+	xcrun simctl boot "$$IOS_SIMULATOR" >/dev/null 2>&1 || true; \
+	xcrun simctl bootstatus "$$IOS_SIMULATOR" -b; \
+	cd mobile/iosApp && JAVA_HOME="$$JAVA_HOME_CANDIDATE" PATH="$$JAVA_HOME_CANDIDATE/bin:$$PATH" \
+		xcodebuild \
 		-scheme iosApp \
-		-destination "platform=iOS Simulator,name=iPhone 16" \
+		-destination "platform=iOS Simulator,name=$$IOS_SIMULATOR" \
 		-allowProvisioningUpdates \
-		build
+		-derivedDataPath "$$DERIVED_DATA_PATH" \
+		build || exit 1; \
+	if [ ! -d "$$IOS_APP_PATH" ]; then \
+		echo "Built app not found at $$IOS_APP_PATH"; exit 1; \
+	fi; \
+	xcrun simctl install booted "$$IOS_APP_PATH"; \
+	xcrun simctl terminate booted "$$IOS_BUNDLE_ID" >/dev/null 2>&1 || true; \
+	xcrun simctl launch booted "$$IOS_BUNDLE_ID"
 
 ## open-ios
 ##   Open the iosApp Xcode project in Xcode (requires Xcode 16+).

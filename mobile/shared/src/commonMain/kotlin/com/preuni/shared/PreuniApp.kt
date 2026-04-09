@@ -1,6 +1,7 @@
 package com.preuni.shared
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -121,13 +122,16 @@ private fun MainContent(component: MainComponent) {
             )
         }
     ) { paddingValues ->
-        Box(modifier = Modifier.padding(paddingValues)) {
+        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
             when (selectedTab) {
                 BottomTab.HOME -> HomeScreen(
                     store = component.homeStore,
                     onStartLearning = { component.selectTab(BottomTab.LEARN) },
                 )
-                BottomTab.LEARN -> LearnScreen()
+                BottomTab.LEARN -> LearnScreen(
+                    store = component.learnStore,
+                    onOpenLesson = { /* PlaceholderLessonScreen not yet in nav */ },
+                )
                 BottomTab.SIMULATE -> SimulateScreen()
                 BottomTab.PROFILE -> ProfileContent(component.profileComponent)
             }
@@ -145,7 +149,7 @@ private fun ProfileContent(component: ProfileComponent) {
             onEditUsername = component::navigateToEditUsername,
             onEditPassword = component::navigateToEditPassword,
             onChangeEmail = component::navigateToChangeEmail,
-            onChangeTrack = { component.navigateToChangeTrack(emptySet()) },
+            onChangeTrack = { component.navigateToChangeTrack(null) },
             onDeleteAccount = component::navigateToDeleteAccount,
             onLogout = component::logout,
         )
@@ -153,6 +157,10 @@ private fun ProfileContent(component: ProfileComponent) {
             store = child.store,
             contentRepository = child.contentRepository,
             onBack = component::navigateBack,
+            onSaved = {
+                component.navigateBack()
+                component.onSwitchToLearn()
+            },
         )
         is ProfileComponent.Child.EditUsername -> {
             val state by child.store.stateFlow.collectAsState()

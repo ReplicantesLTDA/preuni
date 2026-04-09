@@ -22,7 +22,7 @@ data class ApiErrorBody(
     val message: String = "Unknown error",
 )
 
-fun buildHttpClient(baseUrl: String): HttpClient = HttpClient {
+fun buildHttpClient(baseUrl: String, getAccessToken: (() -> String?)? = null): HttpClient = HttpClient {
     install(ContentNegotiation) {
         json(Json {
             ignoreUnknownKeys = true
@@ -43,6 +43,9 @@ fun buildHttpClient(baseUrl: String): HttpClient = HttpClient {
     defaultRequest {
         contentType(ContentType.Application.Json)
         url(baseUrl)
+        getAccessToken?.invoke()?.let { token ->
+            headers.append("Authorization", "Bearer $token")
+        }
     }
 }
 

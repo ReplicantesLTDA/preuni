@@ -10,14 +10,14 @@ import kotlinx.coroutines.launch
 interface ChangeTrackStore : Store<ChangeTrackStore.Intent, ChangeTrackStore.State, ChangeTrackStore.Label> {
 
     data class State(
-        val selectedTrackIds: Set<String> = emptySet(),
+        val selectedTrackId: String? = null,
         val isLoading: Boolean = false,
         val error: AppError? = null,
     )
 
     sealed interface Intent {
-        data class Load(val initialIds: Set<String>) : Intent
-        data class ToggleTrack(val trackId: String) : Intent
+        data class Load(val initialTrackId: String?) : Intent
+        data class SelectTrack(val trackId: String) : Intent
         data object Save : Intent
     }
 
@@ -29,6 +29,7 @@ interface ChangeTrackStore : Store<ChangeTrackStore.Intent, ChangeTrackStore.Sta
 
 class ChangeTrackStoreFactory(
     private val storeFactory: StoreFactory,
+    private val setActiveTrackId: (String) -> Unit,
     private val updateTracks: suspend (List<String>) -> Result<Unit>,
 ) {
     fun create(): ChangeTrackStore =
@@ -41,11 +42,8 @@ class ChangeTrackStoreFactory(
         ) {}
 
     private sealed interface Msg {
-        data class TracksLoaded(val ids: Set<String>) : Msg
-        data class TrackToggled(val trackId: String) : Msg
-        data object Loading : Msg
-        data object DoneLoading : Msg
-        data class ErrorReceived(val error: AppError) : Msg
+        data class TrackLoaded(val trackId: String?) : Msg
+        data class TrackSelected(val trackId: String) : Msg
     }
 
     private inner class Executor :
@@ -53,41 +51,31 @@ class ChangeTrackStoreFactory(
 
         override fun executeIntent(intent: ChangeTrackStore.Intent) {
             when (intent) {
-                is ChangeTrackStore.Intent.Load -> dispatch(Msg.TracksLoaded(intent.initialIds))
-                is ChangeTrackStore.Intent.ToggleTrack -> dispatch(Msg.TrackToggled(intent.trackId))
+                is ChangeTrackStore.Intent.Load -> dispatch(Msg.TrackLoaded(intent.initialTrackId))
+                is ChangeTrackStore.Intent.SelectTrack -> dispatch(Msg.TrackSelected(intent.trackId))
                 ChangeTrackStore.Intent.Save -> save()
             }
         }
 
         private fun save() {
-            val ids = state().selectedTrackIds
-            if (ids.isEmpty()) {
-                publish(ChangeTrackStore.Label.ValidationError("Selecione ao menos uma matéria."))
+            val trackId = state().selectedTrackId
+            if (trackId == null) {
+                publish(ChangeTrackStore.Label.ValidationError("Selecione uma matéria para continuar."))
                 return
             }
-            dispatch(Msg.Loading)
+            // Save locally and navigate immediately — fire-and-forget backend sync
+            setActiveTrackId(trackId)
+            publish(ChangeTrackStore.Label.Saved)
             scope.launch {
-                updateTracks(ids.toList()).fold(
-                    onSuccess = { publish(ChangeTrackStore.Label.Saved) },
-                    onFailure = { dispatch(Msg.ErrorReceived(it as? AppError ?: AppError.Unknown())) },
-                )
-                dispatch(Msg.DoneLoading)
+                updateTracks(listOf(trackId))
             }
         }
     }
 
     private object ReducerImpl : Reducer<ChangeTrackStore.State, Msg> {
         override fun ChangeTrackStore.State.reduce(msg: Msg): ChangeTrackStore.State = when (msg) {
-            is Msg.TracksLoaded -> copy(selectedTrackIds = msg.ids)
-            is Msg.TrackToggled -> copy(
-                selectedTrackIds = if (msg.trackId in selectedTrackIds)
-                    selectedTrackIds - msg.trackId
-                else
-                    selectedTrackIds + msg.trackId
-            )
-            Msg.Loading -> copy(isLoading = true, error = null)
-            Msg.DoneLoading -> copy(isLoading = false)
-            is Msg.ErrorReceived -> copy(error = msg.error, isLoading = false)
+            is Msg.TrackLoaded -> copy(selectedTrackId = msg.trackId)
+            is Msg.TrackSelected -> copy(selectedTrackId = msg.trackId)
         }
     }
 }

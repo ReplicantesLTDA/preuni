@@ -59,13 +59,13 @@ fun OnboardingScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    "Escolha suas matérias",
+                    "Escolha sua matéria",
                     style = MaterialTheme.typography.headlineMedium,
                     textAlign = TextAlign.Center,
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "Você pode escolher mais de uma.",
+                    "Escolha uma matéria. Você pode mudar depois.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -73,8 +73,8 @@ fun OnboardingScreen(
                 SubjectTracks.forEach { track ->
                     SubjectTrackCard(
                         track = track,
-                        selected = state.selectedTrackIds.contains(track.id),
-                        onClick = { store.accept(OnboardingStore.Intent.ToggleTrack(track.id)) },
+                        selected = state.selectedTrackId == track.id,
+                        onClick = { store.accept(OnboardingStore.Intent.SelectTrack(track.id)) },
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Spacer(Modifier.height(8.dp))
@@ -87,7 +87,7 @@ fun OnboardingScreen(
         PreuniButton(
             text = "Começar",
             onClick = { store.accept(OnboardingStore.Intent.Complete) },
-            enabled = state.selectedTrackIds.isNotEmpty() && !state.isLoading,
+            enabled = state.selectedTrackId != null && !state.isLoading,
             isLoading = state.isLoading,
             modifier = Modifier.width(160.dp),
         )

@@ -22,6 +22,8 @@ class ProfileComponent(
     private val contentRepository: ContentRepository,
     private val authRepository: AuthRepository,
     private val onLogout: () -> Unit,
+    private val onSwitchToLearn: () -> Unit = {},
+    private val setActiveTrackId: (String) -> Unit = {},
 ) : ComponentContext by componentContext {
 
     private val profileStore = ProfileStoreFactory(storeFactory, userRepository, authRepository).create()
@@ -48,10 +50,12 @@ class ProfileComponent(
             Config.ChangeEmail -> Child.ChangeEmail(changeEmailStore)
             Config.DeleteAccount -> Child.DeleteAccount(profileStore)
             is Config.ChangeTrack -> Child.ChangeTrack(
-                store = ChangeTrackStoreFactory(storeFactory) { ids ->
-                    userRepository.updateTracks(ids)
-                }.create().also { store ->
-                    store.accept(ChangeTrackStore.Intent.Load(config.initialIds))
+                store = ChangeTrackStoreFactory(
+                    storeFactory = storeFactory,
+                    setActiveTrackId = setActiveTrackId,
+                    updateTracks = { ids -> userRepository.updateTracks(ids) },
+                ).create().also { store ->
+                    store.accept(ChangeTrackStore.Intent.Load(config.initialTrackId))
                 },
                 contentRepository = contentRepository,
             )
@@ -61,10 +65,11 @@ class ProfileComponent(
     fun navigateToEditPassword() = navigation.push(Config.EditPassword)
     fun navigateToChangeEmail() = navigation.push(Config.ChangeEmail)
     fun navigateToDeleteAccount() = navigation.push(Config.DeleteAccount)
-    fun navigateToChangeTrack(initialIds: Set<String>) = navigation.push(Config.ChangeTrack(initialIds))
+    fun navigateToChangeTrack(initialTrackId: String?) = navigation.push(Config.ChangeTrack(initialTrackId))
     fun navigateBack() = navigation.pop()
     fun resetToRoot() = navigation.replaceAll(Config.Profile)
     fun logout() = onLogout()
+    fun onSwitchToLearn() = onSwitchToLearn.invoke()
 
     @Serializable
     sealed interface Config {
@@ -73,7 +78,7 @@ class ProfileComponent(
         @Serializable data object EditPassword : Config
         @Serializable data object ChangeEmail : Config
         @Serializable data object DeleteAccount : Config
-        @Serializable data class ChangeTrack(val initialIds: Set<String>) : Config
+        @Serializable data class ChangeTrack(val initialTrackId: String?) : Config
     }
 
     sealed interface Child {

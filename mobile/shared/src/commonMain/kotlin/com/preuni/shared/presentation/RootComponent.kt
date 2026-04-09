@@ -62,6 +62,7 @@ class RootComponent(
                     componentContext = context,
                     storeFactory = storeFactory,
                     onCompleted = { navigation.replaceAll(Config.Main) },
+                    setActiveTrackId = { trackId -> tokenStore.setActiveTrackId(trackId) },
                     completeOnboarding = { trackIds -> userRepository.updateTracks(trackIds) },
                 )
             )

@@ -140,7 +140,7 @@ func (h *RegisterHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RegisterHandler) createStudentProfile(ctx context.Context, id, email, displayName string) error {
-	body, _ := json.Marshal(map[string]string{"id": id, "email": email, "display_name": displayName})
+	body, _ := json.Marshal(map[string]string{"student_id": id, "email": email, "display_name": displayName})
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, h.userSvcURL+"/internal/students", bytes.NewReader(body))
 	if err != nil {
 		return err
