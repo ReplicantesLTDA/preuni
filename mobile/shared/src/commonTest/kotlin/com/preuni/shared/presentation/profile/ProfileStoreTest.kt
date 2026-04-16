@@ -24,6 +24,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -192,5 +193,98 @@ class ProfileStoreTest {
 
         assertTrue(labelReceived, "Expected Label.UsernameSaved to be published")
         job.cancel()
+    }
+
+    // ── Profile load retry ────────────────────────────────────────────────────
+
+    @Test
+    fun `LoadProfile_networkError_retriesUpToMaxAttempts`() = runTest {
+        var callCount = 0
+        val repo = object : UserRepository by fakeRepo() {
+            override suspend fun getMe(): Result<Student> {
+                callCount++
+                return Result.failure(AppError.NetworkError())
+            }
+        }
+        val store = buildStore(repo)
+        store.accept(ProfileStore.Intent.LoadProfile)
+        advanceUntilIdle()
+
+        assertIs<AppError.NetworkError>(store.stateFlow.first().error)
+        assertEquals(3, callCount, "NetworkError should be retried up to MAX_ATTEMPTS")
+    }
+
+    @Test
+    fun `LoadProfile_nonTransientError_stopsWithoutRetry`() = runTest {
+        var callCount = 0
+        val repo = object : UserRepository by fakeRepo() {
+            override suspend fun getMe(): Result<Student> {
+                callCount++
+                return Result.failure(AppError.Unauthorized())
+            }
+        }
+        val store = buildStore(repo)
+        store.accept(ProfileStore.Intent.LoadProfile)
+        advanceUntilIdle()
+
+        assertEquals(1, callCount, "Non-transient error must not be retried")
+        assertIs<AppError.Unauthorized>(store.stateFlow.first().error)
+    }
+
+    @Test
+    fun `LoadProfile_transientThenSuccess_rendersStudentAfterRetry`() = runTest {
+        var callCount = 0
+        val repo = object : UserRepository by fakeRepo() {
+            override suspend fun getMe(): Result<Student> {
+                callCount++
+                return if (callCount < 3) Result.failure(AppError.NetworkError())
+                else Result.success(fakeStudent)
+            }
+        }
+        val store = buildStore(repo)
+        store.accept(ProfileStore.Intent.LoadProfile)
+        advanceUntilIdle()
+
+        assertNull(store.stateFlow.first().error)
+        assertEquals(fakeStudent, store.stateFlow.first().student)
+    }
+
+    // ── Manual Retry ──────────────────────────────────────────────────────────
+
+    @Test
+    fun `Retry_afterError_sendsNewRequest`() = runTest {
+        var callCount = 0
+        val repo = object : UserRepository by fakeRepo() {
+            override suspend fun getMe(): Result<Student> {
+                callCount++
+                return if (callCount == 1) Result.failure(AppError.Unauthorized())
+                else Result.success(fakeStudent)
+            }
+        }
+        val store = buildStore(repo)
+        store.accept(ProfileStore.Intent.LoadProfile)
+        advanceUntilIdle()
+        assertEquals(1, callCount)
+
+        store.accept(ProfileStore.Intent.Retry)
+        advanceUntilIdle()
+
+        assertEquals(2, callCount)
+        assertEquals(fakeStudent, store.stateFlow.first().student)
+        assertNull(store.stateFlow.first().error)
+    }
+
+    // ── Profile update refreshes state ────────────────────────────────────────
+
+    @Test
+    fun `UpdateDisplayName on success refreshes student in state`() = runTest {
+        val updatedStudent = fakeStudent.copy(displayName = "New Name")
+        val repo = fakeRepo(updateResult = Result.success(updatedStudent))
+        val store = buildStore(repo)
+        store.accept(ProfileStore.Intent.UpdateDisplayName("New Name"))
+        advanceUntilIdle()
+
+        assertEquals(updatedStudent, store.stateFlow.first().student)
+        assertNull(store.stateFlow.first().error)
     }
 }

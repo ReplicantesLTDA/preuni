@@ -1,0 +1,363 @@
+{
+  "repo": "dwbessa/preuni.com.br",
+  "remote": "git@github.com:dwbessa/preuni.com.br.git",
+  "feature": "008-fix-backend-integrations",
+  "tasksTotal": 35,
+  "createdCount": 35,
+  "skippedCount": 0,
+  "failedCount": 0,
+  "created": [
+    {
+      "id": "T001",
+      "parallel": false,
+      "story": "FOUNDATION",
+      "desc": "Run baseline mobile tests for `mobile/shared/src/commonTest/kotlin/com/preuni/shared/presentation/home/HomeStoreTest.kt` and `mobile/shared/src/commonTest/kotlin/com/preuni/shared/presentation/profile/ProfileStoreTest.kt`",
+      "line": 22,
+      "title": "[008-fix-backend-integrations] T001 FOUNDATION: Run baseline mobile tests for and",
+      "number": 1,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/1"
+    },
+    {
+      "id": "T002",
+      "parallel": false,
+      "story": "FOUNDATION",
+      "desc": "Run baseline backend handler tests in `backend/svc/user/handler/`",
+      "line": 23,
+      "title": "[008-fix-backend-integrations] T002 FOUNDATION: Run baseline backend handler tests in",
+      "number": 2,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/2"
+    },
+    {
+      "id": "T003",
+      "parallel": true,
+      "story": "FOUNDATION",
+      "desc": "Create reusable integration DB helper in `backend/svc/user/handler/testhelper/db.go`",
+      "line": 33,
+      "title": "[008-fix-backend-integrations] T003 FOUNDATION: Create reusable integration DB helper in",
+      "number": 3,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/3"
+    },
+    {
+      "id": "T004",
+      "parallel": false,
+      "story": "FOUNDATION",
+      "desc": "Write failing bootstrap coverage tests in `mobile/shared/src/commonTest/kotlin/com/preuni/shared/data/network/NetworkStackFactoryTest.kt`",
+      "line": 34,
+      "title": "[008-fix-backend-integrations] T004 FOUNDATION: Write failing bootstrap coverage tests in",
+      "number": 4,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/4"
+    },
+    {
+      "id": "T005",
+      "parallel": false,
+      "story": "FOUNDATION",
+      "desc": "Implement shared authenticated client bootstrap in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/data/network/NetworkStackFactory.kt`",
+      "line": 35,
+      "title": "[008-fix-backend-integrations] T005 FOUNDATION: Implement shared authenticated client bootstrap in",
+      "number": 5,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/5"
+    },
+    {
+      "id": "T006",
+      "parallel": true,
+      "story": "FOUNDATION",
+      "desc": "Migrate Android bootstrap to shared factory in `mobile/androidApp/src/androidMain/kotlin/com/preuni/android/MainActivity.kt`",
+      "line": 36,
+      "title": "[008-fix-backend-integrations] T006 FOUNDATION: Migrate Android bootstrap to shared factory in",
+      "number": 6,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/6"
+    },
+    {
+      "id": "T007",
+      "parallel": true,
+      "story": "FOUNDATION",
+      "desc": "Migrate iOS bootstrap to shared factory in `mobile/shared/src/iosMain/kotlin/com/preuni/shared/MainViewController.kt`",
+      "line": 37,
+      "title": "[008-fix-backend-integrations] T007 FOUNDATION: Migrate iOS bootstrap to shared factory in",
+      "number": 7,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/7"
+    },
+    {
+      "id": "T008",
+      "parallel": true,
+      "story": "FOUNDATION",
+      "desc": "Migrate Web bootstrap to shared factory in `mobile/webApp/src/wasmJsMain/kotlin/com/preuni/web/main.kt`",
+      "line": 38,
+      "title": "[008-fix-backend-integrations] T008 FOUNDATION: Migrate Web bootstrap to shared factory in",
+      "number": 8,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/8"
+    },
+    {
+      "id": "T009",
+      "parallel": true,
+      "story": "US1",
+      "desc": "Add failing GET `/v1/students/me` auth header + schema tests in `mobile/shared/src/commonTest/kotlin/com/preuni/shared/data/user/UserApiClientTest.kt`",
+      "line": 52,
+      "title": "[008-fix-backend-integrations] T009 US1: Add failing GET auth header + schema tests in",
+      "number": 9,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/9"
+    },
+    {
+      "id": "T010",
+      "parallel": true,
+      "story": "US1",
+      "desc": "Add failing Home load/retry/refresh tests in `mobile/shared/src/commonTest/kotlin/com/preuni/shared/presentation/home/HomeStoreTest.kt`",
+      "line": 53,
+      "title": "[008-fix-backend-integrations] T010 US1: Add failing Home load/retry/refresh tests in",
+      "number": 10,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/10"
+    },
+    {
+      "id": "T011",
+      "parallel": true,
+      "story": "US1",
+      "desc": "Add failing GET `/v1/students/me` integration tests in `backend/svc/user/handler/get_student_integration_test.go`",
+      "line": 54,
+      "title": "[008-fix-backend-integrations] T011 US1: Add failing GET integration tests in",
+      "number": 11,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/11"
+    },
+    {
+      "id": "T012",
+      "parallel": false,
+      "story": "US1",
+      "desc": "Implement strict `StudentResponse` validation + mapping for `getMe()` in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/data/user/UserApiClient.kt`",
+      "line": 58,
+      "title": "[008-fix-backend-integrations] T012 US1: Implement strict validation + mapping for in",
+      "number": 12,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/12"
+    },
+    {
+      "id": "T013",
+      "parallel": false,
+      "story": "US1",
+      "desc": "Implement 10s timeout + transient exponential retry for Home fetch flow in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/home/HomeStore.kt`",
+      "line": 59,
+      "title": "[008-fix-backend-integrations] T013 US1: Implement 10s timeout + transient exponential retry for Home fetch flow in",
+      "number": 13,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/13"
+    },
+    {
+      "id": "T014",
+      "parallel": false,
+      "story": "US1",
+      "desc": "Implement Home refresh affordance and user-friendly error copy in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/home/HomeScreen.kt`",
+      "line": 60,
+      "title": "[008-fix-backend-integrations] T014 US1: Implement Home refresh affordance and user-friendly error copy in",
+      "number": 14,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/14"
+    },
+    {
+      "id": "T015",
+      "parallel": false,
+      "story": "US1",
+      "desc": "Wire Home refresh intent handling in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/PreuniApp.kt`",
+      "line": 61,
+      "title": "[008-fix-backend-integrations] T015 US1: Wire Home refresh intent handling in",
+      "number": 15,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/15"
+    },
+    {
+      "id": "T016",
+      "parallel": true,
+      "story": "US2",
+      "desc": "Add failing Profile load/retry/update tests in `mobile/shared/src/commonTest/kotlin/com/preuni/shared/presentation/profile/ProfileStoreTest.kt`",
+      "line": 75,
+      "title": "[008-fix-backend-integrations] T016 US2: Add failing Profile load/retry/update tests in",
+      "number": 16,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/16"
+    },
+    {
+      "id": "T017",
+      "parallel": true,
+      "story": "US2",
+      "desc": "Add failing PATCH `/v1/students/me` integration tests in `backend/svc/user/handler/update_student_integration_test.go`",
+      "line": 76,
+      "title": "[008-fix-backend-integrations] T017 US2: Add failing PATCH integration tests in",
+      "number": 17,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/17"
+    },
+    {
+      "id": "T018",
+      "parallel": false,
+      "story": "US2",
+      "desc": "Add failing profile-update schema contract tests in `mobile/shared/src/commonTest/kotlin/com/preuni/shared/data/user/UserApiClientTest.kt`",
+      "line": 77,
+      "title": "[008-fix-backend-integrations] T018 US2: Add failing profile-update schema contract tests in",
+      "number": 18,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/18"
+    },
+    {
+      "id": "T019",
+      "parallel": false,
+      "story": "US2",
+      "desc": "Reuse strict `StudentResponse` validation for `updateProfile()` in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/data/user/UserApiClient.kt`",
+      "line": 81,
+      "title": "[008-fix-backend-integrations] T019 US2: Reuse strict validation for in",
+      "number": 19,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/19"
+    },
+    {
+      "id": "T020",
+      "parallel": false,
+      "story": "US2",
+      "desc": "Implement Profile fetch timeout/retry/refresh flow in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/profile/ProfileStore.kt`",
+      "line": 82,
+      "title": "[008-fix-backend-integrations] T020 US2: Implement Profile fetch timeout/retry/refresh flow in",
+      "number": 20,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/20"
+    },
+    {
+      "id": "T021",
+      "parallel": false,
+      "story": "US2",
+      "desc": "Implement Profile refresh/retry UX and friendly error states in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/profile/ProfileScreen.kt`",
+      "line": 83,
+      "title": "[008-fix-backend-integrations] T021 US2: Implement Profile refresh/retry UX and friendly error states in",
+      "number": 21,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/21"
+    },
+    {
+      "id": "T022",
+      "parallel": false,
+      "story": "US2",
+      "desc": "Wire Profile refresh callbacks and labels in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/PreuniApp.kt`",
+      "line": 84,
+      "title": "[008-fix-backend-integrations] T022 US2: Wire Profile refresh callbacks and labels in",
+      "number": 22,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/22"
+    },
+    {
+      "id": "T023",
+      "parallel": true,
+      "story": "US3",
+      "desc": "Add failing telemetry + PII-redaction tests in `mobile/shared/src/commonTest/kotlin/com/preuni/shared/data/network/ApiClientTelemetryTest.kt`",
+      "line": 98,
+      "title": "[008-fix-backend-integrations] T023 US3: Add failing telemetry + PII-redaction tests in",
+      "number": 23,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/23"
+    },
+    {
+      "id": "T024",
+      "parallel": true,
+      "story": "US3",
+      "desc": "Add failing transient-vs-non-transient retry classification tests in `mobile/shared/src/commonTest/kotlin/com/preuni/shared/presentation/home/HomeStoreTest.kt`",
+      "line": 99,
+      "title": "[008-fix-backend-integrations] T024 US3: Add failing transient-vs-non-transient retry classification tests in",
+      "number": 24,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/24"
+    },
+    {
+      "id": "T025",
+      "parallel": true,
+      "story": "US3",
+      "desc": "Add failing transient-vs-non-transient retry classification tests in `mobile/shared/src/commonTest/kotlin/com/preuni/shared/presentation/profile/ProfileStoreTest.kt`",
+      "line": 100,
+      "title": "[008-fix-backend-integrations] T025 US3: Add failing transient-vs-non-transient retry classification tests in",
+      "number": 25,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/25"
+    },
+    {
+      "id": "T026",
+      "parallel": false,
+      "story": "US3",
+      "desc": "Add structured request telemetry and redacted logging hooks in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/data/network/ApiClient.kt`",
+      "line": 104,
+      "title": "[008-fix-backend-integrations] T026 US3: Add structured request telemetry and redacted logging hooks in",
+      "number": 26,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/26"
+    },
+    {
+      "id": "T027",
+      "parallel": false,
+      "story": "US3",
+      "desc": "Create shared retry classification helper in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/data/network/RetryPolicy.kt`",
+      "line": 105,
+      "title": "[008-fix-backend-integrations] T027 US3: Create shared retry classification helper in",
+      "number": 27,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/27"
+    },
+    {
+      "id": "T028",
+      "parallel": false,
+      "story": "US3",
+      "desc": "Apply `RetryPolicy` to Home request flow in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/home/HomeStore.kt`",
+      "line": 106,
+      "title": "[008-fix-backend-integrations] T028 US3: Apply to Home request flow in",
+      "number": 28,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/28"
+    },
+    {
+      "id": "T029",
+      "parallel": false,
+      "story": "US3",
+      "desc": "Apply `RetryPolicy` to Profile request flow in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/profile/ProfileStore.kt`",
+      "line": 107,
+      "title": "[008-fix-backend-integrations] T029 US3: Apply to Profile request flow in",
+      "number": 29,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/29"
+    },
+    {
+      "id": "T030",
+      "parallel": false,
+      "story": "US3",
+      "desc": "Update resilience acceptance matrix and telemetry contract in `specs/008-fix-backend-integrations/contracts/home-profile-api-contract.md`",
+      "line": 108,
+      "title": "[008-fix-backend-integrations] T030 US3: Update resilience acceptance matrix and telemetry contract in",
+      "number": 30,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/30"
+    },
+    {
+      "id": "T031",
+      "parallel": false,
+      "story": "US3",
+      "desc": "Update degraded-network verification steps in `specs/008-fix-backend-integrations/quickstart.md`",
+      "line": 109,
+      "title": "[008-fix-backend-integrations] T031 US3: Update degraded-network verification steps in",
+      "number": 31,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/31"
+    },
+    {
+      "id": "T032",
+      "parallel": true,
+      "story": "FOUNDATION",
+      "desc": "Run KMP feature suites for `mobile/shared/src/commonTest/kotlin/com/preuni/shared/data/user/UserApiClientTest.kt`, `mobile/shared/src/commonTest/kotlin/com/preuni/shared/presentation/home/HomeStoreTest.kt`, `mobile/shared/src/commonTest/kotlin/com/preuni/shared/presentation/profile/ProfileStoreTest.kt`, and `mobile/shared/src/commonTest/kotlin/com/preuni/shared/data/network/ApiClientTelemetryTest.kt`",
+      "line": 119,
+      "title": "[008-fix-backend-integrations] T032 FOUNDATION: Run KMP feature suites for,,, and",
+      "number": 32,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/32"
+    },
+    {
+      "id": "T033",
+      "parallel": true,
+      "story": "FOUNDATION",
+      "desc": "Run backend integration suites for `backend/svc/user/handler/get_student_integration_test.go` and `backend/svc/user/handler/update_student_integration_test.go`",
+      "line": 120,
+      "title": "[008-fix-backend-integrations] T033 FOUNDATION: Run backend integration suites for and",
+      "number": 33,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/33"
+    },
+    {
+      "id": "T034",
+      "parallel": false,
+      "story": "FOUNDATION",
+      "desc": "Resolve final regressions in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/data/user/UserApiClient.kt`, `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/home/HomeStore.kt`, and `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/profile/ProfileStore.kt`",
+      "line": 121,
+      "title": "[008-fix-backend-integrations] T034 FOUNDATION: Resolve final regressions in,, and",
+      "number": 34,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/34"
+    },
+    {
+      "id": "T035",
+      "parallel": true,
+      "story": "FOUNDATION",
+      "desc": "Remove any sensitive/debug logging leftovers in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/data/network/ApiClient.kt` and `mobile/shared/src/commonMain/kotlin/com/preuni/shared/data/network/NetworkStackFactory.kt`",
+      "line": 122,
+      "title": "[008-fix-backend-integrations] T035 FOUNDATION: Remove any sensitive/debug logging leftovers in and",
+      "number": 35,
+      "url": "https://github.com/dwbessa/preuni.com.br/issues/35"
+    }
+  ],
+  "skipped": [],
+  "failed": []
+}

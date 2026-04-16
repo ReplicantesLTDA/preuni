@@ -4,6 +4,7 @@ import com.arkivanov.mvikotlin.core.store.Reducer
 import com.arkivanov.mvikotlin.core.store.Store
 import com.arkivanov.mvikotlin.core.store.StoreFactory
 import com.arkivanov.mvikotlin.extensions.coroutines.CoroutineExecutor
+import com.preuni.shared.data.network.RetryPolicy
 import com.preuni.shared.domain.error.AppError
 import com.preuni.shared.domain.user.Student
 import com.preuni.shared.domain.user.UserRepository
@@ -57,8 +58,8 @@ class HomeStoreFactory(
             dispatch(Msg.Loading)
             scope.launch {
                 var lastError: AppError = AppError.Unknown()
-                repeat(3) { attempt ->
-                    if (attempt > 0) delay(1_000L)
+                for (attempt in 0 until RetryPolicy.MAX_ATTEMPTS) {
+                    if (attempt > 0) delay(RetryPolicy.delayMillis(attempt))
                     val result = repo.getMe()
                     if (result.isSuccess) {
                         dispatch(Msg.StudentLoaded(result.getOrThrow()))
@@ -66,12 +67,13 @@ class HomeStoreFactory(
                         return@launch
                     }
                     lastError = result.exceptionOrNull() as? AppError ?: AppError.Unknown()
+                    // Non-transient errors (auth, validation, etc.) must not be retried.
+                    if (!RetryPolicy.isTransient(lastError)) break
                 }
                 dispatch(Msg.ErrorReceived(lastError))
                 dispatch(Msg.DoneLoading)
             }
         }
-
     }
 
     private object ReducerImpl : Reducer<HomeStore.State, Msg> {

@@ -53,13 +53,26 @@ fun HomeScreen(
             }
 
             state.error != null -> {
-                Text(
-                    "Algo deu errado",
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                TextButton(onClick = { store.accept(HomeStore.Intent.Retry) }) {
-                    Text("Tentar novamente")
+                Spacer(Modifier.height(48.dp))
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        "Não foi possível carregar os dados.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        "Verifique sua conexão e tente novamente.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    TextButton(onClick = { store.accept(HomeStore.Intent.Retry) }) {
+                        Text("Tentar novamente")
+                    }
                 }
             }
 

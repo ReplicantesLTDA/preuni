@@ -6,15 +6,8 @@ import androidx.activity.compose.setContent
 import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.mvikotlin.main.store.DefaultStoreFactory
 import com.preuni.shared.PreuniApp
-import com.preuni.shared.data.auth.AuthApiClient
-import com.preuni.shared.data.auth.AuthRepositoryImpl
 import com.preuni.shared.data.auth.SecureStorage
-import com.preuni.shared.data.auth.TokenStore
-import com.preuni.shared.data.content.ContentRepositoryImpl
-import com.preuni.shared.data.network.buildHttpClient
-import com.preuni.shared.data.network.installTokenRefreshInterceptor
-import com.preuni.shared.data.user.UserApiClient
-import com.preuni.shared.data.user.UserRepositoryImpl
+import com.preuni.shared.data.network.NetworkStackFactory
 import com.preuni.shared.presentation.RootComponent
 
 class MainActivity : ComponentActivity() {
@@ -24,32 +17,19 @@ class MainActivity : ComponentActivity() {
 
         val baseUrl = "http://10.0.2.2:8080" // Android emulator → host loopback
 
-        val secureStorage = SecureStorage()
-        val tokenStore = TokenStore(secureStorage)
-
-        val httpClient = buildHttpClient(baseUrl, getAccessToken = { tokenStore.accessToken() })
-        val authApiClient = AuthApiClient(httpClient)
-        val authRepository = AuthRepositoryImpl(authApiClient, tokenStore)
-
-        val userApiClient = UserApiClient(httpClient)
-        val userRepository = UserRepositoryImpl(userApiClient)
-        val contentRepository = ContentRepositoryImpl(httpClient)
-
-        // Attach token refresh: on 401, silently refresh and retry with new token
-        httpClient.installTokenRefreshInterceptor(
-            tokenStore = tokenStore,
-            authApiClient = authApiClient,
-            onSessionExpired = { /* RootComponent handles logout via tokenStore.isLoggedIn() check */ },
+        val stack = NetworkStackFactory.create(
+            baseUrl = baseUrl,
+            secureStorage = SecureStorage(),
         )
 
         val storeFactory = DefaultStoreFactory()
         val root = RootComponent(
             componentContext = DefaultComponentContext(lifecycle),
             storeFactory = storeFactory,
-            tokenStore = tokenStore,
-            authRepository = authRepository,
-            userRepository = userRepository,
-            contentRepository = contentRepository,
+            tokenStore = stack.tokenStore,
+            authRepository = stack.authRepository,
+            userRepository = stack.userRepository,
+            contentRepository = stack.contentRepository,
         )
 
         setContent {
