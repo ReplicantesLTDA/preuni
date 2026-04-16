@@ -142,4 +142,89 @@ class HomeStoreTest {
         assertNull(store.stateFlow.first().student)
         assertEquals(3, callCount)
     }
+
+    // ── Non-transient errors do not retry ─────────────────────────────────────
+
+    @Test
+    fun `load_nonTransientError_stopsImmediatelyWithoutRetry`() = runTest {
+        var callCount = 0
+        val repo = object : UserRepository by fakeRepo() {
+            override suspend fun getMe(): Result<Student> {
+                callCount++
+                return Result.failure(AppError.Unauthorized())
+            }
+        }
+        val store = buildStore(repo)
+        store.accept(HomeStore.Intent.Load)
+        advanceUntilIdle()
+
+        assertIs<AppError.Unauthorized>(store.stateFlow.first().error)
+        assertEquals(1, callCount, "Non-transient error must not be retried")
+    }
+
+    @Test
+    fun `load_validationError_stopsImmediatelyWithoutRetry`() = runTest {
+        var callCount = 0
+        val repo = object : UserRepository by fakeRepo() {
+            override suspend fun getMe(): Result<Student> {
+                callCount++
+                return Result.failure(AppError.Validation("field", "bad"))
+            }
+        }
+        val store = buildStore(repo)
+        store.accept(HomeStore.Intent.Load)
+        advanceUntilIdle()
+
+        assertEquals(1, callCount, "Validation error must not be retried")
+        assertIs<AppError.Validation>(store.stateFlow.first().error)
+    }
+
+    // ── Timeout classification ─────────────────────────────────────────────────
+
+    @Test
+    fun `load_networkErrorIsTransient_retriesUpToMaxAttempts`() = runTest {
+        var callCount = 0
+        val repo = object : UserRepository by fakeRepo() {
+            override suspend fun getMe(): Result<Student> {
+                callCount++
+                return Result.failure(AppError.NetworkError())
+            }
+        }
+        val store = buildStore(repo)
+        store.accept(HomeStore.Intent.Load)
+        advanceUntilIdle()
+
+        // NetworkError is transient → should retry until MAX_ATTEMPTS (3)
+        assertEquals(3, callCount, "NetworkError should be retried up to MAX_ATTEMPTS")
+        assertIs<AppError.NetworkError>(store.stateFlow.first().error)
+    }
+
+    // ── Manual Retry re-requests backend ──────────────────────────────────────
+
+    @Test
+    fun `Retry_afterNonTransientError_sendsNewRequest`() = runTest {
+        var callCount = 0
+        val repo = object : UserRepository by fakeRepo() {
+            override suspend fun getMe(): Result<Student> {
+                callCount++
+                return if (callCount == 1) Result.failure(AppError.Unauthorized())
+                else Result.success(fakeStudent)
+            }
+        }
+        val store = buildStore(repo)
+        store.accept(HomeStore.Intent.Load)
+        advanceUntilIdle()
+
+        // First attempt hit Unauthorized (not retried)
+        assertEquals(1, callCount)
+        assertIs<AppError.Unauthorized>(store.stateFlow.first().error)
+
+        // Manual Retry should trigger a fresh request
+        store.accept(HomeStore.Intent.Retry)
+        advanceUntilIdle()
+
+        assertEquals(2, callCount)
+        assertEquals(fakeStudent, store.stateFlow.first().student)
+        assertNull(store.stateFlow.first().error)
+    }
 }

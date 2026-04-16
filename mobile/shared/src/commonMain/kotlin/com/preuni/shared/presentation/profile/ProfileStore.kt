@@ -4,12 +4,14 @@ import com.arkivanov.mvikotlin.core.store.Reducer
 import com.arkivanov.mvikotlin.core.store.Store
 import com.arkivanov.mvikotlin.core.store.StoreFactory
 import com.arkivanov.mvikotlin.extensions.coroutines.CoroutineExecutor
+import com.preuni.shared.data.network.RetryPolicy
 import com.preuni.shared.domain.auth.AuthRepository
 import com.preuni.shared.domain.auth.AuthValidator
 import com.preuni.shared.domain.auth.ValidationResult
 import com.preuni.shared.domain.error.AppError
 import com.preuni.shared.domain.user.Student
 import com.preuni.shared.domain.user.UserRepository
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 interface ProfileStore : Store<ProfileStore.Intent, ProfileStore.State, ProfileStore.Label> {
@@ -23,6 +25,7 @@ interface ProfileStore : Store<ProfileStore.Intent, ProfileStore.State, ProfileS
 
     sealed interface Intent {
         data object LoadProfile : Intent
+        data object Retry : Intent
         data class UpdateDisplayName(val value: String) : Intent
         data class UpdateUsername(val value: String) : Intent
         data object UploadAvatar : Intent
@@ -73,7 +76,8 @@ class ProfileStoreFactory(
 
         override fun executeIntent(intent: ProfileStore.Intent) {
             when (intent) {
-                ProfileStore.Intent.LoadProfile -> load()
+                ProfileStore.Intent.LoadProfile,
+                ProfileStore.Intent.Retry -> load()
                 is ProfileStore.Intent.UpdateUsername -> {
                     val result = AuthValidator.validateUsername(intent.value)
                     if (result is ValidationResult.Invalid) {
@@ -95,10 +99,19 @@ class ProfileStoreFactory(
         private fun load() {
             dispatch(Msg.Loading)
             scope.launch {
-                repo.getMe().fold(
-                    onSuccess = { dispatch(Msg.StudentLoaded(it)) },
-                    onFailure = { dispatch(Msg.ErrorReceived(it as? AppError ?: AppError.Unknown())) },
-                )
+                var lastError: AppError = AppError.Unknown()
+                for (attempt in 0 until RetryPolicy.MAX_ATTEMPTS) {
+                    if (attempt > 0) delay(RetryPolicy.delayMillis(attempt))
+                    val result = repo.getMe()
+                    if (result.isSuccess) {
+                        dispatch(Msg.StudentLoaded(result.getOrThrow()))
+                        dispatch(Msg.DoneLoading)
+                        return@launch
+                    }
+                    lastError = result.exceptionOrNull() as? AppError ?: AppError.Unknown()
+                    if (!RetryPolicy.isTransient(lastError)) break
+                }
+                dispatch(Msg.ErrorReceived(lastError))
                 dispatch(Msg.DoneLoading)
             }
         }
