@@ -5,9 +5,9 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: preuni
-      POSTGRES_PASSWORD: preuni
-      POSTGRES_DB: preuni
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
@@ -15,7 +15,7 @@ services:
     networks:
       - preuni
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U preuni"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -72,12 +72,12 @@ services:
     environment:
       PORT: "8081"
       LOG_LEVEL: debug
-      DATABASE_URL: "postgres://preuni:preuni@postgres:5432/preuni?search_path=auth&sslmode=disable"
+      DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?search_path=auth&sslmode=disable"
       REDIS_URL: "redis://redis:6379"
-      INTERNAL_SERVICE_TOKEN: dev-shared-secret
-      JWT_SIGNING_KEY: dev-jwt-signing-key-minimum-32-characters-long
-      JWT_ACCESS_EXPIRY_SECONDS: "3600"
-      JWT_REFRESH_EXPIRY_DAYS: "30"
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY}
+      JWT_ACCESS_EXPIRY_SECONDS: ${JWT_ACCESS_EXPIRY_SECONDS}
+      JWT_REFRESH_EXPIRY_DAYS: ${JWT_REFRESH_EXPIRY_DAYS}
       MAIL_SERVICE_URL: "http://mail:4000"
       USER_SERVICE_URL: "http://user:8082"
     depends_on:
@@ -98,9 +98,9 @@ services:
     environment:
       PORT: "8082"
       LOG_LEVEL: debug
-      DATABASE_URL: "postgres://preuni:preuni@postgres:5432/preuni?search_path=users&sslmode=disable"
-      INTERNAL_SERVICE_TOKEN: dev-shared-secret
-      JWT_SIGNING_KEY: dev-jwt-signing-key-minimum-32-characters-long
+      DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?search_path=users&sslmode=disable"
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY}
     depends_on:
       postgres:
         condition: service_healthy
@@ -119,9 +119,9 @@ services:
     environment:
       PORT: "8083"
       LOG_LEVEL: debug
-      DATABASE_URL: "postgres://preuni:preuni@postgres:5432/preuni?search_path=content&sslmode=disable"
-      INTERNAL_SERVICE_TOKEN: dev-shared-secret
-      JWT_SIGNING_KEY: dev-jwt-signing-key-minimum-32-characters-long
+      DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?search_path=content&sslmode=disable"
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY}
     depends_on:
       postgres:
         condition: service_healthy
@@ -140,9 +140,9 @@ services:
     environment:
       PORT: "8084"
       LOG_LEVEL: debug
-      DATABASE_URL: "postgres://preuni:preuni@postgres:5432/preuni?search_path=learning&sslmode=disable"
-      INTERNAL_SERVICE_TOKEN: dev-shared-secret
-      JWT_SIGNING_KEY: dev-jwt-signing-key-minimum-32-characters-long
+      DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?search_path=learning&sslmode=disable"
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY}
     depends_on:
       postgres:
         condition: service_healthy
@@ -161,9 +161,9 @@ services:
     environment:
       PORT: "8085"
       LOG_LEVEL: debug
-      DATABASE_URL: "postgres://preuni:preuni@postgres:5432/preuni?search_path=simulation&sslmode=disable"
-      INTERNAL_SERVICE_TOKEN: dev-shared-secret
-      JWT_SIGNING_KEY: dev-jwt-signing-key-minimum-32-characters-long
+      DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?search_path=simulation&sslmode=disable"
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY}
     depends_on:
       postgres:
         condition: service_healthy
@@ -182,11 +182,11 @@ services:
     environment:
       PORT: "8086"
       LOG_LEVEL: debug
-      DATABASE_URL: "postgres://preuni:preuni@postgres:5432/preuni?search_path=dissertation&sslmode=disable"
-      INTERNAL_SERVICE_TOKEN: dev-shared-secret
-      JWT_SIGNING_KEY: dev-jwt-signing-key-minimum-32-characters-long
-      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY}"
-      CLAUDE_MODEL: claude-haiku-4-5-20251001
+      DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?search_path=dissertation&sslmode=disable"
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      CLAUDE_MODEL: ${CLAUDE_MODEL}
     depends_on:
       postgres:
         condition: service_healthy
@@ -205,9 +205,9 @@ services:
     environment:
       PORT: "8087"
       LOG_LEVEL: debug
-      DATABASE_URL: "postgres://preuni:preuni@postgres:5432/preuni?search_path=notification&sslmode=disable"
-      INTERNAL_SERVICE_TOKEN: dev-shared-secret
-      JWT_SIGNING_KEY: dev-jwt-signing-key-minimum-32-characters-long
+      DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?search_path=notification&sslmode=disable"
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY}
     depends_on:
       postgres:
         condition: service_healthy
@@ -228,11 +228,16 @@ services:
     environment:
       MIX_ENV: prod
       PORT: "4000"
-      SECRET_KEY_BASE: dev-secret-key-base-minimum-64-characters-long-for-phoenix
-      INTERNAL_TOKEN: dev-shared-secret
-      SWOOSH_ADAPTER: local
-      FROM_EMAIL: noreply@preuni.com.br
-      PHX_HOST: localhost
+      SECRET_KEY_BASE: ${MAIL_SECRET_KEY_BASE}
+      INTERNAL_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      SWOOSH_ADAPTER: ${SWOOSH_ADAPTER}
+      FROM_EMAIL: ${FROM_EMAIL}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME}
+      PHX_HOST: ${PHX_HOST}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
     ports:
       - "4000:4000"
     networks:
