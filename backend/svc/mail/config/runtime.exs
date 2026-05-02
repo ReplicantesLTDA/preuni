@@ -20,13 +20,30 @@ config :preuni, :internal_token,
 # Mailer adapter — "local" uses Swoosh.Adapters.Local (dev mailbox),
 # "smtp" uses Swoosh.Adapters.SMTP (production).
 if System.get_env("SWOOSH_ADAPTER", "local") == "smtp" do
+  smtp_port = String.to_integer(System.get_env("SMTP_PORT", "587"))
+  smtp_host = System.fetch_env!("SMTP_HOST")
+
+  # tls_options is only used by gen_smtp on the STARTTLS upgrade path (port 587).
+  # For implicit SSL (port 465), SSL options must go through sockopts instead.
+  smtp_sockopts =
+    if smtp_port == 465 do
+      [verify: :verify_peer, cacertfile: ~c"/etc/ssl/certs/ca-certificates.crt",
+       server_name_indication: String.to_charlist(smtp_host), depth: 10,
+       customize_hostname_check: [match_fun: :public_key.pkix_verify_hostname_match_fun(:https)]]
+    else
+      []
+    end
+
   config :preuni, Preuni.Mailer,
     adapter: Swoosh.Adapters.SMTP,
-    relay: System.fetch_env!("SMTP_HOST"),
-    port: String.to_integer(System.get_env("SMTP_PORT", "587")),
+    relay: smtp_host,
+    port: smtp_port,
     username: System.fetch_env!("SMTP_USER"),
     password: System.fetch_env!("SMTP_PASS"),
-    tls: :always,
+    ssl: smtp_port == 465,
+    tls: if(smtp_port == 465, do: :never, else: :always),
+    tls_options: [verify: :verify_none],
+    sockopts: smtp_sockopts,
     auth: :always
 else
   config :preuni, Preuni.Mailer,

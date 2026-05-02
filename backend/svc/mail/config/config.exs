@@ -2,7 +2,7 @@ import Config
 
 config :preuni, PreuniWeb.Endpoint,
   url: [host: "localhost"],
-  render_errors: [view: PreuniWeb.ErrorView, accepts: ~w(json)],
+  render_errors: [formats: [json: PreuniWeb.ErrorJSON], layout: false],
   pubsub_server: Preuni.PubSub,
   live_view: [signing_salt: "change_me_in_prod"]
 

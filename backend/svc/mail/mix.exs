@@ -27,6 +27,7 @@ defmodule Preuni.MixProject do
       {:phoenix, "~> 1.7"},
       {:phoenix_html, "~> 4.0"},
       {:swoosh, "~> 1.17"},
+      {:gen_smtp, "~> 1.2"},
       {:finch, "~> 0.18"},
       {:jason, "~> 1.4"},
       {:plug_cowboy, "~> 2.7"},
