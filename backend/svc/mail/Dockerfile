@@ -2,6 +2,9 @@ FROM elixir:1.17-otp-27-alpine
 
 WORKDIR /app
 
+# CA certificates required for TLS verification in SMTP connections
+RUN apk add --no-cache ca-certificates
+
 # Install hex + rebar
 RUN mix local.hex --force && mix local.rebar --force
 
