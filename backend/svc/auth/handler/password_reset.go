@@ -10,6 +10,7 @@ import (
 	"github.com/preuni/pkg/logger"
 	pkgmw "github.com/preuni/pkg/middleware"
 	"github.com/preuni/svc/auth/domain"
+	"github.com/preuni/svc/auth/ports"
 	"github.com/preuni/svc/auth/repository"
 )
 
@@ -21,15 +22,15 @@ type PasswordResetRequestRequest struct {
 // PasswordResetRequestHandler handles POST /auth/password/reset-request.
 // Always returns 202 to prevent email enumeration.
 type PasswordResetRequestHandler struct {
-	credRepo   *repository.CredentialsRepository
-	otpRepo    *repository.OTPRepository
-	mailSvcURL string
-	log        *logger.Logger
+	credRepo    *repository.CredentialsRepository
+	otpRepo     *repository.OTPRepository
+	emailSender ports.EmailSender
+	log         *logger.Logger
 }
 
 // NewPasswordResetRequestHandler constructs the handler.
-func NewPasswordResetRequestHandler(credRepo *repository.CredentialsRepository, otpRepo *repository.OTPRepository, mailSvcURL string, log *logger.Logger) *PasswordResetRequestHandler {
-	return &PasswordResetRequestHandler{credRepo: credRepo, otpRepo: otpRepo, mailSvcURL: mailSvcURL, log: log}
+func NewPasswordResetRequestHandler(credRepo *repository.CredentialsRepository, otpRepo *repository.OTPRepository, emailSender ports.EmailSender, log *logger.Logger) *PasswordResetRequestHandler {
+	return &PasswordResetRequestHandler{credRepo: credRepo, otpRepo: otpRepo, emailSender: emailSender, log: log}
 }
 
 func (h *PasswordResetRequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -57,8 +58,9 @@ func (h *PasswordResetRequestHandler) ServeHTTP(w http.ResponseWriter, r *http.R
 			h.log.Error("password reset otp store failed", logger.Err(err))
 			return
 		}
-		rh := &RegisterHandler{mailSvcURL: h.mailSvcURL, log: h.log}
-		rh.sendEmail(context.Background(), "PASSWORD_RESET", req.Email, map[string]string{"otp": otpCode})
+		if err := h.emailSender.Send(context.Background(), "PASSWORD_RESET", req.Email, map[string]string{"otp": otpCode}); err != nil {
+			h.log.Error("password reset email send failed", logger.Err(err))
+		}
 	}()
 }
 

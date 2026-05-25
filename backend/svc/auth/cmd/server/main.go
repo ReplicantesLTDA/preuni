@@ -1,3 +1,6 @@
+// Deprecated: standalone auth-svc binary kept only for rollback.
+// Production traffic should be served by backend/svc/monolith.
+// Remove once monolith cutover is validated in production.
 package main
 
 import (
@@ -7,29 +10,23 @@ import (
 	"os"
 	"strconv"
 
-	chi "github.com/go-chi/chi/v5"
-	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/preuni/pkg/config"
 	"github.com/preuni/pkg/logger"
-	pkgmw "github.com/preuni/pkg/middleware"
-	"github.com/preuni/svc/auth/domain"
-	"github.com/preuni/svc/auth/handler"
-	"github.com/preuni/svc/auth/repository"
+	"github.com/preuni/svc/auth/adapters"
+	"github.com/preuni/svc/auth/router"
 )
 
 func main() {
 	cfg := config.Load()
 	log := logger.New(cfg.LogLevel)
 
-	// Auth-specific config
 	jwtSigningKey := requireEnv("JWT_SIGNING_KEY")
 	jwtAccessExpiry := envInt("JWT_ACCESS_EXPIRY_SECONDS", 3600)
 	jwtRefreshExpiry := envInt("JWT_REFRESH_EXPIRY_DAYS", 30)
 	mailSvcURL := envOrDefault("MAIL_SERVICE_URL", "http://localhost:4000")
 	userSvcURL := envOrDefault("USER_SERVICE_URL", "http://localhost:8082")
 
-	// Connect to PostgreSQL
 	pool, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
 	if err != nil {
 		log.Error("failed to connect to database", logger.Err(err))
@@ -37,61 +34,15 @@ func main() {
 	}
 	defer pool.Close()
 
-	// Build shared dependencies
-	credRepo := repository.NewCredentialsRepository(pool)
-	otpRepo := repository.NewOTPRepository(pool)
-	refreshRepo := repository.NewRefreshTokenRepository(pool)
-	jwtSvc := domain.NewJWTService(jwtSigningKey, jwtAccessExpiry, jwtRefreshExpiry)
-
-	// Build handlers
-	registerH := handler.NewRegisterHandler(
-		credRepo, otpRepo, refreshRepo, jwtSvc,
-		userSvcURL, mailSvcURL, cfg.InternalServiceToken, log,
-	)
-	loginH := handler.NewLoginHandler(credRepo, refreshRepo, jwtSvc)
-	verifyEmailH := handler.NewVerifyEmailHandler(credRepo, otpRepo)
-	otpRequestH := handler.NewOTPLoginRequestHandler(credRepo, otpRepo, mailSvcURL, log)
-	otpVerifyH := handler.NewOTPLoginVerifyHandler(credRepo, otpRepo, refreshRepo, jwtSvc)
-	logoutH := handler.NewLogoutHandler(refreshRepo)
-	changePasswordH := handler.NewChangePasswordHandler(credRepo, refreshRepo)
-	pwResetRequestH := handler.NewPasswordResetRequestHandler(credRepo, otpRepo, mailSvcURL, log)
-	pwResetH := handler.NewPasswordResetHandler(credRepo, otpRepo, refreshRepo)
-	changeEmailReqH := handler.NewChangeEmailRequestHandler(credRepo, otpRepo, mailSvcURL, log)
-	changeEmailConfH := handler.NewChangeEmailConfirmHandler(credRepo, otpRepo, refreshRepo)
-	deleteAccountH := handler.NewDeleteAccountHandler(credRepo, refreshRepo, userSvcURL)
-
-	authMiddleware := pkgmw.RequireAuth([]byte(jwtSigningKey))
-
-	// Build router
-	r := chi.NewRouter()
-	r.Use(chimw.RequestID)
-	r.Use(chimw.RealIP)
-	r.Use(chimw.Recoverer)
-
-	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, "ok")
-	})
-
-	r.Route("/v1/auth", func(r chi.Router) {
-		// Public endpoints
-		r.Post("/register", registerH.ServeHTTP)
-		r.Post("/login", loginH.ServeHTTP)
-		r.Post("/email/verify", verifyEmailH.ServeHTTP)
-		r.Post("/otp/request", otpRequestH.ServeHTTP)
-		r.Post("/otp/verify", otpVerifyH.ServeHTTP)
-		r.Post("/password/reset/request", pwResetRequestH.ServeHTTP)
-		r.Post("/password/reset/confirm", pwResetH.ServeHTTP)
-
-		// Authenticated endpoints
-		r.Group(func(r chi.Router) {
-			r.Use(authMiddleware)
-			r.Post("/logout", logoutH.ServeHTTP)
-			r.Post("/password/change", changePasswordH.ServeHTTP)
-			r.Post("/email/change/request", changeEmailReqH.ServeHTTP)
-			r.Post("/email/change/confirm", changeEmailConfH.ServeHTTP)
-			r.Delete("/account", deleteAccountH.ServeHTTP)
-		})
+	r := router.NewStandalone(router.Deps{
+		Pool:                 pool,
+		JWTSigningKey:        jwtSigningKey,
+		JWTAccessExpirySec:   jwtAccessExpiry,
+		JWTRefreshExpiryDays: jwtRefreshExpiry,
+		StudentProvisioner:   adapters.NewHTTPStudentProvisioner(userSvcURL, cfg.InternalServiceToken),
+		EmailSender:          adapters.NewHTTPEmailSender(mailSvcURL, cfg.InternalServiceToken),
+		UserSvcURL:           userSvcURL,
+		Log:                  log,
 	})
 
 	log.Info("starting auth service", logger.String("port", cfg.Port))

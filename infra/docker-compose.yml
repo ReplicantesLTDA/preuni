@@ -47,9 +47,7 @@ services:
     networks:
       - preuni
     depends_on:
-      auth:
-        condition: service_started
-      user:
+      monolith:
         condition: service_started
       content:
         condition: service_started
@@ -61,6 +59,43 @@ services:
         condition: service_started
       notification:
         condition: service_started
+    restart: on-failure
+
+  # ── Unified Backend Monolith ─────────────────────────────────────────────────
+  # Serves /v1/auth/*, /v1/students/*, /internal/students, /internal/email/send.
+  # Replaces auth + user + mail in cutover. Legacy services remain for rollback.
+
+  monolith:
+    build:
+      context: ../backend
+      dockerfile: svc/monolith/Dockerfile
+    environment:
+      MONOLITH_PORT: "8080"
+      LOG_LEVEL: debug
+      DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable"
+      REDIS_URL: "redis://redis:6379"
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY}
+      JWT_ACCESS_EXPIRY_SECONDS: ${JWT_ACCESS_EXPIRY_SECONDS}
+      JWT_REFRESH_EXPIRY_DAYS: ${JWT_REFRESH_EXPIRY_DAYS}
+      SELF_BASE_URL: "http://monolith:8080"
+      S3_BUCKET: ${S3_BUCKET:-preuni-avatars}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      FROM_EMAIL: ${FROM_EMAIL}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8088:8080"
+    networks:
+      - preuni
     restart: on-failure
 
   # ── Go Microservices ─────────────────────────────────────────────────────────
@@ -220,29 +255,8 @@ services:
     restart: on-failure
 
   # ── Mail Service (Elixir) ────────────────────────────────────────────────────
-
-  mail:
-    build:
-      context: ../backend/svc/mail
-      dockerfile: Dockerfile
-    environment:
-      MIX_ENV: prod
-      PORT: "4000"
-      SECRET_KEY_BASE: ${MAIL_SECRET_KEY_BASE}
-      INTERNAL_TOKEN: ${INTERNAL_SERVICE_TOKEN}
-      SWOOSH_ADAPTER: ${SWOOSH_ADAPTER}
-      FROM_EMAIL: ${FROM_EMAIL}
-      MAIL_FROM_NAME: ${MAIL_FROM_NAME}
-      PHX_HOST: ${PHX_HOST}
-      SMTP_HOST: ${SMTP_HOST}
-      SMTP_PORT: ${SMTP_PORT}
-      SMTP_USER: ${SMTP_USER}
-      SMTP_PASS: ${SMTP_PASS}
-    ports:
-      - "4000:4000"
-    networks:
-      - preuni
-    restart: on-failure
+  # REMOVED 2026-05-25 — monolith serves /internal/email/send in-process.
+  # Source kept at backend/svc/mail/ for reference until cleanup ticket lands.
 
 networks:
   preuni:

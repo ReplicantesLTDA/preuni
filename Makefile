@@ -1,7 +1,8 @@
 .PHONY: bump-version changelog tag help \
         run-infra stop-infra run-backend stop-backend \
         run-web stop-web migrate \
-        run-android build-android run-ios open-ios
+        run-android build-android run-ios open-ios \
+        run-monolith test-monolith dev test-backend doctor
 
 ## bump-version patch|minor|major
 ##   Increments the version, tags the repo, and updates version.txt.
@@ -69,13 +70,13 @@ run-backend:
 	@until docker compose -f infra/docker-compose.yml exec -T postgres pg_isready -U preuni -d preuni >/dev/null 2>&1; do sleep 1; done
 	@$(MAKE) migrate
 	docker compose -f infra/docker-compose.yml up --build -d \
-		auth user content learning simulation dissertation notification mail gateway
+		monolith content learning simulation dissertation notification gateway
 
 ## stop-backend
 ##   Stop all backend services.
 stop-backend:
 	docker compose -f infra/docker-compose.yml stop \
-		auth user content learning simulation dissertation notification mail gateway
+		monolith content learning simulation dissertation notification gateway
 
 ## migrate
 ##   Run all SQL migrations against the local postgres instance.
@@ -162,6 +163,39 @@ run-ios:
 ##   Open the iosApp Xcode project in Xcode (requires Xcode 16+).
 open-ios:
 	open mobile/iosApp/iosApp.xcodeproj
+
+## run-monolith
+##   Run the unified backend monolith locally (requires infra + migrations).
+run-monolith:
+	cd backend/svc/monolith && go run ./cmd/server
+
+## test-monolith
+##   Run monolith tests (unit + contract + integration).
+test-monolith:
+	cd backend/svc/monolith && go test ./...
+
+## test-backend
+##   Run all backend Go tests via the workspace.
+test-backend:
+	cd backend && go test ./...
+
+## dev
+##   Bring up local infra + monolith + gateway for development.
+dev:
+	docker compose -f infra/docker-compose.yml up -d postgres redis
+	@echo "Waiting for postgres to be healthy..."
+	@until docker compose -f infra/docker-compose.yml exec -T postgres pg_isready -U preuni -d preuni >/dev/null 2>&1; do sleep 1; done
+	@$(MAKE) migrate
+	docker compose -f infra/docker-compose.yml up --build -d monolith gateway
+
+## doctor
+##   Verify local dev prerequisites (Docker, Go 1.24, Postgres).
+doctor:
+	@command -v docker >/dev/null 2>&1 || { echo "✗ docker not installed"; exit 1; }
+	@docker info >/dev/null 2>&1 || { echo "✗ docker daemon not running"; exit 1; }
+	@command -v go >/dev/null 2>&1 || { echo "✗ go not installed"; exit 1; }
+	@go version | grep -qE 'go1\.(2[4-9]|[3-9][0-9])' || { echo "✗ go 1.24+ required"; exit 1; }
+	@echo "✓ docker running, go 1.24+ available"
 
 help:
 	@grep -E '^## ' Makefile | sed 's/## //'

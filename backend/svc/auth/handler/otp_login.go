@@ -9,6 +9,7 @@ import (
 	"github.com/preuni/pkg/logger"
 	pkgmw "github.com/preuni/pkg/middleware"
 	"github.com/preuni/svc/auth/domain"
+	"github.com/preuni/svc/auth/ports"
 	"github.com/preuni/svc/auth/repository"
 )
 
@@ -20,14 +21,14 @@ type OTPLoginRequestRequest struct {
 // OTPLoginRequestHandler handles POST /auth/otp/request.
 // Always returns 202 to prevent email enumeration.
 type OTPLoginRequestHandler struct {
-	credRepo   *repository.CredentialsRepository
-	otpRepo    *repository.OTPRepository
-	mailSvcURL string
-	log        *logger.Logger
+	credRepo    *repository.CredentialsRepository
+	otpRepo     *repository.OTPRepository
+	emailSender ports.EmailSender
+	log         *logger.Logger
 }
 
-func NewOTPLoginRequestHandler(credRepo *repository.CredentialsRepository, otpRepo *repository.OTPRepository, mailSvcURL string, log *logger.Logger) *OTPLoginRequestHandler {
-	return &OTPLoginRequestHandler{credRepo: credRepo, otpRepo: otpRepo, mailSvcURL: mailSvcURL, log: log}
+func NewOTPLoginRequestHandler(credRepo *repository.CredentialsRepository, otpRepo *repository.OTPRepository, emailSender ports.EmailSender, log *logger.Logger) *OTPLoginRequestHandler {
+	return &OTPLoginRequestHandler{credRepo: credRepo, otpRepo: otpRepo, emailSender: emailSender, log: log}
 }
 
 func (h *OTPLoginRequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -43,7 +44,7 @@ func (h *OTPLoginRequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	go func() {
 		creds, err := h.credRepo.FindByEmail(context.Background(), req.Email)
 		if err != nil || !creds.EmailVerified {
-			return // silently ignore unknown or unverified emails
+			return
 		}
 		otpCode, otpHash, otpExpiry, err := domain.GenerateOTP()
 		if err != nil {
@@ -54,9 +55,9 @@ func (h *OTPLoginRequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Reques
 			h.log.Error("otp store failed", logger.Err(err))
 			return
 		}
-		// Deliberately not storing the OTP handler reference in struct to keep it clean
-		rh := &RegisterHandler{mailSvcURL: h.mailSvcURL, log: h.log}
-		rh.sendEmail(context.Background(), "OTP_LOGIN", req.Email, map[string]string{"otp": otpCode})
+		if err = h.emailSender.Send(context.Background(), "OTP_LOGIN", req.Email, map[string]string{"otp": otpCode}); err != nil {
+			h.log.Error("otp email send failed", logger.Err(err))
+		}
 	}()
 }
 

@@ -10,6 +10,7 @@ import (
 	"github.com/preuni/pkg/logger"
 	pkgmw "github.com/preuni/pkg/middleware"
 	"github.com/preuni/svc/auth/domain"
+	"github.com/preuni/svc/auth/ports"
 	"github.com/preuni/svc/auth/repository"
 )
 
@@ -27,15 +28,15 @@ type ChangeEmailConfirmRequest struct {
 // ChangeEmailRequestHandler handles POST /auth/email/change-request.
 // Generates an OTP and sends it to the NEW email address for verification.
 type ChangeEmailRequestHandler struct {
-	credRepo   *repository.CredentialsRepository
-	otpRepo    *repository.OTPRepository
-	mailSvcURL string
-	log        *logger.Logger
+	credRepo    *repository.CredentialsRepository
+	otpRepo     *repository.OTPRepository
+	emailSender ports.EmailSender
+	log         *logger.Logger
 }
 
 // NewChangeEmailRequestHandler constructs the handler.
-func NewChangeEmailRequestHandler(credRepo *repository.CredentialsRepository, otpRepo *repository.OTPRepository, mailSvcURL string, log *logger.Logger) *ChangeEmailRequestHandler {
-	return &ChangeEmailRequestHandler{credRepo: credRepo, otpRepo: otpRepo, mailSvcURL: mailSvcURL, log: log}
+func NewChangeEmailRequestHandler(credRepo *repository.CredentialsRepository, otpRepo *repository.OTPRepository, emailSender ports.EmailSender, log *logger.Logger) *ChangeEmailRequestHandler {
+	return &ChangeEmailRequestHandler{credRepo: credRepo, otpRepo: otpRepo, emailSender: emailSender, log: log}
 }
 
 func (h *ChangeEmailRequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -60,8 +61,9 @@ func (h *ChangeEmailRequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Req
 	}
 
 	go func() {
-		rh := &RegisterHandler{mailSvcURL: h.mailSvcURL, log: h.log}
-		rh.sendEmail(context.Background(), "EMAIL_CHANGE", req.NewEmail, map[string]string{"otp": otpCode})
+		if err := h.emailSender.Send(context.Background(), "EMAIL_CHANGE", req.NewEmail, map[string]string{"otp": otpCode}); err != nil {
+			h.log.Error("email change send failed", logger.Err(err))
+		}
 	}()
 
 	w.WriteHeader(http.StatusAccepted)

@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/preuni/svc/auth/adapters"
 	"github.com/preuni/svc/auth/domain"
 	"github.com/preuni/svc/auth/handler"
 	"github.com/preuni/svc/auth/handler/testhelper"
@@ -40,7 +41,8 @@ func TestIntegration_FullAuthFlow(t *testing.T) {
 
 	registerH := handler.NewRegisterHandler(
 		credRepo, otpRepo, refreshRepo, jwtSvc,
-		userSvc.URL, mailSvc.URL, "test-internal-token",
+		adapters.NewHTTPStudentProvisioner(userSvc.URL, "test-internal-token"),
+		adapters.NewHTTPEmailSender(mailSvc.URL, "test-internal-token"),
 		newTestLogger(t),
 	)
 	verifyEmailH := handler.NewVerifyEmailHandler(credRepo, otpRepo)

@@ -1,3 +1,6 @@
+// Deprecated: standalone user-svc binary kept only for rollback.
+// Production traffic should be served by backend/svc/monolith.
+// Remove once monolith cutover is validated in production.
 package main
 
 import (
@@ -6,14 +9,10 @@ import (
 	"net/http"
 	"os"
 
-	chi "github.com/go-chi/chi/v5"
-	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/preuni/pkg/config"
 	"github.com/preuni/pkg/logger"
-	pkgmw "github.com/preuni/pkg/middleware"
-	"github.com/preuni/svc/user/handler"
-	"github.com/preuni/svc/user/repository"
+	"github.com/preuni/svc/user/router"
 )
 
 func main() {
@@ -31,42 +30,12 @@ func main() {
 	}
 	defer pool.Close()
 
-	studentRepo := repository.NewStudentRepository(pool)
-
-	createStudentH := handler.NewCreateStudentHandler(studentRepo)
-	getStudentH := handler.NewGetStudentHandler(studentRepo)
-	updateStudentH := handler.NewUpdateStudentHandler(studentRepo)
-	avatarH := handler.NewAvatarHandler(studentRepo, s3Bucket, s3Region)
-	onboardingH := handler.NewOnboardingHandler(studentRepo)
-	dataExportH := handler.NewDataExportHandler(studentRepo)
-	deleteStudentH := handler.NewDeleteStudentHandler(studentRepo)
-
-	authMiddleware := pkgmw.RequireAuth([]byte(jwtSigningKey))
-	internalMiddleware := pkgmw.InternalAuth(cfg.InternalServiceToken)
-
-	r := chi.NewRouter()
-	r.Use(chimw.RequestID)
-	r.Use(chimw.RealIP)
-	r.Use(chimw.Recoverer)
-
-	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, "ok")
-	})
-
-	// Internal endpoint — service-to-service only
-	r.With(internalMiddleware).Post("/internal/students", createStudentH.ServeHTTP)
-
-	// Authenticated student endpoints
-	r.Route("/v1/students", func(r chi.Router) {
-		r.Use(authMiddleware)
-		r.Get("/me", getStudentH.ServeHTTP)
-		r.Patch("/me", updateStudentH.ServeHTTP)
-		r.Delete("/me", deleteStudentH.ServeHTTP)
-		r.Get("/me/avatar/upload-url", avatarH.ServeUpload)
-		r.Post("/me/avatar/confirm", avatarH.ServeConfirm)
-		r.Patch("/me/onboarding", onboardingH.ServeHTTP)
-		r.Get("/me/data-export", dataExportH.ServeHTTP)
+	r := router.NewStandalone(router.Deps{
+		Pool:                 pool,
+		JWTSigningKey:        jwtSigningKey,
+		S3Bucket:             s3Bucket,
+		S3Region:             s3Region,
+		InternalServiceToken: cfg.InternalServiceToken,
 	})
 
 	log.Info("starting user service", logger.String("port", cfg.Port))

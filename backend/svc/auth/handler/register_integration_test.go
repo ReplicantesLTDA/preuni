@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/preuni/svc/auth/adapters"
 	"github.com/preuni/svc/auth/domain"
 	"github.com/preuni/svc/auth/handler"
 	"github.com/preuni/svc/auth/handler/testhelper"
@@ -40,7 +41,8 @@ func TestIntegration_Register_HappyPath(t *testing.T) {
 
 	h := handler.NewRegisterHandler(
 		credRepo, otpRepo, refreshRepo, jwtSvc,
-		userSvc.URL, mailSvc.URL, "tok",
+		adapters.NewHTTPStudentProvisioner(userSvc.URL, "tok"),
+		adapters.NewHTTPEmailSender(mailSvc.URL, "tok"),
 		newTestLogger(t),
 	)
 
@@ -84,7 +86,8 @@ func TestIntegration_Register_DuplicateEmail(t *testing.T) {
 
 	h := handler.NewRegisterHandler(
 		credRepo, otpRepo, refreshRepo, jwtSvc,
-		userSvc.URL, mailSvc.URL, "tok",
+		adapters.NewHTTPStudentProvisioner(userSvc.URL, "tok"),
+		adapters.NewHTTPEmailSender(mailSvc.URL, "tok"),
 		newTestLogger(t),
 	)
 

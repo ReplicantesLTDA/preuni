@@ -9,4 +9,5 @@ use (
 	./svc/simulation
 	./svc/dissertation
 	./svc/notification
+	./svc/monolith
 )
