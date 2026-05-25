@@ -1,12 +1,12 @@
 package handler_test
 
 import (
-	"encoding/json"
-	"io"
-	"net/http"
+	"context"
+	"sync"
 	"testing"
 
 	"github.com/preuni/pkg/logger"
+	"github.com/preuni/app/internal/auth/ports"
 )
 
 // newTestLogger returns a logger that suppresses output during tests.
@@ -15,34 +15,40 @@ func newTestLogger(t *testing.T) *logger.Logger {
 	return logger.New("error")
 }
 
-// captureMailOTP returns an http.Handler and a channel that receives the
-// plaintext OTP code from the first EMAIL_VERIFY request the register handler
-// fires to the mail service (asynchronously).
-func captureMailOTP() (http.Handler, <-chan string) {
-	ch := make(chan string, 1)
-	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
+// fakeStudentProvisioner accepts every CreateStudent call without side effects.
+type fakeStudentProvisioner struct{}
 
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			return
-		}
+func (fakeStudentProvisioner) CreateStudent(_ context.Context, _ ports.CreateStudentRequest) error {
+	return nil
+}
 
-		var payload struct {
-			Type   string            `json:"type"`
-			Params map[string]string `json:"params"`
-		}
-		if err = json.Unmarshal(body, &payload); err != nil {
-			return
-		}
-		if payload.Type == "EMAIL_VERIFY" {
-			if otp, ok := payload.Params["otp"]; ok {
-				select {
-				case ch <- otp:
-				default:
-				}
+// fakeEmailSender accepts every Send call without side effects.
+type fakeEmailSender struct{}
+
+func (fakeEmailSender) Send(_ context.Context, _, _ string, _ map[string]string) error {
+	return nil
+}
+
+// otpCapturingEmailSender records the OTP from the first EMAIL_VERIFY call.
+type otpCapturingEmailSender struct {
+	mu  sync.Mutex
+	ch  chan string
+}
+
+func newOTPCapturingEmailSender() *otpCapturingEmailSender {
+	return &otpCapturingEmailSender{ch: make(chan string, 1)}
+}
+
+func (s *otpCapturingEmailSender) Send(_ context.Context, emailType, _ string, params map[string]string) error {
+	if emailType == "EMAIL_VERIFY" {
+		if otp, ok := params["otp"]; ok {
+			select {
+			case s.ch <- otp:
+			default:
 			}
 		}
-	})
-	return h, ch
+	}
+	return nil
 }
+
+func (s *otpCapturingEmailSender) OTPChan() <-chan string { return s.ch }

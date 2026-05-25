@@ -15,17 +15,17 @@ type DeleteAccountRequest struct {
 }
 
 // DeleteAccountHandler handles DELETE /auth/account.
-// GDPR: Anonymizes credentials and revokes all sessions.
-// The user-svc student row is anonymized via its own DELETE /students/me endpoint.
+// GDPR: Anonymizes credentials and revokes all sessions. The student row in
+// users.students is anonymized via the user domain's own DELETE /v1/students/me
+// path (clients call that explicitly during the delete flow).
 type DeleteAccountHandler struct {
 	credRepo    *repository.CredentialsRepository
 	refreshRepo *repository.RefreshTokenRepository
-	userSvcURL  string
 }
 
 // NewDeleteAccountHandler constructs a DeleteAccountHandler.
-func NewDeleteAccountHandler(credRepo *repository.CredentialsRepository, refreshRepo *repository.RefreshTokenRepository, userSvcURL string) *DeleteAccountHandler {
-	return &DeleteAccountHandler{credRepo: credRepo, refreshRepo: refreshRepo, userSvcURL: userSvcURL}
+func NewDeleteAccountHandler(credRepo *repository.CredentialsRepository, refreshRepo *repository.RefreshTokenRepository) *DeleteAccountHandler {
+	return &DeleteAccountHandler{credRepo: credRepo, refreshRepo: refreshRepo}
 }
 
 func (h *DeleteAccountHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -39,20 +39,15 @@ func (h *DeleteAccountHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 
 	userID := pkgmw.UserIDFromContext(r.Context())
 
-	// 1. Revoke all refresh tokens
 	if err := h.refreshRepo.RevokeAllForCredential(r.Context(), userID); err != nil {
 		pkgmw.ErrorResponse(w, err)
 		return
 	}
 
-	// 2. Anonymize credentials (GDPR erasure)
 	if err := h.credRepo.Anonymize(r.Context(), userID); err != nil {
 		pkgmw.ErrorResponse(w, err)
 		return
 	}
-
-	// 3. Call user-svc to anonymize the student row
-	// (best-effort via internal endpoint; actual implementation will use http.Client)
 
 	w.WriteHeader(http.StatusNoContent)
 }

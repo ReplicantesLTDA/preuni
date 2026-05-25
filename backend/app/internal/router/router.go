@@ -45,7 +45,6 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *logger.Logger) chi.Router {
 		JWTRefreshExpiryDays: cfg.JWTRefreshExpiryDays,
 		StudentProvisioner:   provisioner,
 		EmailSender:          emailSender,
-		UserSvcURL:           cfg.SelfBaseURL, // delete-account legacy path
 		Log:                  log,
 	})
 

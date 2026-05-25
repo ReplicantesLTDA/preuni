@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/preuni/app/internal/auth/adapters"
 	"github.com/preuni/app/internal/auth/domain"
 	"github.com/preuni/app/internal/auth/handler"
 	"github.com/preuni/app/internal/auth/handler/testhelper"
@@ -22,27 +21,19 @@ import (
 // sequence against a real PostgreSQL instance.
 func TestIntegration_FullAuthFlow(t *testing.T) {
 	pool := testhelper.SetupTestDB(t)
-	_ = context.Background() // used by helpers
+	_ = context.Background()
 
 	credRepo := repository.NewCredentialsRepository(pool)
 	otpRepo := repository.NewOTPRepository(pool)
 	refreshRepo := repository.NewRefreshTokenRepository(pool)
 	jwtSvc := domain.NewJWTService("test-signing-key-32-bytes-minimum!", 3600, 30)
 
-	// Capture the OTP from the mail service call.
-	mailHandler, otpCh := captureMailOTP()
-	mailSvc := httptest.NewServer(mailHandler)
-	defer mailSvc.Close()
-
-	userSvc := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer userSvc.Close()
+	emailSender := newOTPCapturingEmailSender()
 
 	registerH := handler.NewRegisterHandler(
 		credRepo, otpRepo, refreshRepo, jwtSvc,
-		adapters.NewHTTPStudentProvisioner(userSvc.URL, "test-internal-token"),
-		adapters.NewHTTPEmailSender(mailSvc.URL, "test-internal-token"),
+		fakeStudentProvisioner{},
+		emailSender,
 		newTestLogger(t),
 	)
 	verifyEmailH := handler.NewVerifyEmailHandler(credRepo, otpRepo)
@@ -70,10 +61,10 @@ func TestIntegration_FullAuthFlow(t *testing.T) {
 	assert.NotEmpty(t, regResp.RefreshToken)
 	assert.Equal(t, 3600, regResp.ExpiresIn)
 
-	// ── Step 2: Capture OTP from mail service (sent asynchronously) ───────────
+	// ── Step 2: Capture OTP from in-process sender (sent asynchronously) ──────
 	var otpPlaintext string
 	select {
-	case otpPlaintext = <-otpCh:
+	case otpPlaintext = <-emailSender.OTPChan():
 	case <-time.After(2 * time.Second):
 		t.Fatal("timed out waiting for verification email OTP")
 	}

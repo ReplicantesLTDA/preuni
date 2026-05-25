@@ -1,13 +1,8 @@
-// Package router exposes a router builder so both the standalone auth-svc
-// binary and the unified monolith binary can mount the same routes.
+// Package router exposes the auth router builder for the monolith.
 package router
 
 import (
-	"fmt"
-	"net/http"
-
 	chi "github.com/go-chi/chi/v5"
-	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/preuni/pkg/logger"
 	pkgmw "github.com/preuni/pkg/middleware"
@@ -18,10 +13,8 @@ import (
 )
 
 // Deps captures everything the auth router needs.
-//
-// StudentProvisioner + EmailSender are required: the caller (standalone
-// binary or monolith) constructs the concrete adapter (HTTP or in-process)
-// and injects it here.
+// StudentProvisioner + EmailSender are injected by the monolith wiring with
+// in-process implementations from app/internal/adapters/.
 type Deps struct {
 	Pool                 *pgxpool.Pool
 	JWTSigningKey        string
@@ -29,7 +22,6 @@ type Deps struct {
 	JWTRefreshExpiryDays int
 	StudentProvisioner   ports.StudentProvisioner
 	EmailSender          ports.EmailSender
-	UserSvcURL           string // only used by delete-account legacy path
 	Log                  *logger.Logger
 }
 
@@ -52,7 +44,7 @@ func Mount(r chi.Router, d Deps) {
 	pwResetH := handler.NewPasswordResetHandler(credRepo, otpRepo, refreshRepo)
 	changeEmailReqH := handler.NewChangeEmailRequestHandler(credRepo, otpRepo, d.EmailSender, d.Log)
 	changeEmailConfH := handler.NewChangeEmailConfirmHandler(credRepo, otpRepo, refreshRepo)
-	deleteAccountH := handler.NewDeleteAccountHandler(credRepo, refreshRepo, d.UserSvcURL)
+	deleteAccountH := handler.NewDeleteAccountHandler(credRepo, refreshRepo)
 
 	authMiddleware := pkgmw.RequireAuth([]byte(d.JWTSigningKey))
 
@@ -77,19 +69,3 @@ func Mount(r chi.Router, d Deps) {
 	})
 }
 
-// NewStandalone returns a fully configured chi.Router for the standalone
-// auth-svc binary (includes /health + standard middleware).
-func NewStandalone(d Deps) chi.Router {
-	r := chi.NewRouter()
-	r.Use(chimw.RequestID)
-	r.Use(chimw.RealIP)
-	r.Use(chimw.Recoverer)
-
-	r.Get("/health", func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, "ok")
-	})
-
-	Mount(r, d)
-	return r
-}

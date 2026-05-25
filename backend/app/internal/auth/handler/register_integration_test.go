@@ -8,7 +8,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/preuni/app/internal/auth/adapters"
 	"github.com/preuni/app/internal/auth/domain"
 	"github.com/preuni/app/internal/auth/handler"
 	"github.com/preuni/app/internal/auth/handler/testhelper"
@@ -29,20 +28,10 @@ func TestIntegration_Register_HappyPath(t *testing.T) {
 	refreshRepo := repository.NewRefreshTokenRepository(pool)
 	jwtSvc := domain.NewJWTService("test-signing-key-32-bytes-minimum!", 3600, 30)
 
-	mailSvc := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer mailSvc.Close()
-
-	userSvc := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer userSvc.Close()
-
 	h := handler.NewRegisterHandler(
 		credRepo, otpRepo, refreshRepo, jwtSvc,
-		adapters.NewHTTPStudentProvisioner(userSvc.URL, "tok"),
-		adapters.NewHTTPEmailSender(mailSvc.URL, "tok"),
+		fakeStudentProvisioner{},
+		fakeEmailSender{},
 		newTestLogger(t),
 	)
 
@@ -74,20 +63,10 @@ func TestIntegration_Register_DuplicateEmail(t *testing.T) {
 	refreshRepo := repository.NewRefreshTokenRepository(pool)
 	jwtSvc := domain.NewJWTService("test-signing-key-32-bytes-minimum!", 3600, 30)
 
-	mailSvc := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer mailSvc.Close()
-
-	userSvc := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer userSvc.Close()
-
 	h := handler.NewRegisterHandler(
 		credRepo, otpRepo, refreshRepo, jwtSvc,
-		adapters.NewHTTPStudentProvisioner(userSvc.URL, "tok"),
-		adapters.NewHTTPEmailSender(mailSvc.URL, "tok"),
+		fakeStudentProvisioner{},
+		fakeEmailSender{},
 		newTestLogger(t),
 	)
 
