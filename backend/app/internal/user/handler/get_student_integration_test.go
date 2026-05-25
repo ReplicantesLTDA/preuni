@@ -96,7 +96,8 @@ func TestIntegration_GetStudent_NotFound(t *testing.T) {
 	studentRepo := repository.NewStudentRepository(pool)
 	h := withAuth(handler.NewGetStudentHandler(studentRepo))
 
-	token := testhelper.MakeTestJWT(t, "00000000-0000-0000-0000-nonexistent01")
+	// Valid UUID that does not exist in users.students.
+	token := testhelper.MakeTestJWT(t, "00000000-0000-0000-0000-000000000001")
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/students/me", nil)
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))

@@ -171,8 +171,10 @@ run-monolith:
 
 ## test-monolith
 ##   Run monolith tests (unit + contract + integration).
+##   -p 1: serialize packages — integration + handler tests share auth tables
+##         and race when run in parallel.
 test-monolith:
-	cd backend/app && go test ./...
+	cd backend/app && go test -p 1 ./...
 
 ## test-backend
 ##   Run all backend Go tests via the workspace.
