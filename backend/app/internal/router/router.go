@@ -1,5 +1,6 @@
 // Package router builds the unified monolith chi.Router by mounting
-// per-domain routers (auth, user) and the in-process mail handler.
+// per-domain routers (auth, user). Mail is invoked in-process via the
+// EmailSender adapter — there is no HTTP mail endpoint.
 package router
 
 import (
@@ -31,13 +32,11 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *logger.Logger) chi.Router {
 		fmt.Fprint(w, "ok")
 	})
 
-	// Build shared collaborators once.
 	studentRepo := userrepo.NewStudentRepository(pool)
 	sender := buildSender(cfg, log)
 	provisioner := adapters.NewInProcessStudentProvisioner(studentRepo)
 	emailSender := adapters.NewInProcessEmailSender(cfg.MailFromAddr, cfg.MailFromName, sender, log)
 
-	// Auth — /v1/auth/* (uses in-process adapters; no self-HTTP loopback)
 	authrouter.Mount(r, authrouter.Deps{
 		Pool:                 pool,
 		JWTSigningKey:        cfg.JWTSigningKey,
@@ -48,19 +47,12 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *logger.Logger) chi.Router {
 		Log:                  log,
 	})
 
-	// User — /v1/students/* + /internal/students
 	userrouter.Mount(r, userrouter.Deps{
-		Pool:                 pool,
-		JWTSigningKey:        cfg.JWTSigningKey,
-		S3Bucket:             cfg.S3Bucket,
-		S3Region:             cfg.S3Region,
-		InternalServiceToken: cfg.InternalServiceToken,
+		Pool:          pool,
+		JWTSigningKey: cfg.JWTSigningKey,
+		S3Bucket:      cfg.S3Bucket,
+		S3Region:      cfg.S3Region,
 	})
-
-	// Mail — /internal/email/send (internal-token protected; serves split-service callers)
-	mailHandler := mail.NewHandler(cfg.MailFromAddr, cfg.MailFromName, sender, log)
-	internalAuth := pkgmw.InternalAuth(cfg.InternalServiceToken)
-	r.With(internalAuth).Post("/internal/email/send", mailHandler.ServeHTTP)
 
 	return r
 }

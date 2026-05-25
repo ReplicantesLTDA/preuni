@@ -1,33 +1,33 @@
-# preuni monolith
+# preuni monolith (`backend/app/`)
 
-Unified backend binary. Serves the gateway-facing `/v1/*` HTTP API plus
-internal endpoints, replacing `auth-svc`, `user-svc`, and the Elixir
-`mail-svc` with a single Go process.
+Single Go binary serving the entire backend HTTP surface.
 
-## Routes mounted
+## Routes
 
 - `GET  /health`
-- `/v1/auth/*` — register, login, refresh, email verify, OTP login,
-  password reset, password change, email change, logout, account delete
+- `/v1/auth/*` — register, login, refresh, email verify, OTP login, password reset, password change, email change, logout, account delete
 - `/v1/students/*` — me, onboarding, avatar, data export
-- `/internal/students` — provisioning (internal-token protected)
-- `/internal/email/send` — transactional email (internal-token protected)
+
+Mail is **in-process**: auth handlers dispatch via the `EmailSender` port
+(`app/internal/adapters/email_sender.go`), which calls
+`mail.Validate → Build → Sender.Send` directly. No HTTP mail endpoint.
+
+Student provisioning is also in-process via the `StudentProvisioner` port
+(`app/internal/adapters/student_provisioner.go`) — no HTTP `/internal/students`.
 
 ## Run locally
 
-### Option A — Docker Compose (recommended)
+### Option A — Docker Compose
 
 ```bash
 docker compose -f infra/docker-compose.yml up --build -d monolith gateway
+# gateway: :8080   monolith (direct): :8088
 ```
-
-Gateway listens on `:8080`. Routes `/v1/auth/*` and `/v1/students/*` go to
-the monolith. Monolith itself is exposed on host port `:8088`.
 
 ### Option B — Go run
 
 ```bash
-cp backend/svc/monolith/.env.example backend/svc/monolith/.env
+cp backend/app/.env.example backend/app/.env
 # fill in values, then:
 make run-monolith
 ```
@@ -35,26 +35,28 @@ make run-monolith
 ## Tests
 
 ```bash
-make test-monolith        # unit + handler tests
-cd backend/svc/monolith && go test ./...
+make test-monolith
+# or
+cd backend/app && go test ./...
 ```
 
-## Rollback to legacy split services
+Integration tests in `tests/integration/` need a running Postgres; they skip
+gracefully if unreachable. Handler-level integration tests read `TEST_DB_URL`
+from the environment.
 
-The legacy `auth`, `user`, and `mail` containers remain in
-`infra/docker-compose.yml` and the legacy upstream blocks in
-`infra/nginx/nginx.conf`. To roll back gateway routing:
+## Layout
 
-1. In `infra/nginx/nginx.conf`, change `proxy_pass http://monolith_svc`
-   back to `http://auth_svc` (for `/v1/auth/`) and `http://user_svc`
-   (for `/v1/students/`).
-2. `docker compose up -d --no-deps gateway` to reload nginx.
-3. `docker compose up -d --build auth user mail` to bring legacy back.
-
-## Self-HTTP loopback
-
-In monolith mode, auth handlers still self-HTTP to `/internal/students`
-and `/internal/email/send` via `SELF_BASE_URL`. This preserves the
-existing service contract and means internal endpoints remain
-internal-token protected. Direct in-process adapters are deferred —
-see specs/009-backend-monolith-refactor/tasks.md (T008–T011, T026, T049).
+```
+cmd/server/                  main entrypoint
+internal/auth/               handlers, repo, router, ports
+internal/user/               handlers, repo, router
+internal/mail/               validator, templates, SMTP sender
+internal/adapters/           in-process implementations of auth ports
+internal/config/             env loading
+internal/router/             top-level chi router that mounts the domains
+internal/{content,learning,
+          simulation,
+          dissertation,
+          notification}/     scaffolding (README only — no endpoints yet)
+tests/{contract,integration}/
+```

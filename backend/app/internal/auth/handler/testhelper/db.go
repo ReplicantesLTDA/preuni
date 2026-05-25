@@ -59,12 +59,12 @@ func MustEnv(t *testing.T, key string) string {
 }
 
 // runMigrations executes all *.sql files in infra/migrations/auth/ sorted by
-// filename. Tests run from backend/svc/auth/handler/ so the relative path
-// walks four directories up to the repository root.
+// filename. Tests run from backend/app/internal/auth/handler/ so the relative
+// path walks five directories up to the repository root.
 func runMigrations(t *testing.T, ctx context.Context, pool *pgxpool.Pool) {
 	t.Helper()
 
-	migrationsDir := filepath.Join("..", "..", "..", "..", "infra", "migrations", "auth")
+	migrationsDir := filepath.Join("..", "..", "..", "..", "..", "infra", "migrations", "auth")
 
 	entries, err := os.ReadDir(migrationsDir)
 	if err != nil {

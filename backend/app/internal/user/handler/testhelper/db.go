@@ -73,12 +73,12 @@ func MakeTestJWT(t *testing.T, userID string) string {
 }
 
 // runMigrations executes all *.sql files in infra/migrations/user/ sorted by
-// filename. Tests run from backend/svc/user/handler/ so the relative path
-// walks four directories up to the repository root.
+// filename. Tests run from backend/app/internal/user/handler/ so the relative
+// path walks five directories up to the repository root.
 func runMigrations(t *testing.T, ctx context.Context, pool *pgxpool.Pool) {
 	t.Helper()
 
-	migrationsDir := filepath.Join("..", "..", "..", "..", "infra", "migrations", "user")
+	migrationsDir := filepath.Join("..", "..", "..", "..", "..", "infra", "migrations", "user")
 
 	entries, err := os.ReadDir(migrationsDir)
 	if err != nil {

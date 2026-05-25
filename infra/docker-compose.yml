@@ -64,11 +64,9 @@ services:
       LOG_LEVEL: debug
       DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable"
       REDIS_URL: "redis://redis:6379"
-      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
       JWT_SIGNING_KEY: ${JWT_SIGNING_KEY}
       JWT_ACCESS_EXPIRY_SECONDS: ${JWT_ACCESS_EXPIRY_SECONDS}
       JWT_REFRESH_EXPIRY_DAYS: ${JWT_REFRESH_EXPIRY_DAYS}
-      SELF_BASE_URL: "http://monolith:8080"
       S3_BUCKET: ${S3_BUCKET:-preuni-avatars}
       S3_REGION: ${S3_REGION:-us-east-1}
       FROM_EMAIL: ${FROM_EMAIL}

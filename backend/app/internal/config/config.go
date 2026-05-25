@@ -10,11 +10,10 @@ import (
 
 // Config aggregates all settings the monolith needs at startup.
 type Config struct {
-	Port                 string
-	LogLevel             string
-	DatabaseURL          string
-	RedisURL             string
-	InternalServiceToken string
+	Port        string
+	LogLevel    string
+	DatabaseURL string
+	RedisURL    string
 
 	// Auth
 	JWTSigningKey        string
@@ -24,10 +23,6 @@ type Config struct {
 	// User
 	S3Bucket string
 	S3Region string
-
-	// Self-URL: where in-process services find the monolith's own internal endpoints.
-	// In monolith mode, auth handlers self-HTTP to mail+user via this URL.
-	SelfBaseURL string
 
 	// Mail
 	SMTPHost     string
@@ -41,14 +36,11 @@ type Config struct {
 
 // Load reads Config from env. Missing required vars panic at startup.
 func Load() Config {
-	port := getEnv("MONOLITH_PORT", getEnv("PORT", "8080"))
-	selfDefault := "http://localhost:" + port
 	return Config{
-		Port:                 port,
-		LogLevel:             getEnv("LOG_LEVEL", "info"),
-		DatabaseURL:          require("DATABASE_URL"),
-		RedisURL:             getEnv("REDIS_URL", ""),
-		InternalServiceToken: require("INTERNAL_SERVICE_TOKEN"),
+		Port:        getEnv("MONOLITH_PORT", getEnv("PORT", "8080")),
+		LogLevel:    getEnv("LOG_LEVEL", "info"),
+		DatabaseURL: require("DATABASE_URL"),
+		RedisURL:    getEnv("REDIS_URL", ""),
 
 		JWTSigningKey:        require("JWT_SIGNING_KEY"),
 		JWTAccessExpirySec:   envInt("JWT_ACCESS_EXPIRY_SECONDS", 3600),
@@ -56,8 +48,6 @@ func Load() Config {
 
 		S3Bucket: getEnv("S3_BUCKET", "preuni-avatars"),
 		S3Region: getEnv("S3_REGION", "us-east-1"),
-
-		SelfBaseURL: getEnv("SELF_BASE_URL", selfDefault),
 
 		SMTPHost:     getEnv("SMTP_HOST", ""),
 		SMTPPort:     envInt("SMTP_PORT", 587),

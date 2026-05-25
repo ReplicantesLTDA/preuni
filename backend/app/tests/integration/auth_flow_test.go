@@ -40,7 +40,6 @@ func setup(t *testing.T) (http.Handler, *pgxpool.Pool) {
 		JWTSigningKey:        "test-signing-key-32-bytes-minimum!",
 		JWTAccessExpirySec:   3600,
 		JWTRefreshExpiryDays: 30,
-		InternalServiceToken: "test-internal-token",
 		MailFromAddr:         "noreply@test",
 		MailFromName:         "Test",
 		S3Bucket:             "test-bucket",
