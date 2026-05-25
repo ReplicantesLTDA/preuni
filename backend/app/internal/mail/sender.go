@@ -76,6 +76,14 @@ func (s *SMTPSender) Send(msg Message) error {
 	return smtp.SendMail(addr, auth, from, []string{msg.To}, []byte(body))
 }
 
+// sanitizeHeader strips CR and LF (and embedded NUL) from a header value to
+// prevent SMTP header injection via attacker-controlled input that flows into
+// To / From / Subject. RFC 5322 forbids these bytes in header field values
+// anyway; rejecting them at the boundary is the safe default.
+func sanitizeHeader(v string) string {
+	return strings.NewReplacer("\r", "", "\n", "", "\x00", "").Replace(v)
+}
+
 func encodeMIME(msg Message) string {
 	from := msg.From
 	if msg.FromName != "" {
@@ -83,9 +91,9 @@ func encodeMIME(msg Message) string {
 	}
 	boundary := "preuni-mime-boundary"
 	headers := []string{
-		"From: " + from,
-		"To: " + msg.To,
-		"Subject: " + msg.Subject,
+		"From: " + sanitizeHeader(from),
+		"To: " + sanitizeHeader(msg.To),
+		"Subject: " + sanitizeHeader(msg.Subject),
 		"MIME-Version: 1.0",
 		"Content-Type: multipart/alternative; boundary=" + boundary,
 	}

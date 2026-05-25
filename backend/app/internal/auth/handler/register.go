@@ -3,18 +3,42 @@ package handler
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
+	apperrors "github.com/preuni/pkg/errors"
 	"github.com/preuni/pkg/logger"
 	pkgmw "github.com/preuni/pkg/middleware"
 	"github.com/preuni/app/internal/auth/domain"
 	"github.com/preuni/app/internal/auth/ports"
 	"github.com/preuni/app/internal/auth/repository"
 )
+
+// validateDisplayName rejects empty, oversized, or control-char-bearing
+// values. display_name flows into transactional email Subject + HTML body;
+// rejecting control bytes at the boundary stops SMTP header injection and
+// MIME smuggling regardless of downstream escaping.
+func validateDisplayName(s string) error {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return apperrors.Validation("display_name", "display_name is required")
+	}
+	if utf8.RuneCountInString(s) > 64 {
+		return apperrors.Validation("display_name", "display_name must be 64 characters or fewer")
+	}
+	for _, r := range s {
+		// Reject ASCII control chars + DEL. Printable Unicode (incl. accented
+		// chars, emoji) stays allowed.
+		if r < 0x20 || r == 0x7f {
+			return apperrors.Validation("display_name", "display_name contains invalid control characters")
+		}
+	}
+	return nil
+}
 
 // RegisterRequest is the JSON body for POST /auth/register.
 type RegisterRequest struct {
@@ -75,8 +99,8 @@ func (h *RegisterHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		pkgmw.ErrorResponse(w, err)
 		return
 	}
-	if req.DisplayName == "" {
-		pkgmw.ErrorResponse(w, fmt.Errorf("display_name is required"))
+	if err := validateDisplayName(req.DisplayName); err != nil {
+		pkgmw.ErrorResponse(w, err)
 		return
 	}
 
