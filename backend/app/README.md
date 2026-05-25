@@ -27,8 +27,8 @@ docker compose -f infra/docker-compose.yml up --build -d monolith gateway
 ### Option B — Go run
 
 ```bash
-cp backend/app/.env.example backend/app/.env
-# fill in values, then:
+# Env vars live in infra/.env (same file docker compose uses).
+set -a; source infra/.env; set +a
 make run-monolith
 ```
 

@@ -69,6 +69,7 @@ services:
       JWT_REFRESH_EXPIRY_DAYS: ${JWT_REFRESH_EXPIRY_DAYS}
       S3_BUCKET: ${S3_BUCKET:-preuni-avatars}
       S3_REGION: ${S3_REGION:-us-east-1}
+      APP_VERIFICATION_BASE_URL: ${APP_VERIFICATION_BASE_URL:-https://app.preuni.com.br/verify-email}
       FROM_EMAIL: ${FROM_EMAIL}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME}
       SMTP_HOST: ${SMTP_HOST}
