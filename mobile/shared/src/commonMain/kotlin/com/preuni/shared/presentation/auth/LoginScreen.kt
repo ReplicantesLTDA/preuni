@@ -23,11 +23,11 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.unit.dp
 import com.arkivanov.mvikotlin.extensions.coroutines.stateFlow
 import com.preuni.shared.domain.error.AppError
 import com.preuni.shared.ui.components.PreuniButton
 import com.preuni.shared.ui.components.PreuniTextField
+import com.preuni.shared.ui.theme.LocalSpacing
 
 @Composable
 fun LoginScreen(
@@ -37,11 +37,12 @@ fun LoginScreen(
 ) {
     val state by store.stateFlow.collectAsState(LoginStore.State())
     var passwordVisible by remember { mutableStateOf(false) }
+    val s = LocalSpacing.current
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 24.dp),
+            .padding(horizontal = s.xl),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -57,7 +58,7 @@ fun LoginScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
-        Spacer(Modifier.height(48.dp))
+        Spacer(Modifier.height(s.xxxl))
 
         PreuniTextField(
             value = state.emailOrUsername,
@@ -73,7 +74,7 @@ fun LoginScreen(
                 ?.takeIf { it.field == "emailOrUsername" }?.message,
         )
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(s.sm))
 
         PreuniTextField(
             value = state.password,
@@ -99,7 +100,7 @@ fun LoginScreen(
 
         val err = state.error
         if (err != null && err !is AppError.Validation) {
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(s.xs))
             Text(
                 text = when (err) {
                     is AppError.Unauthorized -> "Credenciais inválidas. Tente novamente."
@@ -111,7 +112,7 @@ fun LoginScreen(
             )
         }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(s.xl))
 
         PreuniButton(
             text = "Entrar",
@@ -119,7 +120,7 @@ fun LoginScreen(
             isLoading = state.isLoading,
         )
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(s.sm))
 
         TextButton(onClick = onSignInWithCode) {
             Text("Entrar com código")

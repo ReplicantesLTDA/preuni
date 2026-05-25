@@ -30,26 +30,36 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.arkivanov.mvikotlin.extensions.coroutines.labels
 import com.arkivanov.mvikotlin.extensions.coroutines.stateFlow
+import com.preuni.shared.ui.components.MascotPlaceholder
 import com.preuni.shared.ui.components.PreuniButton
+import com.preuni.shared.ui.theme.LocalSpacing
 import kotlinx.coroutines.launch
 
-private data class WelcomePage(val emoji: String, val title: String, val body: String)
+private data class WelcomePage(
+    val showMascot: Boolean,
+    val emoji: String?,
+    val title: String,
+    val body: String,
+)
 
 private val PAGES = listOf(
     WelcomePage(
-        emoji = "🎓",
+        showMascot = true,
+        emoji = null,
         title = "Bem-vindo ao PreUni!",
-        body = "Prepare-se para o ENEM de forma inteligente e sem pressão. Aprenda no seu ritmo.",
+        body = "Prepare-se para o ENEM no seu ritmo. A gente vai te acompanhar passo a passo.",
     ),
     WelcomePage(
+        showMascot = false,
         emoji = "🔁",
-        title = "Aprendizado por repetição",
-        body = "Nosso método de repetição espaçada garante que você revise o conteúdo no momento certo para fixar melhor.",
+        title = "Aprenda com repetição certa",
+        body = "Nosso método de repetição espaçada traz o conteúdo de volta no momento ideal para fixar melhor.",
     ),
     WelcomePage(
+        showMascot = false,
         emoji = "📝",
-        title = "Simule o ENEM",
-        body = "Treine com simulados completos e receba feedback detalhado sobre suas redações com inteligência artificial.",
+        title = "Simule e melhore sua redação",
+        body = "Treine com simulados completos e receba feedback detalhado da sua redação.",
     ),
 )
 
@@ -61,6 +71,7 @@ fun WelcomeScreen(
     val state by store.stateFlow.collectAsState(WelcomeStore.State())
     val pagerState = rememberPagerState(pageCount = { WelcomeStoreFactory.TOTAL_PAGES })
     val scope = rememberCoroutineScope()
+    val s = LocalSpacing.current
 
     LaunchedEffect(store) {
         store.labels.collect { label ->
@@ -77,10 +88,9 @@ fun WelcomeScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 24.dp, vertical = 32.dp),
+            .padding(horizontal = s.xl, vertical = s.xxl),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // Skip button top-right
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             TextButton(onClick = { store.accept(WelcomeStore.Intent.Skip) }) {
                 Text("Pular")
@@ -98,18 +108,21 @@ fun WelcomeScreen(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(
-                    p.emoji,
-                    style = MaterialTheme.typography.displayLarge,
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                )
-                Spacer(Modifier.height(24.dp))
+                if (p.showMascot) {
+                    MascotPlaceholder()
+                } else if (p.emoji != null) {
+                    Text(
+                        p.emoji,
+                        style = MaterialTheme.typography.displayLarge,
+                    )
+                }
+                Spacer(Modifier.height(s.xl))
                 Text(
                     p.title,
                     style = MaterialTheme.typography.headlineMedium,
                     textAlign = TextAlign.Center,
                 )
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(s.lg))
                 Text(
                     p.body,
                     style = MaterialTheme.typography.bodyLarge,
@@ -119,7 +132,6 @@ fun WelcomeScreen(
             }
         }
 
-        // Page indicator dots
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,
@@ -142,11 +154,11 @@ fun WelcomeScreen(
                             .background(MaterialTheme.colorScheme.outlineVariant),
                     )
                 }
-                if (index < WelcomeStoreFactory.TOTAL_PAGES - 1) Spacer(Modifier.width(6.dp))
+                if (index < WelcomeStoreFactory.TOTAL_PAGES - 1) Spacer(Modifier.width(s.xs))
             }
         }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(s.xl))
 
         PreuniButton(
             text = if (state.pageIndex < WelcomeStoreFactory.TOTAL_PAGES - 1) "Próximo" else "Começar",

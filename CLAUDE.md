@@ -19,6 +19,7 @@ Auto-generated from all feature plans. Last updated: 2026-05-25
 - PostgreSQL 16 (auth + users schemas), Redis 7 (existing infra), S3-compatible object storage (avatar flows) (009-backend-monolith-refactor)
 - Go 1.24 (per `backend/go.work`) + go-chi/chi v5 (router), pgx/v5 (Postgres), golang-jwt/jwt v5 (JWT), zap (logging), testify (tests), `net/smtp` (mail). No new dependencies introduced. (010-backend-monolith-cleanup)
 - PostgreSQL 16 (`auth.*`, `users.*` schemas — unchanged). Redis 7 (existing). S3 (avatars). (010-backend-monolith-cleanup)
+- N/A (UI/UX refactor; keep existing device-local flags/state such as welcome + active track) (011-app-design-refresh)
 
 **Frontend (001-enem-prep-platform)**
 - Kotlin 2.x + Compose Multiplatform 1.8+ (Android/iOS/Web)
@@ -95,9 +96,9 @@ cd mobile/shared && ./gradlew desktopTest
 **SQL**: lowercase keywords, snake_case identifiers; all new queries need EXPLAIN plan reviewed
 
 ## Recent Changes
+- 011-app-design-refresh: Added Kotlin 2.1.20 (Compose Multiplatform 1.8.0) + Material Design 3 (already in classpath), Decompose 3.3.0, MVIKotlin 4.2.0
 - 010-backend-monolith-cleanup: Added Go 1.24 (per `backend/go.work`) + go-chi/chi v5 (router), pgx/v5 (Postgres), golang-jwt/jwt v5 (JWT), zap (logging), testify (tests), `net/smtp` (mail). No new dependencies introduced.
 - 009-backend-monolith-refactor: Added Go 1.24 (per `go.work`/`go.mod`); Elixir mail service currently exists and will be replaced for this feature + go-chi/chi (HTTP routing), pgx/v5 (PostgreSQL), golang-jwt/jwt (JWT), zap (logging), testify (tests), NGINX (gateway routing + rate limiting)
-- 008-fix-backend-integrations: Added Kotlin 2.1.20 (KMP shared + Android/iOS/Web entrypoints), Go 1.23 (user-svc integration tests) + Compose Multiplatform 1.8.0, Decompose 3.3.0, MVIKotlin 4.2.0, Ktor Client, kotlinx.serialization, go-chi + pgx (existing backend stack)
 
 
 <!-- MANUAL ADDITIONS START -->
