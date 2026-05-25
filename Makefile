@@ -70,13 +70,13 @@ run-backend:
 	@until docker compose -f infra/docker-compose.yml exec -T postgres pg_isready -U preuni -d preuni >/dev/null 2>&1; do sleep 1; done
 	@$(MAKE) migrate
 	docker compose -f infra/docker-compose.yml up --build -d \
-		monolith content learning simulation dissertation notification gateway
+		monolith gateway
 
 ## stop-backend
 ##   Stop all backend services.
 stop-backend:
 	docker compose -f infra/docker-compose.yml stop \
-		monolith content learning simulation dissertation notification gateway
+		monolith gateway
 
 ## migrate
 ##   Run all SQL migrations against the local postgres instance.
@@ -167,12 +167,12 @@ open-ios:
 ## run-monolith
 ##   Run the unified backend monolith locally (requires infra + migrations).
 run-monolith:
-	cd backend/svc/monolith && go run ./cmd/server
+	cd backend/app && go run ./cmd/server
 
 ## test-monolith
 ##   Run monolith tests (unit + contract + integration).
 test-monolith:
-	cd backend/svc/monolith && go test ./...
+	cd backend/app && go test ./...
 
 ## test-backend
 ##   Run all backend Go tests via the workspace.

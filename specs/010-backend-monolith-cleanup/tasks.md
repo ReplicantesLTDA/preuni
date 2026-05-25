@@ -24,10 +24,10 @@ Target: `backend/app/` (single Go module) + `backend/pkg/` (unchanged shared inf
 
 **Purpose**: Establish rollback anchor + clean working tree before the structural move.
 
-- [ ] T001 Verify clean working tree: `cd /Users/dwbessa/projects/preuni && git status --porcelain` returns empty
-- [ ] T002 Stop docker stack: `docker compose -f /Users/dwbessa/projects/preuni/infra/docker-compose.yml stop monolith gateway`
-- [ ] T003 Tag rollback anchor at HEAD: `git tag pre-monolith-reorg && git push origin pre-monolith-reorg` (push only after confirming the team is aware)
-- [ ] T004 Confirm feature-009 baseline test suite passes pre-reorg: `cd /Users/dwbessa/projects/preuni/backend/svc/monolith && go test ./tests/contract/... ./tests/integration/... -count=1` → all green
+- [X] T001 Working tree clean (pending feature-009 + spec-010 work committed first; tree empty after)
+- [X] T002 Stack stopped (monolith + gateway)
+- [X] T003 Rollback tag `pre-monolith-reorg` created locally (push deferred to team announcement)
+- [X] T004 Baseline tests pass: monolith contract suite green pre-reorg
 
 ---
 
@@ -37,16 +37,16 @@ Target: `backend/app/` (single Go module) + `backend/pkg/` (unchanged shared inf
 
 **⚠️ CRITICAL**: All subsequent phases assume the new tree exists.
 
-- [ ] T005 Rename monolith module directory: `cd /Users/dwbessa/projects/preuni && git mv backend/svc/monolith backend/app`
-- [ ] T006 Create target dirs for auth domain: `mkdir -p /Users/dwbessa/projects/preuni/backend/app/internal/auth`
-- [ ] T007 Move auth subpackages: `cd /Users/dwbessa/projects/preuni && for d in adapters domain handler ports repository router; do git mv backend/svc/auth/$d backend/app/internal/auth/$d; done`
-- [ ] T008 Delete legacy auth cmd + Dockerfile + go.mod: `cd /Users/dwbessa/projects/preuni && git rm -r backend/svc/auth/cmd backend/svc/auth/Dockerfile backend/svc/auth/go.mod backend/svc/auth/go.sum && rmdir backend/svc/auth`
-- [ ] T009 Create target dirs for user domain: `mkdir -p /Users/dwbessa/projects/preuni/backend/app/internal/user`
-- [ ] T010 Move user subpackages: `cd /Users/dwbessa/projects/preuni && for d in domain handler repository router; do git mv backend/svc/user/$d backend/app/internal/user/$d; done`
-- [ ] T011 Delete legacy user cmd + Dockerfile + go.mod: `cd /Users/dwbessa/projects/preuni && git rm -r backend/svc/user/cmd backend/svc/user/Dockerfile backend/svc/user/go.mod backend/svc/user/go.sum && rmdir backend/svc/user`
-- [ ] T012 Delete Elixir mail tree entirely: `cd /Users/dwbessa/projects/preuni && git rm -r backend/svc/mail`
-- [ ] T013 Delete stub services: `cd /Users/dwbessa/projects/preuni && git rm -r backend/svc/content backend/svc/learning backend/svc/simulation backend/svc/dissertation backend/svc/notification`
-- [ ] T014 Verify `backend/svc/` is gone: `cd /Users/dwbessa/projects/preuni && rmdir backend/svc 2>/dev/null; test ! -d backend/svc`
+- [X] T005 `git mv backend/svc/monolith backend/app`
+- [X] T006 `backend/app/internal/auth/` exists (created by git mv)
+- [X] T007 Moved auth subpackages (adapters, domain, handler, ports, repository, router) into `backend/app/internal/auth/`
+- [X] T008 Removed `backend/svc/auth/{cmd,Dockerfile,go.mod,go.sum,.dockerignore}` + dir
+- [X] T009 `backend/app/internal/user/` exists
+- [X] T010 Moved user subpackages (domain, handler, repository, router) into `backend/app/internal/user/`
+- [X] T011 Removed `backend/svc/user/{cmd,Dockerfile,go.mod,go.sum,.dockerignore}` + dir
+- [X] T012 Removed Elixir `backend/svc/mail/` tree
+- [X] T013 Removed all five stub `backend/svc/{content,learning,simulation,dissertation,notification}/`
+- [X] T014 `backend/svc/` deleted; `ls backend/` = `app/  go.work  go.work.sum  pkg/`
 
 **Checkpoint**: `ls backend/` returns exactly `app/  go.work  go.work.sum  pkg/`.
 
@@ -60,16 +60,16 @@ Target: `backend/app/` (single Go module) + `backend/pkg/` (unchanged shared inf
 
 ### Implementation for User Story 1
 
-- [ ] T015 [US1] Edit `/Users/dwbessa/projects/preuni/backend/app/go.mod`: change module path `github.com/preuni/svc/monolith` → `github.com/preuni/app`; remove `replace github.com/preuni/svc/auth => ../auth` and `replace github.com/preuni/svc/user => ../user`; keep `replace github.com/preuni/pkg => ../pkg`
-- [ ] T016 [US1] Edit `/Users/dwbessa/projects/preuni/backend/go.work`: replace `use (...)` block to list ONLY `./pkg` and `./app`
-- [ ] T017 [US1] Bulk import rewrite across all `.go` files under `backend/app/`: `cd /Users/dwbessa/projects/preuni && find backend/app -name '*.go' -exec sed -i '' 's|github.com/preuni/svc/monolith/|github.com/preuni/app/|g; s|github.com/preuni/svc/auth|github.com/preuni/app/internal/auth|g; s|github.com/preuni/svc/user|github.com/preuni/app/internal/user|g' {} +`
-- [ ] T018 [US1] Verify import rewrite caught everything: `cd /Users/dwbessa/projects/preuni && grep -rn 'github.com/preuni/svc/' backend/app/ | grep -v _test.go || echo NONE` (expected: NONE)
-- [ ] T019 [US1] Rewrite imports in test files too: `cd /Users/dwbessa/projects/preuni && grep -rn 'github.com/preuni/svc/' backend/app/` (any remaining hits must also be patched by re-running T017)
-- [ ] T020 [US1] Run `go mod tidy` inside the new module: `cd /Users/dwbessa/projects/preuni/backend/app && go mod tidy`
-- [ ] T021 [US1] Compile-check: `cd /Users/dwbessa/projects/preuni/backend/app && go build ./...` → zero errors
-- [ ] T022 [US1] Vet-check: `cd /Users/dwbessa/projects/preuni/backend/app && go vet ./...` → zero issues
-- [ ] T023 [US1] Run unit + contract tests (no DB needed): `cd /Users/dwbessa/projects/preuni/backend/app && go test -short ./...`
-- [ ] T024 [US1] Run integration tests against running Postgres: `cd /Users/dwbessa/projects/preuni && docker compose -f infra/docker-compose.yml up -d postgres redis && cd backend/app && TEST_DB_URL="postgres://preuni:preuni@localhost:5432/preuni?sslmode=disable" go test ./tests/integration/... -count=1`
+- [X] T015 [US1] Module path `github.com/preuni/svc/monolith` → `github.com/preuni/app`; `replace` for auth/user dropped; pkg replace kept
+- [X] T016 [US1] `backend/go.work` lists only `./pkg` + `./app`
+- [X] T017 [US1] Bulk import rewrite via sed across `backend/app/**/*.go`
+- [X] T018 [US1] `grep -rn 'github.com/preuni/svc/' backend/app/` returns nothing
+- [X] T019 [US1] Test files clean (rewrite caught everything)
+- [X] T020 [US1] `go mod tidy` ran successfully; added testify/uuid as direct deps
+- [X] T021 [US1] `go build ./...` zero errors
+- [X] T022 [US1] `go vet ./...` zero issues
+- [X] T023 [US1] `go test -short ./...` all green (mail, contract, integration, user handler/domain)
+- [X] T024 [US1] Integration tests green against running Postgres
 
 **Checkpoint**: Module renamed; all tests pass against the moved tree.
 
@@ -83,13 +83,13 @@ Target: `backend/app/` (single Go module) + `backend/pkg/` (unchanged shared inf
 
 ### Implementation for User Story 2
 
-- [ ] T025 [US2] Update `/Users/dwbessa/projects/preuni/infra/docker-compose.yml`: remove any `auth`, `user`, `mail` service blocks; remove the `monolith_svc` Dockerfile path's `svc/` prefix → `app/Dockerfile`; gateway `depends_on` already targets `monolith`
-- [ ] T026 [US2] Update `/Users/dwbessa/projects/preuni/backend/app/Dockerfile`: COPY paths drop `svc/` (was `COPY svc/monolith/ ./svc/monolith/` → `COPY app/ ./app/`); WORKDIR + build command target `./app/cmd/server`
-- [ ] T027 [US2] Update `/Users/dwbessa/projects/preuni/infra/nginx/nginx.conf`: delete `upstream auth_svc`, `upstream user_svc`, and any other `*_svc` blocks whose compose service no longer exists. Keep `upstream monolith_svc`.
-- [ ] T028 [US2] Update `/Users/dwbessa/projects/preuni/Makefile`: every `cd backend/svc/monolith` → `cd backend/app`; remove `mail`, `auth`, `user` from `run-backend` / `stop-backend` service lists
-- [ ] T029 [US2] Grep audit — no `backend/svc/` references: `cd /Users/dwbessa/projects/preuni && grep -rn 'backend/svc/' Makefile infra/ backend/ 2>/dev/null | grep -v '/specs/' || echo NONE` (expected: NONE)
-- [ ] T030 [US2] Grep audit — no Elixir source files: `cd /Users/dwbessa/projects/preuni && find backend -name '*.ex' -o -name '*.exs' -o -name 'mix.exs'` (expected: empty output)
-- [ ] T031 [US2] Grep audit — no Elixir mail mentions outside specs: `cd /Users/dwbessa/projects/preuni && grep -rln 'Elixir\|Phoenix\|Swoosh\|mix phx' backend/ infra/ Makefile 2>/dev/null | grep -v specs/ || echo NONE` (expected: NONE)
+- [X] T025 [US2] `infra/docker-compose.yml` slimmed: removed auth/user/content/learning/simulation/dissertation/notification/mail blocks; monolith dockerfile path now `app/Dockerfile`
+- [X] T026 [US2] `backend/app/Dockerfile` COPY paths drop `svc/`; only pkg + app copied; builds `./app/cmd/server`
+- [X] T027 [US2] `infra/nginx/nginx.conf` rewritten: only `upstream monolith_svc`; only `/v1/auth/` + `/v1/students/` + `/health` locations
+- [X] T028 [US2] Makefile `cd backend/svc/monolith` → `cd backend/app`; run-backend/stop-backend now list only `monolith gateway`
+- [X] T029 [US2] Grep `backend/svc/` outside specs returns nothing
+- [X] T030 [US2] `find backend -name '*.ex*'` returns nothing
+- [X] T031 [US2] No Elixir/Phoenix/Swoosh references outside specs
 
 **Checkpoint**: All three greps return empty; CI builds reproduce.
 
@@ -103,13 +103,13 @@ Target: `backend/app/` (single Go module) + `backend/pkg/` (unchanged shared inf
 
 ### Implementation for User Story 3
 
-- [ ] T032 [P] [US3] Create stub package marker: `mkdir -p /Users/dwbessa/projects/preuni/backend/app/internal/content && echo 'Scaffolding only — no endpoints yet. Implement when the content feature lands.' > /Users/dwbessa/projects/preuni/backend/app/internal/content/README.md`
-- [ ] T033 [P] [US3] Same for learning: `mkdir -p /Users/dwbessa/projects/preuni/backend/app/internal/learning && echo 'Scaffolding only — no endpoints yet. Implement when the learning feature lands.' > /Users/dwbessa/projects/preuni/backend/app/internal/learning/README.md`
-- [ ] T034 [P] [US3] Same for simulation: `mkdir -p /Users/dwbessa/projects/preuni/backend/app/internal/simulation && echo 'Scaffolding only — no endpoints yet. Implement when the simulation feature lands.' > /Users/dwbessa/projects/preuni/backend/app/internal/simulation/README.md`
-- [ ] T035 [P] [US3] Same for dissertation: `mkdir -p /Users/dwbessa/projects/preuni/backend/app/internal/dissertation && echo 'Scaffolding only — no endpoints yet. Implement when the dissertation feature lands.' > /Users/dwbessa/projects/preuni/backend/app/internal/dissertation/README.md`
-- [ ] T036 [P] [US3] Same for notification: `mkdir -p /Users/dwbessa/projects/preuni/backend/app/internal/notification && echo 'Scaffolding only — no endpoints yet. Implement when the notification feature lands.' > /Users/dwbessa/projects/preuni/backend/app/internal/notification/README.md`
-- [ ] T037 [US3] Stage all five READMEs: `cd /Users/dwbessa/projects/preuni && git add backend/app/internal/{content,learning,simulation,dissertation,notification}/README.md`
-- [ ] T038 [US3] Verify directory count: `cd /Users/dwbessa/projects/preuni && ls backend/app/internal/ | sort` shows exactly: `adapters`, `auth`, `config`, `content`, `dissertation`, `learning`, `mail`, `notification`, `router`, `simulation`, `user`
+- [X] T032 [P] [US3] `backend/app/internal/content/README.md` created
+- [X] T033 [P] [US3] `backend/app/internal/learning/README.md` created
+- [X] T034 [P] [US3] `backend/app/internal/simulation/README.md` created
+- [X] T035 [P] [US3] `backend/app/internal/dissertation/README.md` created
+- [X] T036 [P] [US3] `backend/app/internal/notification/README.md` created
+- [X] T037 [US3] Staged all five READMEs
+- [X] T038 [US3] `backend/app/internal/` lists exactly 11 dirs (adapters, auth, config, content, dissertation, learning, mail, notification, router, simulation, user)
 
 **Checkpoint**: Five stub packages exist with truthful README markers; no Go files in them so they do not pollute `go test`.
 
@@ -123,12 +123,12 @@ Target: `backend/app/` (single Go module) + `backend/pkg/` (unchanged shared inf
 
 ### Implementation for User Story 4
 
-- [ ] T039 [US4] Rewrite the backend architecture section of `/Users/dwbessa/projects/preuni/.specify/memory/constitution.md`: state that the backend is a single Go binary (`backend/app/`) composed of domain packages under `internal/`; remove references to "the auth service" / "the mail service" as separate processes; bump version (e.g. 1.0.0 → 1.1.0) and update `Last Amended` to 2026-05-25
-- [ ] T040 [US4] Rewrite the "Backend" section of `/Users/dwbessa/projects/preuni/CLAUDE.md` "Active Technologies": collapse the dual entries (monolith + legacy auth/user + Elixir mail) into one paragraph stating "Single Go 1.24 binary at `backend/app/`; domains under `app/internal/<domain>/`; mail handled in-process via SMTP"
-- [ ] T041 [US4] Rewrite the "Project Structure" section of `/Users/dwbessa/projects/preuni/CLAUDE.md`: replace the `backend/svc/{...}` tree with the new `backend/{go.work, pkg/, app/}` layout from `specs/010-backend-monolith-cleanup/plan.md`
-- [ ] T042 [US4] Update the "Commands" section of `/Users/dwbessa/projects/preuni/CLAUDE.md`: all `cd backend/svc/...` → `cd backend/app`; remove the `Run Elixir mail service` block
-- [ ] T043 [US4] Update or create `/Users/dwbessa/projects/preuni/backend/README.md` with the two-line layout summary + pointer to `app/README.md` for running locally
-- [ ] T044 [US4] Validation — read both files end-to-end and confirm no statement contradicts `ls /Users/dwbessa/projects/preuni/backend/`
+- [X] T039 [US4] Constitution gained Architecture section (monolith); version bumped 1.0.0 → 1.1.0; Last Amended 2026-05-25
+- [X] T040 [US4] CLAUDE.md "Backend" section rewritten as single Go monolith block
+- [X] T041 [US4] CLAUDE.md "Project Structure" rewritten to new `backend/{pkg,app}` tree
+- [X] T042 [US4] CLAUDE.md "Commands" updated: all `cd backend/svc/...` → `cd backend/app`; Elixir block removed
+- [X] T043 [US4] `backend/README.md` created with two-line layout summary + pointer to `app/README.md`
+- [X] T044 [US4] Constitution + CLAUDE.md describe the actual tree (no contradictions remain)
 
 **Checkpoint**: Constitution + `CLAUDE.md` reflect the actual tree. No "the auth service" / "Elixir mail" references remain outside historical specs.
 

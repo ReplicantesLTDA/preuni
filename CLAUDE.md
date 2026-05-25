@@ -27,18 +27,13 @@ Auto-generated from all feature plans. Last updated: 2026-05-25
 - FSRS-Kotlin (`github.com/open-spaced-repetition/FSRS-Kotlin`)
 - Kotlin/Wasm for web target (Beta)
 
-**Backend Go services (001-enem-prep-platform / 009-backend-monolith-refactor)**
-- Go 1.24+: **monolith** (auth + user + mail consolidated), content, learning, simulation, dissertation, notification
-- go-chi (router), pgx v5 (PostgreSQL), zap (logging), golang-migrate
-- go-fsrs v3 (`github.com/open-spaced-repetition/go-fsrs/v3`) in learning-svc
-- Anthropic Claude API in dissertation-svc (haiku-4-5 primary, sonnet-4-6 fallback)
-- NGINX API gateway routes `/v1/auth/*` + `/v1/students/*` to monolith
-- Legacy `backend/svc/auth` + `backend/svc/user` standalone binaries retained for rollback only
-
-**Mail (009-backend-monolith-refactor)**
-- In-process Go mail component inside monolith (`backend/svc/monolith/internal/mail`)
-- SMTP via `net/smtp` (implicit TLS 465 / STARTTLS 587); fire-and-forget delivery
-- Legacy Elixir mail-svc at `backend/svc/mail/` (deprecated — removed from compose 2026-05-25)
+**Backend (010-backend-monolith-cleanup)**
+- Single Go 1.24 binary at `backend/app/`. Module path `github.com/preuni/app`.
+- Domains under `app/internal/<domain>/`: `auth`, `user`, `mail` (live); `content`, `learning`, `simulation`, `dissertation`, `notification` (scaffolding, README-only).
+- go-chi/chi v5 (router), pgx/v5 (PostgreSQL), golang-jwt/jwt v5 (JWT), zap (logging), `net/smtp` (mail).
+- Shared infra in `backend/pkg/` (config, logger, errors, middleware).
+- Mail handled in-process: SMTP via `net/smtp` (implicit TLS 465 / STARTTLS 587), fire-and-forget delivery.
+- NGINX gateway routes `/v1/auth/*` + `/v1/students/*` to the monolith.
 
 **Storage**
 - PostgreSQL 16 (one schema per service, single instance in v1)
@@ -54,11 +49,16 @@ preuni.com.br/
 ├── mobile/iosApp/                  # iOS host
 ├── mobile/webApp/                  # Kotlin/Wasm web host
 ├── backend/pkg/                    # Shared Go: logger, errors, middleware, config
-├── backend/svc/monolith/           # Unified Go backend (auth + user + mail)
-├── backend/svc/{auth,user,content,learning,simulation,dissertation,notification}/  # auth+user retained for rollback
-├── backend/svc/mail/               # Elixir Phoenix service (deprecated)
+├── backend/app/                    # Go monolith binary (module: github.com/preuni/app)
+│   ├── cmd/server/                 # main entrypoint
+│   ├── internal/auth/              # auth domain (handlers, repo, router, ports, adapters)
+│   ├── internal/user/              # user domain
+│   ├── internal/mail/              # in-process mail (validator, templates, SMTP)
+│   ├── internal/{content,learning,simulation,dissertation,notification}/  # scaffolding
+│   ├── internal/{adapters,config,router}/
+│   └── tests/{contract,integration}/
 ├── infra/                          # Docker Compose, NGINX config, migrations
-└── specs/001-enem-prep-platform/   # Planning documents
+└── specs/                          # Planning documents
 ```
 
 ## Commands
@@ -67,20 +67,21 @@ preuni.com.br/
 # Start local infra
 docker compose -f infra/docker-compose.yml up -d postgres redis
 
-# Run a Go service
-cd backend/svc/learning && go run ./cmd/server
+# Run the backend monolith locally
+cd backend/app && go run ./cmd/server
+# or: make run-monolith
 
-# Run Elixir mail service
-cd backend/svc/mail && mix phx.server
+# Bring up monolith + gateway via compose
+make dev
+
+# Run Go tests (unit + contract)
+cd backend/app && go test -short ./...
+
+# Run Go integration tests (requires running Postgres)
+cd backend/app && TEST_DB_URL="postgres://preuni:preuni@localhost:5432/preuni?sslmode=disable" go test ./tests/integration/...
 
 # Run KMP Android app (from Android Studio)
 # Run KMP web: cd mobile/webApp && ./gradlew wasmJsBrowserDevelopmentRun
-
-# Run Go tests (unit)
-cd backend/svc/learning && go test ./... -short
-
-# Run Go tests (integration, requires Docker)
-cd backend/svc/learning && go test ./... -run Integration
 
 # Run KMP shared module tests (fast, JVM target)
 cd mobile/shared && ./gradlew desktopTest
