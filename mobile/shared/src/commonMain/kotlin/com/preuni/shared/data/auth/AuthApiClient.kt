@@ -20,6 +20,11 @@ data class VerifyEmailRequest(
 )
 
 @Serializable
+data class ResendVerificationRequest(
+    val email: String,
+)
+
+@Serializable
 data class RegisterRequest(
     val email: String,
     val password: String,
@@ -68,6 +73,17 @@ class AuthApiClient(private val httpClient: HttpClient) {
         return runCatching {
             val response: HttpResponse = httpClient.post("v1/auth/email/verify") {
                 setBody(VerifyEmailRequest(email, otp))
+            }
+            if (!response.status.isSuccess()) {
+                throw response.toAppError()
+            }
+        }.mapFailure()
+    }
+
+    suspend fun resendVerificationOtp(email: String): Result<Unit> {
+        return runCatching {
+            val response: HttpResponse = httpClient.post("v1/auth/email/verify-resend") {
+                setBody(ResendVerificationRequest(email))
             }
             if (!response.status.isSuccess()) {
                 throw response.toAppError()

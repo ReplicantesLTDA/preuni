@@ -25,6 +25,7 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *logger.Logger) chi.Router {
 	r := chi.NewRouter()
 	r.Use(pkgmw.RequestID)
 	r.Use(chimw.RealIP)
+	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
 
 	r.Get("/health", func(w http.ResponseWriter, _ *http.Request) {

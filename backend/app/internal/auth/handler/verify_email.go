@@ -1,12 +1,15 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
 	apperrors "github.com/preuni/pkg/errors"
+	"github.com/preuni/pkg/logger"
 	pkgmw "github.com/preuni/pkg/middleware"
 	"github.com/preuni/app/internal/auth/domain"
+	"github.com/preuni/app/internal/auth/ports"
 	"github.com/preuni/app/internal/auth/repository"
 )
 
@@ -65,6 +68,74 @@ func (h *VerifyEmailHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		pkgmw.ErrorResponse(w, err)
 		return
 	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// ResendVerificationRequest is the JSON body for POST /auth/email/verify/resend.
+type ResendVerificationRequest struct {
+	Email string `json:"email"`
+}
+
+// ResendVerificationHandler handles POST /auth/email/verify/resend.
+type ResendVerificationHandler struct {
+	credRepo    *repository.CredentialsRepository
+	otpRepo     *repository.OTPRepository
+	emailSender ports.EmailSender
+	log         *logger.Logger
+}
+
+func NewResendVerificationHandler(
+	credRepo *repository.CredentialsRepository,
+	otpRepo *repository.OTPRepository,
+	emailSender ports.EmailSender,
+	log *logger.Logger,
+) *ResendVerificationHandler {
+	return &ResendVerificationHandler{
+		credRepo:    credRepo,
+		otpRepo:     otpRepo,
+		emailSender: emailSender,
+		log:         log,
+	}
+}
+
+func (h *ResendVerificationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	var req ResendVerificationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Email == "" {
+		pkgmw.ErrorResponse(w, apperrors.Validation("body", "email is required"))
+		return
+	}
+
+	creds, err := h.credRepo.FindByEmail(r.Context(), req.Email)
+	if err != nil {
+		// Return 204 to prevent email enumeration
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	if creds.EmailVerified {
+		pkgmw.ErrorResponse(w, apperrors.Conflict("email is already verified"))
+		return
+	}
+
+	otpCode, otpHash, otpExpiry, err := domain.GenerateOTP()
+	if err != nil {
+		pkgmw.ErrorResponse(w, apperrors.Internal(err))
+		return
+	}
+
+	if err = h.otpRepo.Create(r.Context(), creds.ID, domain.OTPPurposeEmailVerify, otpHash, otpExpiry); err != nil {
+		pkgmw.ErrorResponse(w, err)
+		return
+	}
+
+	go func() {
+		if err := h.emailSender.Send(context.Background(), "EMAIL_VERIFY", creds.Email, map[string]string{
+			"otp": otpCode,
+		}); err != nil {
+			h.log.Error("failed to resend verification email", logger.String("email", creds.Email), logger.Err(err))
+		}
+	}()
 
 	w.WriteHeader(http.StatusNoContent)
 }

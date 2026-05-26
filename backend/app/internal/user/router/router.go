@@ -35,7 +35,7 @@ func Mount(r chi.Router, d Deps) {
 		r.Get("/me", getStudentH.ServeHTTP)
 		r.Patch("/me", updateStudentH.ServeHTTP)
 		r.Delete("/me", deleteStudentH.ServeHTTP)
-		r.Get("/me/avatar/upload-url", avatarH.ServeUpload)
+		r.Put("/me/avatar", avatarH.ServeUpload)
 		r.Post("/me/avatar/confirm", avatarH.ServeConfirm)
 		r.Patch("/me/onboarding", onboardingH.ServeHTTP)
 		r.Get("/me/data-export", dataExportH.ServeHTTP)

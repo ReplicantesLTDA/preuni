@@ -13,10 +13,10 @@ INSERT INTO auth.credentials (
 VALUES (
     '00000000-0000-4000-a000-000000000000',
     'admin@preuni.com',
-    '$2a$12$R9hZ7lBwO2B3qE7X9v8uGeUqgZf7W8yq8XoO8M1Xw6k1Gz5x6Y7uG',
+    '$2a$12$QQm/tzjaNEwR7TUY4Z6JV.8Vecup6LNGC743SrbjHFHakQVjFxYMW',
     true,
     now()
 )
--- Como o índice único usa lower(email), criamos uma estratégia para o conflito
+-- Como o índice único usa lower(email), atualizamos a senha caso já exista
 ON CONFLICT (lower(email))
-DO NOTHING;
+DO UPDATE SET password_hash = EXCLUDED.password_hash;

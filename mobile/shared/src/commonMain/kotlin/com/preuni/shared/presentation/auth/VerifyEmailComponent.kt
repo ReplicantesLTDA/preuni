@@ -16,6 +16,6 @@ class VerifyEmailComponent(
         storeFactory = storeFactory,
         email = email,
         onSubmit = { e, otp -> authRepository.verifyEmail(e, otp) },
-        onResend = { _ -> Result.success(Unit) }, // TODO: add resend-OTP endpoint
+        onResend = { e -> authRepository.resendVerificationOtp(e) },
     ).create()
 }

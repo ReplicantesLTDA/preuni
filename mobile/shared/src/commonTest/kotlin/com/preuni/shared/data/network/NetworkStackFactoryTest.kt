@@ -56,11 +56,7 @@ class NetworkStackFactoryTest {
             )
         }
 
-        val storage = SecureStorage()
-        val tokenStore = TokenStore(storage)
-        tokenStore.updateTokens("test-access-token", "refresh")
-
-        val client = buildTestHttpClient(engine, getAccessToken = { tokenStore.accessToken() })
+        val client = buildTestHttpClient(engine, getAccessToken = { "test-access-token" })
         val repo = UserRepositoryImpl(UserApiClient(client))
 
         kotlinx.coroutines.test.runTest {
