@@ -51,11 +51,11 @@
 - [X] T012 [US1] Welcome → auth routing verified (unchanged, already coherent)
 - [X] T013 [US1] WelcomeStore completion logic verified (unchanged)
 - [X] T014 [P] [US1] LoginScreen migrated to spacing tokens; layout/copy intact
-- [ ] T015 [P] [US1] Refine register layout/copy consistency in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/auth/RegisterScreen.kt`
-- [ ] T016 [P] [US1] Refine verify-email layout/copy consistency in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/auth/VerifyEmailScreen.kt`
-- [ ] T017 [P] [US1] Refine OTP login layout/copy consistency in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/auth/OtpLoginScreen.kt`
-- [ ] T018 [US1] Keep entry → auth → onboarding → main routing coherent in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/RootComponent.kt`
-- [ ] T019 [US1] Run the “Core Flow Smoke Test” checklist in `specs/011-app-design-refresh/quickstart.md`
+- [X] T015 [P] [US1] RegisterScreen spacing migrated to tokens
+- [X] T016 [P] [US1] VerifyEmailScreen now uses MascotPlaceholder + spacing tokens
+- [X] T017 [P] [US1] OtpLoginScreen spacing migrated to tokens
+- [X] T018 [US1] RootComponent routing verified — unchanged, coherent
+- [ ] T019 [US1] Smoke checklist — defer to live web preview run by user
 
 **Checkpoint**: US1 can be demoed without touching main navigation.
 
@@ -67,20 +67,20 @@
 
 **Independent Test**: Log in → bottom tabs match wireframe destinations → switching tabs keeps location obvious and consistent.
 
-- [ ] T020 [US2] Update bottom tab enum to wireframe destinations in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/navigation/BottomNavigation.kt`
-- [ ] T021 [US2] Update bottom nav rendering for 5 tabs + accessibility labels in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/navigation/BottomNavigation.kt`
-- [ ] T022 [US2] Update default tab + selection logic for new tabs in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/main/MainComponent.kt`
-- [ ] T023 [US2] Update main scaffold to render new tab destinations in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/PreuniApp.kt`
-- [ ] T024 [P] [US2] Add friends placeholder screen using `EmptyState` in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/friends/FriendsScreen.kt`
-- [ ] T025 [P] [US2] Add league placeholder screen using `EmptyState` in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/league/LeagueScreen.kt`
-- [ ] T026 [US2] Integrate friends destination into main tab routing in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/PreuniApp.kt`
-- [ ] T027 [US2] Integrate league destination into main tab routing in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/PreuniApp.kt`
-- [ ] T028 [US2] Ensure top status bar is included on core tabs (wireframe scaffold) in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/PreuniApp.kt`
-- [ ] T029 [US2] Add settings entry point from profile (gear or row action) in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/profile/ProfileScreen.kt`
-- [ ] T030 [US2] Add settings screen placeholder using `EmptyState` in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/settings/SettingsScreen.kt`
-- [ ] T031 [US2] Wire profile → settings navigation (Decompose child) in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/profile/ProfileComponent.kt`
-- [ ] T032 [US2] Render settings child in profile content switch in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/PreuniApp.kt`
-- [ ] T033 [US2] Run the “Navigation Audit” checklist in `specs/011-app-design-refresh/quickstart.md`
+- [X] T020 [US2] BottomTab enum = LEARN(Trilha) / SIMULATE(Redação) / FRIENDS(Amigos) / LEAGUE(Liga) / PROFILE(Perfil) — 5 wireframe destinations
+- [X] T021 [US2] BottomNavigation renders 5 tabs with `contentDescription = label` on each icon
+- [X] T022 [US2] MainComponent default tab = LEARN (Trilha); HomeStore retained for future use, comment added
+- [X] T023 [US2] PreuniApp MainContent switch updated for the 5 tabs; HOME branch removed
+- [X] T024 [P] [US2] FriendsScreen using EmptyState
+- [X] T025 [P] [US2] LeagueScreen using EmptyState
+- [X] T026 [US2] FRIENDS tab routed to FriendsScreen
+- [X] T027 [US2] LEAGUE tab routed to LeagueScreen
+- [ ] T028 [US2] TopStatusBar inclusion on core tabs — primitive exists; integration deferred (needs real streak/XP wiring)
+- [X] T029 [US2] Settings gear icon added to ProfileScreen top-right
+- [X] T030 [US2] SettingsScreen placeholder using EmptyState + SectionHeader
+- [X] T031 [US2] ProfileComponent gained `Config.Settings` + `Child.Settings` + `navigateToSettings()`
+- [X] T032 [US2] PreuniApp ProfileContent switch renders `ProfileComponent.Child.Settings → SettingsScreen`
+- [ ] T033 [US2] Navigation audit — defer to live web preview run by user
 
 **Checkpoint**: US2 delivers the wireframe navigation + consistent scaffold.
 
@@ -92,12 +92,12 @@
 
 **Independent Test**: Open Redação → see stage/progress + next action → move between steps without losing context.
 
-- [ ] T034 [US3] Replace old “Simulados em breve” message with Redação entry scaffold in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/simulate/SimulateScreen.kt`
-- [ ] T035 [US3] Add minimal step model for the guided journey in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/simulate/WritingStep.kt`
-- [ ] T036 [US3] Add progress UI (current step + next action) in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/simulate/SimulateScreen.kt`
-- [ ] T037 [US3] Add locked/upcoming explanation state (no hidden actions) in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/simulate/SimulateScreen.kt`
-- [ ] T038 [US3] Ensure copy is Portuguese, calming, and scannable in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/simulate/SimulateScreen.kt`
-- [ ] T039 [US3] Validate “Guided Writing Journey” acceptance scenarios in `specs/011-app-design-refresh/spec.md`
+- [X] T034 [US3] SimulateScreen rewritten as Redação entry — header, intro copy, step list
+- [X] T035 [US3] `WritingStep` data class + `DefaultWritingFlow` (5 stages) created
+- [X] T036 [US3] Progress UI: "Etapa N de 5" label + LinearProgressIndicator + "Agora" primary-container card with continue CTA
+- [X] T037 [US3] Locked stages render with 🔒 badge + "Disponível depois das etapas anteriores." caption — no hidden actions
+- [X] T038 [US3] Copy in Portuguese, scannable, calm ("uma de cada vez", "com calma")
+- [ ] T039 [US3] Acceptance scenarios validation — defer to live web preview
 
 **Checkpoint**: US3 is usable even with mock/no backend.
 
@@ -109,13 +109,13 @@
 
 **Independent Test**: Open Amigos/Liga/Perfil/Ajustes → each screen communicates purpose, status, and next action clearly.
 
-- [ ] T040 [P] [US4] Add friendly empty-state copy + layout polish in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/friends/FriendsScreen.kt`
-- [ ] T041 [P] [US4] Add friendly empty-state copy + layout polish in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/league/LeagueScreen.kt`
-- [ ] T042 [US4] Make profile sections more scannable using `SectionHeader` in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/profile/ProfileScreen.kt`
-- [ ] T043 [US4] Ensure long usernames/labels don’t clip on profile in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/profile/ProfileScreen.kt`
-- [ ] T044 [US4] Ensure settings sections are scannable (grouped, readable) in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/settings/SettingsScreen.kt`
-- [ ] T045 [US4] Ensure empty/low-data states feel encouraging (not unfinished) in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/ui/components/EmptyState.kt`
-- [ ] T046 [US4] Validate edge cases section items in `specs/011-app-design-refresh/spec.md`
+- [X] T040 [P] [US4] FriendsScreen copy already friendly ("Amigos chegando em breve. Aqui você vai ver…")
+- [X] T041 [P] [US4] LeagueScreen copy already friendly ("Sua liga começa em breve. Quando você ganhar XP…")
+- [X] T042 [US4] ProfileScreen now uses `SectionHeader("Conta")` + `SectionHeader("Sessão")` for scannability
+- [X] T043 [US4] Display name / username / email all marked `maxLines` + `TextOverflow.Ellipsis` to prevent clipping
+- [X] T044 [US4] SettingsScreen uses SectionHeader("Preferências") + EmptyState block
+- [X] T045 [US4] EmptyState component renders mascot + warm title + body + optional CTA — feels intentional, not unfinished
+- [ ] T046 [US4] Edge-case validation — defer to live preview
 
 **Checkpoint**: Social + identity screens feel “real” even with placeholders.
 
@@ -125,11 +125,11 @@
 
 **Purpose**: Consistency, accessibility, and cleanup across the whole refreshed flow.
 
-- [ ] T047 [P] Normalize any remaining English strings touched by this feature in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/`
-- [ ] T048 Ensure all icons/actions have meaningful accessibility labels in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/`
-- [ ] T049 Replace ad-hoc spacing with spacing tokens on all modified screens in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/presentation/`
-- [ ] T050 Remove dead code paths caused by tab remap (e.g., unused cases/imports) in `mobile/shared/src/commonMain/kotlin/com/preuni/shared/PreuniApp.kt`
-- [ ] T051 Run the full manual checklist in `specs/011-app-design-refresh/quickstart.md`
+- [X] T047 [P] English profile strings ("Change username/password/email", "Delete account") translated to Portuguese
+- [X] T048 IconButton actions carry contentDescription ("Ajustes", "Voltar", tab labels on bottom nav)
+- [X] T049 Spacing tokens applied on all touched screens (Welcome, Login, Register, VerifyEmail, OtpLogin, Profile, Settings, Friends, League, Simulate)
+- [X] T050 HomeScreen import dropped from PreuniApp.kt; HOME tab branch removed
+- [ ] T051 Manual checklist — defer to live web preview
 
 ---
 

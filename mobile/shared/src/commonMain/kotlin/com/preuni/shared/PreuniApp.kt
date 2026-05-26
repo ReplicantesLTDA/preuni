@@ -21,11 +21,13 @@ import com.preuni.shared.presentation.auth.OtpLoginScreen
 import com.preuni.shared.presentation.auth.RegisterScreen
 import com.preuni.shared.presentation.auth.RegisterStore
 import com.preuni.shared.presentation.auth.VerifyEmailScreen
-import com.preuni.shared.presentation.home.HomeScreen
+import com.preuni.shared.presentation.friends.FriendsScreen
 import com.preuni.shared.presentation.learn.LearnScreen
+import com.preuni.shared.presentation.league.LeagueScreen
 import com.preuni.shared.presentation.main.MainComponent
 import com.preuni.shared.presentation.navigation.BottomNavigation
 import com.preuni.shared.presentation.navigation.BottomTab
+import com.preuni.shared.presentation.settings.SettingsScreen
 import com.preuni.shared.presentation.onboarding.OnboardingScreen
 import com.preuni.shared.presentation.welcome.WelcomeScreen
 import com.preuni.shared.presentation.profile.ChangeEmailScreen
@@ -124,15 +126,13 @@ private fun MainContent(component: MainComponent) {
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
             when (selectedTab) {
-                BottomTab.HOME -> HomeScreen(
-                    store = component.homeStore,
-                    onStartLearning = { component.selectTab(BottomTab.LEARN) },
-                )
                 BottomTab.LEARN -> LearnScreen(
                     store = component.learnStore,
                     onOpenLesson = { /* PlaceholderLessonScreen not yet in nav */ },
                 )
                 BottomTab.SIMULATE -> SimulateScreen()
+                BottomTab.FRIENDS -> FriendsScreen()
+                BottomTab.LEAGUE -> LeagueScreen()
                 BottomTab.PROFILE -> ProfileContent(component.profileComponent)
             }
         }
@@ -152,6 +152,10 @@ private fun ProfileContent(component: ProfileComponent) {
             onChangeTrack = { component.navigateToChangeTrack(null) },
             onDeleteAccount = component::navigateToDeleteAccount,
             onLogout = component::logout,
+            onSettings = component::navigateToSettings,
+        )
+        is ProfileComponent.Child.Settings -> SettingsScreen(
+            onBack = component::navigateBack,
         )
         is ProfileComponent.Child.ChangeTrack -> ChangeTrackScreen(
             store = child.store,

@@ -26,6 +26,9 @@ class MainComponent(
     private val _selectedTab = MutableStateFlow(BottomTab.LEARN)
     val selectedTab: StateFlow<BottomTab> = _selectedTab
 
+    // HomeStore retained internally — currently unused in the wireframe nav
+    // (LEARN tab covers the post-login landing). Kept available for callers
+    // that may need home data in future surfaces.
     val homeStore = HomeStoreFactory(storeFactory, userRepository).create()
 
     val learnStore = LearnStoreFactory(
