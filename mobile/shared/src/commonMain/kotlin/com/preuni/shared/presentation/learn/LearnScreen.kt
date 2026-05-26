@@ -329,10 +329,10 @@ private fun DrawScope.drawStarPath(
     val path = Path()
     val points = 5
     val innerRadius = radius * 0.4f
-    val startAngle = -Math.PI / 2
+    val startAngle = -kotlin.math.PI / 2
 
     for (i in 0 until points * 2) {
-        val angle = startAngle + i * Math.PI / points
+        val angle = startAngle + i * kotlin.math.PI / points
         val r = if (i % 2 == 0) radius else innerRadius
         val x = center.x + (r * kotlin.math.cos(angle)).toFloat()
         val y = center.y + (r * kotlin.math.sin(angle)).toFloat()

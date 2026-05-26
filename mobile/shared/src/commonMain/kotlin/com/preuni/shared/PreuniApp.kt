@@ -28,6 +28,9 @@ import com.preuni.shared.presentation.main.MainComponent
 import com.preuni.shared.presentation.navigation.BottomNavigation
 import com.preuni.shared.presentation.navigation.BottomTab
 import com.preuni.shared.presentation.settings.SettingsScreen
+import com.preuni.shared.ui.components.StatusMetric
+import com.preuni.shared.ui.components.TopStatusBar
+import androidx.compose.foundation.layout.Column
 import com.preuni.shared.presentation.onboarding.OnboardingScreen
 import com.preuni.shared.presentation.welcome.WelcomeScreen
 import com.preuni.shared.presentation.profile.ChangeEmailScreen
@@ -42,6 +45,34 @@ import com.preuni.shared.presentation.profile.ProfileComponent
 import com.preuni.shared.presentation.profile.ProfileScreen
 import com.preuni.shared.presentation.profile.ProfileStore
 import com.preuni.shared.presentation.simulate.SimulateScreen
+
+/**
+ * Placeholder status-bar metrics shown above the core tabs. Real values flow
+ * in once the streak/XP feed is wired into MainComponent in a follow-up.
+ */
+private fun placeholderStatusMetrics(): List<StatusMetric> = listOf(
+    StatusMetric(
+        icon = "🔥",
+        value = "—",
+        caption = "Streak",
+        accessibilityLabel = "Streak ainda não disponível",
+        isPlaceholder = true,
+    ),
+    StatusMetric(
+        icon = "⭐",
+        value = "—",
+        caption = "XP",
+        accessibilityLabel = "XP ainda não disponível",
+        isPlaceholder = true,
+    ),
+    StatusMetric(
+        icon = "🦉",
+        value = "—",
+        caption = "Liga",
+        accessibilityLabel = "Liga ainda não disponível",
+        isPlaceholder = true,
+    ),
+)
 
 /**
  * Root composable entry point for all platforms.
@@ -124,16 +155,21 @@ private fun MainContent(component: MainComponent) {
             )
         }
     ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-            when (selectedTab) {
-                BottomTab.LEARN -> LearnScreen(
-                    store = component.learnStore,
-                    onOpenLesson = { /* PlaceholderLessonScreen not yet in nav */ },
-                )
-                BottomTab.SIMULATE -> SimulateScreen()
-                BottomTab.FRIENDS -> FriendsScreen()
-                BottomTab.LEAGUE -> LeagueScreen()
-                BottomTab.PROFILE -> ProfileContent(component.profileComponent)
+        Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+            if (selectedTab != BottomTab.PROFILE) {
+                TopStatusBar(metrics = placeholderStatusMetrics())
+            }
+            Box(modifier = Modifier.fillMaxSize()) {
+                when (selectedTab) {
+                    BottomTab.LEARN -> LearnScreen(
+                        store = component.learnStore,
+                        onOpenLesson = { /* PlaceholderLessonScreen not yet in nav */ },
+                    )
+                    BottomTab.SIMULATE -> SimulateScreen()
+                    BottomTab.FRIENDS -> FriendsScreen()
+                    BottomTab.LEAGUE -> LeagueScreen()
+                    BottomTab.PROFILE -> ProfileContent(component.profileComponent)
+                }
             }
         }
     }
