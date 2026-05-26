@@ -35,7 +35,7 @@
 - [X] T007 [P] `EmptyState` created (title + body + optional CTA, uses MascotPlaceholder)
 - [X] T008 [P] `MascotPlaceholder` created (96dp circle, primaryContainer bg, owl glyph, semantics label)
 - [X] T009 [P] `TopStatusBar` + `StatusMetric` immutable model created
-- [ ] T010 Partial: touched components (Login, Welcome) consume tokens; remaining screens deferred to subsequent passes
+- [X] T010 All screens touched by this feature consume tokens (Welcome, Login, Register, VerifyEmail, OtpLogin, Profile, Simulate, Settings, Friends, League). Untouched legacy screens (Home, Onboarding, ChangeTrack, EditUsername, EditPassword, ChangeEmail, ConfirmNewEmail, DeleteAccount) still use raw dp — out of 011 scope.
 
 **Checkpoint**: Tokens + primitives compile and can be consumed by screens.
 
