@@ -1,0 +1,47 @@
+name: mobile-ci
+
+on:
+  push:
+    branches: [main, dev, '012-expo-rn-frontend']
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/mobile-ci.yml'
+  pull_request:
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/mobile-ci.yml'
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: mobile/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm typecheck
+
+      - run: pnpm lint
+
+      - run: pnpm test --coverage --runInBand
+
+      - run: pnpm build:web
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mobile-web-bundle
+          path: mobile/dist
+          retention-days: 7

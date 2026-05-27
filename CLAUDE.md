@@ -1,63 +1,63 @@
-# preuni.com.br Development Guidelines
+# preuni Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-05-25
+Auto-generated from all feature plans. Last updated: 2026-05-27
 
 ## Active Technologies
-- Kotlin 2.1.20 + Compose Multiplatform 1.8.0 + Decompose 3.3.0, MVIKotlin 4.2.0, Compose canvas rendering (Skiko), webpack 5 (002-fix-web-compilation)
-- sessionStorage (web), SQLDelight/WebWorkerDriver (not yet activated) (002-fix-web-compilation)
-- Kotlin 2.1.20 (Compose Multiplatform 1.8.0) + Material Design 3 (already in classpath), Decompose 3.3.0, MVIKotlin 4.2.0 (003-ui-polish)
-- N/A (UI layer only — no persistence changes) (003-ui-polish)
-- Kotlin 2.1.20 / Compose Multiplatform 1.8.0 + Decompose 3.3.0 (navigation), MVIKotlin 4.2.0 (state), Ktor Client (HTTP) (005-onboarding-ux-fixes)
-- `SecureStorage` (expect/actual, already exists) — key-value local store (005-onboarding-ux-fixes)
-- Kotlin 2.1.20 / Compose Multiplatform 1.8.0 + Decompose 3.3.0 (navigation), MVIKotlin 4.2.0 (state), Compose Canvas (path drawing) (006-subject-track-path)
-- `SecureStorage` (expect/actual, already exists) — add `active_track_id` key to `TokenStore` (006-subject-track-path)
-- Kotlin 2.1.20 (KMP shared module), Go 1.23 (backend — no changes) + Compose Multiplatform 1.8.0, Decompose 3.3.0, MVIKotlin 4.2.0, Ktor Client (007-profile-mgmt-fixes)
-- `SecureStorage` / `TokenStore` (local session only); no new persistent storage (007-profile-mgmt-fixes)
-- Kotlin 2.1.20 (KMP shared + Android/iOS/Web entrypoints), Go 1.23 (user-svc integration tests) + Compose Multiplatform 1.8.0, Decompose 3.3.0, MVIKotlin 4.2.0, Ktor Client, kotlinx.serialization, go-chi + pgx (existing backend stack) (008-fix-backend-integrations)
-- `SecureStorage` / `TokenStore` for session tokens; PostgreSQL 16 only for backend integration test fixture (008-fix-backend-integrations)
-- Go 1.24 (per `go.work`/`go.mod`); Elixir mail service currently exists and will be replaced for this feature + go-chi/chi (HTTP routing), pgx/v5 (PostgreSQL), golang-jwt/jwt (JWT), zap (logging), testify (tests), NGINX (gateway routing + rate limiting) (009-backend-monolith-refactor)
-- PostgreSQL 16 (auth + users schemas), Redis 7 (existing infra), S3-compatible object storage (avatar flows) (009-backend-monolith-refactor)
-- Go 1.24 (per `backend/go.work`) + go-chi/chi v5 (router), pgx/v5 (Postgres), golang-jwt/jwt v5 (JWT), zap (logging), testify (tests), `net/smtp` (mail). No new dependencies introduced. (010-backend-monolith-cleanup)
-- PostgreSQL 16 (`auth.*`, `users.*` schemas — unchanged). Redis 7 (existing). S3 (avatars). (010-backend-monolith-cleanup)
-- N/A (UI/UX refactor; keep existing device-local flags/state such as welcome + active track) (011-app-design-refresh)
 
-**Frontend (001-enem-prep-platform)**
-- Kotlin 2.x + Compose Multiplatform 1.8+ (Android/iOS/Web)
-- Decompose (navigation), MVIKotlin (state management)
-- Ktor Client (HTTP), SQLDelight (local DB), Koin (DI)
-- FSRS-Kotlin (`github.com/open-spaced-repetition/FSRS-Kotlin`)
-- Kotlin/Wasm for web target (Beta)
+**Frontend (012-expo-rn-frontend — current)**
+
+- React Native 0.81 + Expo SDK 54 + TypeScript 5.9 (strict)
+- Expo Router 6 (file-based routing, `(auth)/(onboarding)/(tabs)` groups)
+- TanStack Query v5 (server cache + mutations), Zustand v5 (client/session state), Zod v3 (schemas)
+- `expo-secure-store` (session tokens, web fallback to `localStorage`)
+- `expo-image`, `expo-image-picker`, `react-native-reanimated` 4 (+ `react-native-worklets`), `react-native-svg`, `react-native-safe-area-context`, `react-native-screens`, `@expo/vector-icons`
+- `@expo-google-fonts/{caveat-brush,patrick-hand,architects-daughter,kalam,caveat}` (hand-drawn family stack)
+- Jest 29 + jest-expo 54 + `@testing-library/react-native` 13 (msw deferred; tests use `globalThis.fetch` mock)
 
 **Backend (010-backend-monolith-cleanup)**
+
 - Single Go 1.24 binary at `backend/app/`. Module path `github.com/preuni/app`.
 - Domains under `app/internal/<domain>/`: `auth`, `user`, `mail` (live); `content`, `learning`, `simulation`, `dissertation`, `notification` (scaffolding, README-only).
 - go-chi/chi v5 (router), pgx/v5 (PostgreSQL), golang-jwt/jwt v5 (JWT), zap (logging), `net/smtp` (mail).
 - Shared infra in `backend/pkg/` (config, logger, errors, middleware).
-- Mail handled in-process: SMTP via `net/smtp` (implicit TLS 465 / STARTTLS 587), fire-and-forget delivery.
 - NGINX gateway routes `/v1/auth/*` + `/v1/students/*` to the monolith.
+- Backend wire format is **snake_case**; client uses a case-converter in `mobile/src/lib/api/caseConvert.ts` to round-trip camelCase ↔ snake_case at the network boundary.
 
 **Storage**
-- PostgreSQL 16 (one schema per service, single instance in v1)
+
+- PostgreSQL 16 (one schema per domain, single instance in v1)
 - Redis 7 (JWT refresh tokens, rate-limit counters)
 - S3-compatible object storage (avatars, essay support media)
 
 ## Project Structure
 
 ```text
-preuni.com.br/
-├── mobile/shared/src/commonMain/   # KMP shared domain, data, presentation
-├── mobile/androidApp/              # Android host
-├── mobile/iosApp/                  # iOS host
-├── mobile/webApp/                  # Kotlin/Wasm web host
+preuni/
+├── mobile/                         # React Native + Expo app (replaces the KMP tree retired in 012)
+│   ├── app/                        # Expo Router routes
+│   │   ├── (auth)/                 # public — login, register, verify-email, otp-login, password-reset, welcome
+│   │   ├── (onboarding)/           # authed + !onboardingCompleted — welcome, profile, interests
+│   │   └── (tabs)/                 # authed + onboardingCompleted — trilha, redacao, simulado, perfil (each with nested Stack)
+│   ├── src/
+│   │   ├── theme/                  # design tokens (sourced from wireframe.html)
+│   │   ├── components/             # shared UI primitives
+│   │   ├── features/<domain>/      # vertical slices: api.ts, hooks.ts, validation.ts
+│   │   ├── lib/api/                # typed fetch client + refresh interceptor + case converter + error mapping
+│   │   ├── lib/auth/               # tokenStore, bootstrap
+│   │   ├── lib/query/              # TanStack Query client + keys
+│   │   ├── lib/i18n/               # pt-BR copy
+│   │   ├── stores/                 # zustand stores
+│   │   └── types/                  # zod schemas + inferred TS
+│   ├── assets/fonts/               # placeholders only — actual TTFs pulled from @expo-google-fonts/*
+│   └── tests/                      # jest + RTL + globalThis.fetch mock
 ├── backend/pkg/                    # Shared Go: logger, errors, middleware, config
-├── backend/app/                    # Go monolith binary (module: github.com/preuni/app)
+├── backend/app/                    # Go monolith binary
 │   ├── cmd/server/                 # main entrypoint
-│   ├── internal/auth/              # auth domain (handlers, repo, router, ports, adapters)
+│   ├── internal/auth/              # auth domain
 │   ├── internal/user/              # user domain
-│   ├── internal/mail/              # in-process mail (validator, templates, SMTP)
+│   ├── internal/mail/              # in-process mail
 │   ├── internal/{content,learning,simulation,dissertation,notification}/  # scaffolding
-│   ├── internal/{adapters,config,router}/
-│   └── tests/{contract,integration}/
+│   └── internal/{adapters,config,router}/
 ├── infra/                          # Docker Compose, NGINX config, migrations
 └── specs/                          # Planning documents
 ```
@@ -65,41 +65,37 @@ preuni.com.br/
 ## Commands
 
 ```bash
-# Start local infra
+# Local infra
 docker compose -f infra/docker-compose.yml up -d postgres redis
 
-# Run the backend monolith locally
+# Backend monolith
 cd backend/app && go run ./cmd/server
 # or: make run-monolith
+make dev                                        # full stack (postgres + redis + monolith + gateway)
 
-# Bring up monolith + gateway via compose
-make dev
-
-# Run Go tests (unit + contract)
+# Backend tests
 cd backend/app && go test -short ./...
-
-# Run Go integration tests (requires running Postgres)
 cd backend/app && TEST_DB_URL="postgres://preuni:preuni@localhost:5432/preuni?sslmode=disable" go test ./tests/integration/...
 
-# Run KMP Android app (from Android Studio)
-# Run KMP web: cd mobile/webApp && ./gradlew wasmJsBrowserDevelopmentRun
-
-# Run KMP shared module tests (fast, JVM target)
-cd mobile/shared && ./gradlew desktopTest
+# Mobile app
+cd mobile && pnpm install
+cd mobile && pnpm start                          # Expo dev server (QR for Expo Go)
+cd mobile && pnpm ios | pnpm android | pnpm web
+cd mobile && pnpm typecheck && pnpm lint && pnpm test
+cd mobile && pnpm build:web                      # static export → mobile/dist/
+# Makefile shortcuts: mobile-install, mobile-start, mobile-test, mobile-web, mobile-lint
 ```
 
 ## Code Style
 
-**Go**: Follow standard `gofmt` + `golangci-lint` conventions; error types from `backend/pkg/errors`
-**Kotlin/KMP**: Kotlin coding conventions; composables in PascalCase; coroutines not threads
-**Elixir**: `mix format`; ExUnit for tests; pattern match over if/else
-**SQL**: lowercase keywords, snake_case identifiers; all new queries need EXPLAIN plan reviewed
+- **Go**: standard `gofmt` + `golangci-lint`; error types from `backend/pkg/errors`.
+- **TypeScript**: strict mode, `noUncheckedIndexedAccess`, ESLint flat config; no raw hex/px in component styles (Constitution III enforced by `no-restricted-syntax` rule); design tokens from `mobile/src/theme/tokens.ts`.
+- **SQL**: lowercase keywords, snake_case identifiers; new queries need EXPLAIN plan reviewed.
 
 ## Recent Changes
-- 011-app-design-refresh: Added Kotlin 2.1.20 (Compose Multiplatform 1.8.0) + Material Design 3 (already in classpath), Decompose 3.3.0, MVIKotlin 4.2.0
-- 010-backend-monolith-cleanup: Added Go 1.24 (per `backend/go.work`) + go-chi/chi v5 (router), pgx/v5 (Postgres), golang-jwt/jwt v5 (JWT), zap (logging), testify (tests), `net/smtp` (mail). No new dependencies introduced.
-- 009-backend-monolith-refactor: Added Go 1.24 (per `go.work`/`go.mod`); Elixir mail service currently exists and will be replaced for this feature + go-chi/chi (HTTP routing), pgx/v5 (PostgreSQL), golang-jwt/jwt (JWT), zap (logging), testify (tests), NGINX (gateway routing + rate limiting)
 
+- **012-expo-rn-frontend**: Retired the Kotlin Multiplatform frontend. Replaced with React Native + Expo SDK 54 + TypeScript at `mobile/`. Single codebase ships to iOS / Android (via Expo Go) and Web (via `expo export --platform web`). Backend untouched.
+- 010-backend-monolith-cleanup: Go 1.24 monolith at `backend/app/`; chi v5 router; pgx/v5 Postgres; jwt v5; zap; `net/smtp`. No new dependencies.
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
