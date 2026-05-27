@@ -36,7 +36,7 @@ jobs:
 
       - run: pnpm lint
 
-      - run: pnpm test --coverage --runInBand
+      - run: pnpm test -- --coverage --runInBand
 
       - run: pnpm build:web
 
