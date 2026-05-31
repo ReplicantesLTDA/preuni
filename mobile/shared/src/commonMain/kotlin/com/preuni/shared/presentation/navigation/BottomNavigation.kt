@@ -1,10 +1,11 @@
 package com.preuni.shared.presentation.navigation
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Assignment
-import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -14,10 +15,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 
+/**
+ * Wireframe destinations. Order matches the bottom-tab layout: Trilha first
+ * (default after login), Redação center for the writing journey, then the
+ * social/identity surfaces.
+ */
 enum class BottomTab(val label: String, val icon: ImageVector) {
-    HOME("Início", Icons.Filled.Home),
-    LEARN("Aprender", Icons.Filled.MenuBook),
-    SIMULATE("Simular", Icons.Filled.Assignment),
+    LEARN("Trilha", Icons.Filled.MenuBook),
+    SIMULATE("Redação", Icons.Outlined.Edit),
+    FRIENDS("Amigos", Icons.Filled.Group),
+    LEAGUE("Liga", Icons.Filled.EmojiEvents),
     PROFILE("Perfil", Icons.Filled.Person),
 }
 

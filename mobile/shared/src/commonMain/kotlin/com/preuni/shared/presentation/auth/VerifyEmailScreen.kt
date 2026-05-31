@@ -21,10 +21,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import com.arkivanov.mvikotlin.extensions.coroutines.stateFlow
+import com.preuni.shared.ui.components.MascotPlaceholder
 import com.preuni.shared.ui.components.PreuniButton
 import com.preuni.shared.ui.components.PreuniTextField
+import com.preuni.shared.ui.theme.LocalSpacing
 import kotlinx.coroutines.delay
 
 @Composable
@@ -47,24 +48,26 @@ fun VerifyEmailScreen(
         if (state.verified) onVerified()
     }
 
+    val s = LocalSpacing.current
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 24.dp),
+            .padding(horizontal = s.xl),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("📧", style = MaterialTheme.typography.displayMedium)
-        Spacer(Modifier.height(16.dp))
+        MascotPlaceholder()
+        Spacer(Modifier.height(s.lg))
         Text("Verifique seu email", style = MaterialTheme.typography.headlineMedium)
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(s.md))
         Text(
             text = "Enviamos um código para $email. Insira-o abaixo.",
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(s.xxl))
 
         PreuniTextField(
             value = state.code,
@@ -78,7 +81,7 @@ fun VerifyEmailScreen(
             isError = state.error != null,
             errorMessage = state.error,
         )
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(s.xl))
 
         PreuniButton(
             text = "Verificar",
@@ -87,7 +90,7 @@ fun VerifyEmailScreen(
             isLoading = state.isLoading,
         )
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(s.md))
 
         if (resendCooldown > 0) {
             Text(

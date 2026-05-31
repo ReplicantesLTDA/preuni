@@ -45,6 +45,7 @@ class ProfileComponent(
     private fun createChild(config: Config, context: ComponentContext): Child =
         when (config) {
             Config.Profile -> Child.Profile(profileStore)
+            Config.Settings -> Child.Settings
             Config.EditUsername -> Child.EditUsername(profileStore)
             Config.EditPassword -> Child.EditPassword(changePasswordStore)
             Config.ChangeEmail -> Child.ChangeEmail(changeEmailStore)
@@ -66,6 +67,7 @@ class ProfileComponent(
     fun navigateToChangeEmail() = navigation.push(Config.ChangeEmail)
     fun navigateToDeleteAccount() = navigation.push(Config.DeleteAccount)
     fun navigateToChangeTrack(initialTrackId: String?) = navigation.push(Config.ChangeTrack(initialTrackId))
+    fun navigateToSettings() = navigation.push(Config.Settings)
     fun navigateBack() = navigation.pop()
     fun resetToRoot() = navigation.replaceAll(Config.Profile)
     fun logout() = onLogout()
@@ -74,6 +76,7 @@ class ProfileComponent(
     @Serializable
     sealed interface Config {
         @Serializable data object Profile : Config
+        @Serializable data object Settings : Config
         @Serializable data object EditUsername : Config
         @Serializable data object EditPassword : Config
         @Serializable data object ChangeEmail : Config
@@ -83,6 +86,7 @@ class ProfileComponent(
 
     sealed interface Child {
         data class Profile(val store: ProfileStore) : Child
+        data object Settings : Child
         data class EditUsername(val store: ProfileStore) : Child
         data class EditPassword(val store: ChangePasswordStore) : Child
         data class ChangeEmail(val store: ChangeEmailStore) : Child

@@ -1,5 +1,19 @@
 # preuni.com.br Constitution
 
+## Architecture
+
+The preuni backend is a **single Go monolith** at `backend/app/`. All HTTP routes
+(`/v1/auth/*`, `/v1/students/*`, `/internal/*`) are served by one binary. Domains
+are organized as internal subpackages under `backend/app/internal/<domain>/`
+(currently: `auth`, `user`, `mail`; placeholders: `content`, `learning`,
+`simulation`, `dissertation`, `notification`). Shared infrastructure (logger,
+errors, middleware, config) lives in `backend/pkg/`. NGINX is the only external
+process besides Postgres + Redis. There are no per-domain deployable services.
+
+References to "the auth service" or "the mail service" elsewhere in this document
+or in older specs refer to domain packages within the monolith, not to separate
+processes.
+
 ## Core Principles
 
 ### I. Code Quality (NON-NEGOTIABLE)
@@ -61,4 +75,4 @@ Every pull request must pass all of the following before merge:
 - Exceptions must be documented inline with a comment referencing a tracked issue and an expiry plan
 - Complexity must be justified; the burden of proof is on the author adding it
 
-**Version**: 1.0.0 | **Ratified**: 2026-04-03 | **Last Amended**: 2026-04-03
+**Version**: 1.1.0 | **Ratified**: 2026-04-03 | **Last Amended**: 2026-05-25

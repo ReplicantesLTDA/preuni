@@ -46,7 +46,7 @@ class AuthComponent(
                     storeFactory = storeFactory,
                     authRepository = authRepository,
                     email = config.email,
-                    onVerified = { navigation.replaceAll(Config.Login) },
+                    onVerified = { onLoggedIn() },
                 )
             )
             Config.OtpLogin -> Child.OtpLogin(

@@ -28,6 +28,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.arkivanov.mvikotlin.extensions.coroutines.stateFlow
+import com.preuni.shared.ui.theme.LocalSpacing
 import com.preuni.shared.domain.auth.AuthValidator
 import com.preuni.shared.domain.auth.ValidationResult
 import com.preuni.shared.domain.error.AppError
@@ -45,17 +46,18 @@ fun RegisterScreen(
     val state by store.stateFlow.collectAsState(RegisterStore.State())
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmVisible by remember { mutableStateOf(false) }
+    val s = LocalSpacing.current
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 32.dp),
+            .padding(horizontal = s.xl, vertical = s.xxl),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text("Criar conta", style = MaterialTheme.typography.headlineMedium)
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(s.xl))
 
         PreuniTextField(
             value = state.displayName,
@@ -63,7 +65,7 @@ fun RegisterScreen(
             label = "Nome completo",
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(s.sm))
 
         PreuniTextField(
             value = state.email,
@@ -73,7 +75,7 @@ fun RegisterScreen(
             isError = state.emailError != null,
             errorMessage = state.emailError,
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(s.sm))
 
         val usernameResult = AuthValidator.validateUsername(state.username)
         val usernameIsError = state.username.isNotEmpty() && usernameResult is ValidationResult.Invalid
@@ -86,7 +88,7 @@ fun RegisterScreen(
             errorMessage = if (usernameIsError) (usernameResult as ValidationResult.Invalid).message else null,
             helperText = if (!usernameIsError) "Letras minúsculas, números, - e _ apenas" else null,
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(s.sm))
 
         val passwordStrength = passwordStrength(state.password)
         PreuniTextField(
@@ -110,7 +112,7 @@ fun RegisterScreen(
                 modifier = Modifier.fillMaxWidth().height(4.dp),
             )
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(s.sm))
 
         PreuniTextField(
             value = state.confirmPassword,
@@ -129,7 +131,7 @@ fun RegisterScreen(
 
         val globalErr = state.globalError
         if (globalErr != null) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(s.sm))
             Text(
                 text = when (globalErr) {
                     is AppError.Conflict -> globalErr.message
@@ -141,7 +143,7 @@ fun RegisterScreen(
             )
         }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(s.xl))
 
         PreuniButton(
             text = "Criar conta",

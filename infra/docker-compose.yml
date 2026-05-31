@@ -47,199 +47,42 @@ services:
     networks:
       - preuni
     depends_on:
-      auth:
-        condition: service_started
-      user:
-        condition: service_started
-      content:
-        condition: service_started
-      learning:
-        condition: service_started
-      simulation:
-        condition: service_started
-      dissertation:
-        condition: service_started
-      notification:
+      monolith:
         condition: service_started
     restart: on-failure
 
-  # ── Go Microservices ─────────────────────────────────────────────────────────
+  # ── Unified Backend Monolith ─────────────────────────────────────────────────
+  # Single Go binary serving /v1/auth/*, /v1/students/*, /internal/students,
+  # /internal/email/send. Replaces former auth + user + Elixir mail services.
 
-  auth:
+  monolith:
     build:
       context: ../backend
-      dockerfile: svc/auth/Dockerfile
+      dockerfile: app/Dockerfile
     environment:
-      PORT: "8081"
+      MONOLITH_PORT: "8080"
       LOG_LEVEL: debug
-      DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?search_path=auth&sslmode=disable"
+      DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable"
       REDIS_URL: "redis://redis:6379"
-      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
       JWT_SIGNING_KEY: ${JWT_SIGNING_KEY}
       JWT_ACCESS_EXPIRY_SECONDS: ${JWT_ACCESS_EXPIRY_SECONDS}
       JWT_REFRESH_EXPIRY_DAYS: ${JWT_REFRESH_EXPIRY_DAYS}
-      MAIL_SERVICE_URL: "http://mail:4000"
-      USER_SERVICE_URL: "http://user:8082"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    ports:
-      - "8081:8081"
-    networks:
-      - preuni
-    restart: on-failure
-
-  user:
-    build:
-      context: ../backend
-      dockerfile: svc/user/Dockerfile
-    environment:
-      PORT: "8082"
-      LOG_LEVEL: debug
-      DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?search_path=users&sslmode=disable"
-      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
-      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    ports:
-      - "8082:8082"
-    networks:
-      - preuni
-    restart: on-failure
-
-  content:
-    build:
-      context: ../backend
-      dockerfile: svc/content/Dockerfile
-    environment:
-      PORT: "8083"
-      LOG_LEVEL: debug
-      DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?search_path=content&sslmode=disable"
-      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
-      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    ports:
-      - "8083:8083"
-    networks:
-      - preuni
-    restart: on-failure
-
-  learning:
-    build:
-      context: ../backend
-      dockerfile: svc/learning/Dockerfile
-    environment:
-      PORT: "8084"
-      LOG_LEVEL: debug
-      DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?search_path=learning&sslmode=disable"
-      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
-      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    ports:
-      - "8084:8084"
-    networks:
-      - preuni
-    restart: on-failure
-
-  simulation:
-    build:
-      context: ../backend
-      dockerfile: svc/simulation/Dockerfile
-    environment:
-      PORT: "8085"
-      LOG_LEVEL: debug
-      DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?search_path=simulation&sslmode=disable"
-      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
-      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    ports:
-      - "8085:8085"
-    networks:
-      - preuni
-    restart: on-failure
-
-  dissertation:
-    build:
-      context: ../backend
-      dockerfile: svc/dissertation/Dockerfile
-    environment:
-      PORT: "8086"
-      LOG_LEVEL: debug
-      DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?search_path=dissertation&sslmode=disable"
-      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
-      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
-      CLAUDE_MODEL: ${CLAUDE_MODEL}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    ports:
-      - "8086:8086"
-    networks:
-      - preuni
-    restart: on-failure
-
-  notification:
-    build:
-      context: ../backend
-      dockerfile: svc/notification/Dockerfile
-    environment:
-      PORT: "8087"
-      LOG_LEVEL: debug
-      DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?search_path=notification&sslmode=disable"
-      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
-      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    ports:
-      - "8087:8087"
-    networks:
-      - preuni
-    restart: on-failure
-
-  # ── Mail Service (Elixir) ────────────────────────────────────────────────────
-
-  mail:
-    build:
-      context: ../backend/svc/mail
-      dockerfile: Dockerfile
-    environment:
-      MIX_ENV: prod
-      PORT: "4000"
-      SECRET_KEY_BASE: ${MAIL_SECRET_KEY_BASE}
-      INTERNAL_TOKEN: ${INTERNAL_SERVICE_TOKEN}
-      SWOOSH_ADAPTER: ${SWOOSH_ADAPTER}
+      S3_BUCKET: ${S3_BUCKET:-preuni-avatars}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      APP_VERIFICATION_BASE_URL: ${APP_VERIFICATION_BASE_URL:-https://app.preuni.com.br/verify-email}
       FROM_EMAIL: ${FROM_EMAIL}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME}
-      PHX_HOST: ${PHX_HOST}
       SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT}
       SMTP_USER: ${SMTP_USER}
       SMTP_PASS: ${SMTP_PASS}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
-      - "4000:4000"
+      - "8088:8080"
     networks:
       - preuni
     restart: on-failure

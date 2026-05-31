@@ -37,6 +37,7 @@ class ChangePasswordStoreTest {
         changePasswordResult: Result<Unit> = Result.success(Unit),
     ): AuthRepository = object : AuthRepository {
         override suspend fun verifyEmail(email: String, otp: String): Result<Unit> = Result.success(Unit)
+        override suspend fun resendVerificationOtp(email: String): Result<Unit> = Result.success(Unit)
         override suspend fun register(email: String, password: String, displayName: String): Result<AuthSession> =
             Result.failure(NotImplementedError())
         override suspend fun login(emailOrUsername: String, password: String): Result<AuthSession> =

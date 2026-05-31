@@ -45,6 +45,7 @@ class RegisterStoreTest {
         override suspend fun login(emailOrUsername: String, password: String): Result<AuthSession> =
             Result.failure(AppError.Unknown())
         override suspend fun verifyEmail(email: String, otp: String): Result<Unit> = Result.success(Unit)
+        override suspend fun resendVerificationOtp(email: String): Result<Unit> = Result.success(Unit)
         override suspend fun logout() {}
         override fun isLoggedIn() = false
         override suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit> = Result.success(Unit)
@@ -94,6 +95,7 @@ class RegisterStoreTest {
             override suspend fun login(emailOrUsername: String, password: String): Result<AuthSession> =
                 Result.failure(AppError.Unknown())
             override suspend fun verifyEmail(email: String, otp: String): Result<Unit> = Result.success(Unit)
+            override suspend fun resendVerificationOtp(email: String): Result<Unit> = Result.success(Unit)
             override suspend fun logout() {}
             override fun isLoggedIn() = false
             override suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit> = Result.success(Unit)

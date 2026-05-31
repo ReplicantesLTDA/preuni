@@ -21,10 +21,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import com.arkivanov.mvikotlin.extensions.coroutines.stateFlow
 import com.preuni.shared.ui.components.PreuniButton
 import com.preuni.shared.ui.components.PreuniTextField
+import com.preuni.shared.ui.theme.LocalSpacing
 
 @Composable
 fun OtpLoginScreen(
@@ -32,12 +32,13 @@ fun OtpLoginScreen(
     onBack: () -> Unit,
 ) {
     val state by store.stateFlow.collectAsState(OtpLoginStore.State())
+    val s = LocalSpacing.current
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .padding(horizontal = 24.dp),
+            .padding(horizontal = s.xl),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -45,20 +46,20 @@ fun OtpLoginScreen(
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
         }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(s.xl))
 
         if (!state.codeSent) {
             Text("🔑", style = MaterialTheme.typography.displayMedium)
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(s.lg))
             Text("Entre sem senha", style = MaterialTheme.typography.headlineMedium)
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(s.md))
             Text(
                 text = "Enviaremos um código de 6 dígitos para o seu email.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(s.xxl))
 
             PreuniTextField(
                 value = state.email,
@@ -66,7 +67,7 @@ fun OtpLoginScreen(
                 label = "Email",
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             )
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(s.xl))
 
             PreuniButton(
                 text = "Enviar código",
@@ -76,16 +77,16 @@ fun OtpLoginScreen(
             )
         } else {
             Text("🔑", style = MaterialTheme.typography.displayMedium)
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(s.lg))
             Text("Digite seu código", style = MaterialTheme.typography.headlineMedium)
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(s.md))
             Text(
                 text = "Enviamos o código para\n${state.email}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(s.xxl))
 
             PreuniTextField(
                 value = state.otp,
@@ -99,7 +100,7 @@ fun OtpLoginScreen(
                 isError = state.error != null,
                 errorMessage = state.error,
             )
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(s.xl))
 
             PreuniButton(
                 text = "Entrar",

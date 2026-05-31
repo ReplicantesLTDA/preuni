@@ -20,7 +20,13 @@ import kotlinx.serialization.json.Json
 import kotlin.time.measureTime
 
 @Serializable
+data class ApiErrorEnvelope(
+    val error: ApiErrorBody
+)
+
+@Serializable
 data class ApiErrorBody(
+    val code: String? = null,
     val field: String? = null,
     val message: String = "Unknown error",
 )
@@ -56,21 +62,21 @@ fun buildHttpClient(baseUrl: String, getAccessToken: (() -> String?)? = null): H
 }
 
 suspend fun HttpResponse.toAppError(): AppError {
-    val body = runCatching {
+    val errorBody = runCatching {
         val text = bodyAsText()
-        Json.decodeFromString<ApiErrorBody>(text)
+        Json.decodeFromString<ApiErrorEnvelope>(text).error
     }.getOrNull()
 
     return when (status) {
         HttpStatusCode.Unauthorized -> AppError.Unauthorized()
-        HttpStatusCode.Forbidden -> AppError.Forbidden(body?.message ?: "Access denied.")
-        HttpStatusCode.Conflict -> AppError.Conflict(body?.message ?: "Conflict")
+        HttpStatusCode.Forbidden -> AppError.Forbidden(errorBody?.message ?: "Access denied.")
+        HttpStatusCode.Conflict -> AppError.Conflict(errorBody?.message ?: "Conflict")
         HttpStatusCode.UnprocessableEntity ->
             AppError.Validation(
-                field = body?.field ?: "unknown",
-                message = body?.message ?: "Validation failed",
+                field = errorBody?.field ?: "unknown",
+                message = errorBody?.message ?: "Validation failed",
             )
-        else -> AppError.Unknown(body?.message ?: "Something went wrong. Please try again.")
+        else -> AppError.Unknown(errorBody?.message ?: "Something went wrong. Please try again.")
     }
 }
 

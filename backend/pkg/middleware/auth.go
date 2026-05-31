@@ -60,21 +60,6 @@ func RequireAuth(signingKey []byte) func(http.Handler) http.Handler {
 	}
 }
 
-// InternalAuth validates the shared internal service token from the
-// Authorization header. Use this on internal-only endpoints.
-func InternalAuth(token string) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			got := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-			if got != token {
-				writeError(w, apperrors.Unauthorized("invalid internal token"))
-				return
-			}
-			next.ServeHTTP(w, r)
-		})
-	}
-}
-
 // UserIDFromContext extracts the authenticated user's ID from the request context.
 // Returns an empty string if not set (i.e., unauthenticated route).
 func UserIDFromContext(ctx context.Context) string {

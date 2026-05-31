@@ -11,6 +11,9 @@ class AuthRepositoryImpl(
     override suspend fun verifyEmail(email: String, otp: String): Result<Unit> =
         apiClient.verifyEmail(email, otp)
 
+    override suspend fun resendVerificationOtp(email: String): Result<Unit> =
+        apiClient.resendVerificationOtp(email)
+
     override suspend fun register(email: String, password: String, displayName: String): Result<AuthSession> {
         val result = apiClient.register(email, password, displayName)
         result.onSuccess { session -> tokenStore.save(session) }
