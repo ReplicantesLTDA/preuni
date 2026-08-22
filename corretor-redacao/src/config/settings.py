@@ -16,35 +16,6 @@ class DatabaseSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="DATABASE_", case_sensitive=False)
 
 
-class JWTSettings(BaseSettings):
-    """JWT authentication configuration."""
-
-    secret_key: str
-    algorithm: str = "HS256"
-    access_token_expire_minutes: int = 15
-    refresh_token_expire_days: int = 7
-
-    model_config = SettingsConfigDict(env_prefix="JWT_", case_sensitive=False)
-
-
-class SMTPSettings(BaseSettings):
-    """SMTP email configuration."""
-
-    host: str = ""
-    port: int = 587
-    username: str = ""
-    password: str = ""
-    from_email: str = "noreply@corretor-redacao.example.com"
-    use_tls: bool = True
-
-    model_config = SettingsConfigDict(env_prefix="SMTP_", case_sensitive=False)
-
-    @property
-    def is_configured(self) -> bool:
-        """Check if SMTP is configured."""
-        return bool(self.host and self.username)
-
-
 class LLMSettings(BaseSettings):
     """LLM provider configuration."""
 
@@ -79,17 +50,6 @@ class EssayValidationSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="ESSAY_", case_sensitive=False)
 
 
-class QuotaSettings(BaseSettings):
-    """Quota configuration."""
-
-    free_tier_monthly_quota: int = 3
-    premium_tier_monthly_quota: int = 30
-    quota_reset_utc_day: int = 1
-    quota_reset_utc_hour: int = 0
-
-    model_config = SettingsConfigDict(env_prefix="", case_sensitive=False)
-
-
 class ObservabilitySettings(BaseSettings):
     """Observability and logging configuration."""
 
@@ -106,7 +66,13 @@ class ObservabilitySettings(BaseSettings):
 
 
 class AppSettings(BaseSettings):
-    """Main application settings."""
+    """Main application settings.
+
+    Constitution v2.1.1 / specs/014-constitution-alignment-refactor: this
+    service is internal-only now (research.md #2, #3) — JWT, SMTP, quota,
+    and end-user-facing feature flags/CORS/rate-limiting were all removed
+    as dead config once the Go monolith took over identity/quota/email.
+    """
 
     app_name: str = "Corretor Redação"
     app_version: str = "0.1.0"
@@ -115,12 +81,9 @@ class AppSettings(BaseSettings):
 
     # Sub-configurations
     database: DatabaseSettings = DatabaseSettings()
-    jwt: JWTSettings = JWTSettings()
-    smtp: SMTPSettings = SMTPSettings()
     llm: LLMSettings = LLMSettings()
     prompt: PromptSettings = PromptSettings()
     essay_validation: EssayValidationSettings = EssayValidationSettings()
-    quota: QuotaSettings = QuotaSettings()
     observability: ObservabilitySettings = ObservabilitySettings()
 
     # API Configuration
@@ -129,44 +92,14 @@ class AppSettings(BaseSettings):
     api_workers: int = 4
     api_log_level: str = "INFO"
 
-    # Features
-    feature_email_verification: bool = True
-    feature_parental_consent: bool = True
     feature_reevaluation: bool = True
     feature_golden_metrics_only: bool = False
-
-    # LGPD & Privacy
-    zero_data_retention: bool = True
-    allow_data_training: bool = False
-    user_deletion_grace_period_days: int = 15
 
     # Worker Configuration
     worker_enabled: bool = True
     worker_poll_interval_seconds: int = 5
     worker_batch_size: int = 5
     worker_log_level: str = "INFO"
-
-    # CORS
-    cors_origins: list[str] = [
-        "http://localhost:3000",
-        "http://localhost:8080",
-    ]
-    cors_allow_credentials: bool = True
-    cors_allow_methods: list[str] = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-    cors_allow_headers: list[str] = ["Authorization", "Content-Type"]
-
-    # Rate Limiting
-    rate_limit_enabled: bool = True
-    rate_limit_requests_per_minute: int = 60
-    rate_limit_auth_requests_per_minute: int = 5
-
-    # Backup
-    backup_enabled: bool = False
-    backup_s3_endpoint: str = ""
-    backup_s3_access_key: str = ""
-    backup_s3_secret_key: str = ""
-    backup_s3_bucket: str = ""
-    backup_s3_region: str = "us-east-1"
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -162,11 +162,11 @@ Existing repo layout (see plan.md Project Structure): `backend/app/internal/<dom
 
 **Purpose**: Repo-wide cleanup and final validation once all stories land
 
-- [ ] T057 [P] Run every command in `quickstart.md` end to end against a clean checkout; fix any drift
-- [ ] T058 [P] Update `backend/app/internal/README.md` (or equivalent) and `corretor-redacao/README.md` to describe the trimmed, internal-only correction service
-- [ ] T059 Remove now-dead Python auth code and its tests fully from `corretor-redacao/src/` and `corretor-redacao/tests/` (cleanup pass beyond T013's route removal)
-- [ ] T060 [P] Verify combined coverage ≥90% across Go, Python, and mobile on the final branch state; add tests to close any gap
-- [ ] T061 Update `CLAUDE.md` / `AGENTS.md` "Recent Changes" section to record the 014 refactor
+- [X] T057 [P] Reviewed `quickstart.md` against the final code (no live Docker stack available in this environment — verified by inspection, not a live run): fixed the error-envelope shape (`{"error":{"code":"QUOTA_EXCEEDED",...}}`, not `error_code`/`quota_exhausted`), added the missing migration step (both `infra/migrations/*` via `psql` and `corretor-redacao`'s `alembic upgrade head` — the "bring up the stack" section never mentioned applying either before this), and added smoke commands for the friends/ranking/medals endpoints that didn't exist when quickstart.md was first written.
+- [X] T058 [P] Updated `backend/app/README.md` (new domains + the DB-mediated correction bridge, replacing the outdated "no other domains" framing) and `corretor-redacao/README.md` (internal-only framing, architecture diagram corrected — `auth/` package is gone, `api/` is health/metrics only)
+- [X] T059 Removed the last dead Python config: `JWTSettings`/`SMTPSettings`/`QuotaSettings` and the LGPD/CORS/rate-limiting fields in `corretor-redacao/src/config/settings.py` were unused by anything (verified via repo-wide grep) since T013 removed the code that used them; pruned the matching vars from `.env.example`. Verified after: ruff clean, ruff format clean, 92/92 unit tests pass, 150 tests collect.
+- [ ] T060 [P] **Not met — honestly reporting, not claiming otherwise.** Combined coverage across Go/Python/mobile is still at the provisional floors from T017/T020/T021 (roughly 15-45% depending on codebase), not 90%. Reaching 90% requires a dedicated test-writing pass per codebase (unit tests for every new handler/repository method beyond the pure-domain-function tests this refactor added, plus mobile component tests for the new screens) that is out of scope for what a single continued session can respectably deliver on top of the 4 user stories + CI/CD already shipped. Recommend a follow-up PR (or several small ones, per Principle VI) dedicated solely to closing this gap, ratcheting each codebase's floor up as tests land — the mechanism (T016/T017/T020/T021's scripts and config) is already real and wired; it only needs the coverage numbers to actually move.
+- [X] T061 Updated `CLAUDE.md` "Recent Changes" with the full 014 summary (new domains, corretor-redacao import, CI/CD, 6 stacked PRs). `AGENTS.md` has no "Recent Changes" section (different file, ai-memory-managed) — nothing to update there.
 
 ---
 

@@ -1,10 +1,12 @@
 # Corretor de Redação ENEM
 
-B2C API for automated ENEM essay correction via LLM — Constitution v2.1.0.
+**Internal-only** essay-grading service for the [preuni](../README.md) monorepo — no public API surface. Originally a standalone B2C product (history preserved at github.com/dwbessa/redacao-enem); imported and trimmed down by `specs/014-constitution-alignment-refactor/` (see `.specify/memory/constitution.md` there — that's this service's *own* constitution, v2.0.0, describing its correction-pipeline principles; preuni's top-level constitution at `../.specify/memory/constitution.md` v2.1.1 is the one that actually governs this refactor).
 
 ## What it does
 
-A Brazilian high-school student submits an essay + prompt theme, receives a 202, and polls until a structured correction is ready. Each correction breaks the essay into the 5 official ENEM competencies with verbatim excerpts, pt-BR justifications, and improvement paths.
+The preuni Go monolith (`../backend/app/`) owns identity, quota, and submission intake. It enqueues a job into `correction.correction_jobs` — the *only* table this boundary is DB-mediated through (see `../specs/014-constitution-alignment-refactor/contracts/internal-bridge.md`), not an HTTP call. This service's worker claims the job, runs the LLM correction pipeline, and writes the graded result back to `correction.corrections`; the monolith polls and reconciles it. Each correction breaks the essay into the 5 official ENEM competencies with verbatim excerpts, pt-BR justifications, and improvement paths.
+
+Its own `/auth`, `/me`, and `POST /corrections` endpoints were removed in that refactor — this service no longer has end users of its own, and no longer owns any identity/quota data (`users`, `refresh_tokens`, `consent_records`, `email_verification_tokens` were dropped). `/healthz`, `/readyz`, and `/metrics` are all that remain public.
 
 ## Key documents
 
@@ -48,13 +50,15 @@ make test-golden-fake  # golden harness against FakeProvider (every PR)
 ## Architecture overview
 
 ```
-api/          FastAPI surface (thin): auth, corrections, me
+api/          FastAPI surface (thin): health/readiness + metrics only, no public API
 workers/      Async worker: LISTEN/NOTIFY + 5 s poll + pipeline execution
 corrector/    Pure correction logic: prompts, LLM abstraction, per-competency parsers
-db/           SQLAlchemy models, Alembic migrations, repositories
-auth/         JWT, argon2id passwords, quota enforcement, email verification
+db/           SQLAlchemy models (schema `correction`), Alembic migrations, repositories
 observability/ structlog JSON, Prometheus metrics, OTel spans
 ```
+
+The `auth/` package (JWT, argon2id, quota enforcement, email verification)
+was removed — the Go monolith owns all of that now.
 
 Import-linter enforces: `corrector/` must not import `db/`, `api/`, or `workers/`.
 
