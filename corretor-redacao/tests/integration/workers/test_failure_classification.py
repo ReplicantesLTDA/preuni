@@ -12,13 +12,22 @@ from __future__ import annotations
 import os
 import pytest
 import uuid
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from src.db.models import Correction, CorrectionJob
 from src.db.models.enums import CorrectionJobStatus, CorrectionStatus
 from src.db.repositories.correction_repo import claim_next, mark_failed
 from src.workers.failure_classifier import PROVIDER_ERROR_CODES, USER_ERROR_CODES, classify_failure
+
+
+async def _clear_pending(session: AsyncSession) -> None:
+    """Remove pending jobs left by a previous run against a persistent DB
+    (tests share a DB; claim_next() picks the *oldest* pending row, so a
+    stray row from an earlier invocation jumps the queue ahead of the one
+    this test just inserted)."""
+    await session.execute(text("DELETE FROM correction.correction_jobs WHERE status = 'pending'"))
+    await session.commit()
 
 
 async def _insert_pending_job(session: AsyncSession, n: int = 0) -> CorrectionJob:
@@ -77,6 +86,7 @@ def test_user_error_codes_set() -> None:
 
 @pytest.mark.asyncio
 async def test_mark_failed_provider_error_quota_false(db_session: AsyncSession) -> None:
+    await _clear_pending(db_session)
     job = await _insert_pending_job(db_session)
     await db_session.commit()
 
@@ -123,6 +133,7 @@ async def test_mark_failed_provider_error_quota_false(db_session: AsyncSession) 
 
 @pytest.mark.asyncio
 async def test_mark_failed_user_error_quota_true(db_session: AsyncSession) -> None:
+    await _clear_pending(db_session)
     job = await _insert_pending_job(db_session, n=1)
     await db_session.commit()
 

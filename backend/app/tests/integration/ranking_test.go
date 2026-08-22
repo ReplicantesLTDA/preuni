@@ -2,11 +2,88 @@ package integration_test
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
 	gamificationrepo "github.com/preuni/app/internal/gamification/repository"
 )
+
+// TestIntegration_Ranking_MeAndWeeklyEndpoints covers GET /v1/ranking/me,
+// GET /v1/ranking/weekly, and GET /v1/medals/me end to end: a submitted +
+// reconciled essay puts the user on this week's bronze leaderboard with a
+// medal for their first-ever streak day... actually the 7-day medal only
+// fires at 7, so this just asserts the endpoints return real data shaped
+// as expected once EnsureCurrentWeekEntry has run.
+func TestIntegration_Ranking_MeAndWeeklyEndpoints(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, token := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+
+	repo := gamificationrepo.NewRepository(pool)
+	if err := repo.EnsureCurrentWeekEntry(ctx, studentID, time.Now().UTC()); err != nil {
+		t.Fatalf("EnsureCurrentWeekEntry: %v", err)
+	}
+
+	meReq := httptest.NewRequest(http.MethodGet, "/v1/ranking/me", nil)
+	meReq.Header.Set("Authorization", "Bearer "+token)
+	meW := httptest.NewRecorder()
+	r.ServeHTTP(meW, meReq)
+	if meW.Code != http.StatusOK {
+		t.Fatalf("ranking/me: got %d body=%s", meW.Code, meW.Body.String())
+	}
+	var me struct {
+		LeagueTier  string `json:"league_tier"`
+		WeeklyScore int    `json:"weekly_score"`
+	}
+	if err := json.Unmarshal(meW.Body.Bytes(), &me); err != nil {
+		t.Fatal(err)
+	}
+	if me.LeagueTier != "bronze" {
+		t.Fatalf("expected a brand-new user to start in bronze, got %q", me.LeagueTier)
+	}
+
+	weeklyReq := httptest.NewRequest(http.MethodGet, "/v1/ranking/weekly?tier=bronze", nil)
+	weeklyReq.Header.Set("Authorization", "Bearer "+token)
+	weeklyW := httptest.NewRecorder()
+	r.ServeHTTP(weeklyW, weeklyReq)
+	if weeklyW.Code != http.StatusOK {
+		t.Fatalf("ranking/weekly: got %d body=%s", weeklyW.Code, weeklyW.Body.String())
+	}
+	var leaderboard []struct {
+		UserID string `json:"user_id"`
+	}
+	if err := json.Unmarshal(weeklyW.Body.Bytes(), &leaderboard); err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, e := range leaderboard {
+		if e.UserID == studentID {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected the user to appear on the bronze weekly leaderboard, got %+v", leaderboard)
+	}
+
+	medalsReq := httptest.NewRequest(http.MethodGet, "/v1/medals/me", nil)
+	medalsReq.Header.Set("Authorization", "Bearer "+token)
+	medalsW := httptest.NewRecorder()
+	r.ServeHTTP(medalsW, medalsReq)
+	if medalsW.Code != http.StatusOK {
+		t.Fatalf("medals/me: got %d body=%s", medalsW.Code, medalsW.Body.String())
+	}
+	var medals []any
+	if err := json.Unmarshal(medalsW.Body.Bytes(), &medals); err != nil {
+		t.Fatal(err)
+	}
+	if len(medals) != 0 {
+		t.Fatalf("a brand-new user should have zero medals, got %d", len(medals))
+	}
+}
 
 // TestIntegration_WeekClose_PromotesTopDemotesBottomAndResetsScore covers
 // spec User Story 3 acceptance scenarios 2 & 4: at week close, the top

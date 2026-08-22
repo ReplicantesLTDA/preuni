@@ -60,6 +60,51 @@ func submitEssay(t *testing.T, r http.Handler, accessToken string) *httptest.Res
 	return w
 }
 
+// TestIntegration_ListEssays_ReturnsOwnSubmissionsOnly covers GET /v1/essays.
+func TestIntegration_ListEssays_ReturnsOwnSubmissionsOnly(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, token := registerTestUser(t, r)
+	otherID, otherToken := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+	defer cleanupTestUser(ctx, t, pool, otherID)
+
+	if w := submitEssay(t, r, token); w.Code != http.StatusAccepted {
+		t.Fatalf("submit: got %d body=%s", w.Code, w.Body.String())
+	}
+
+	listReq := httptest.NewRequest(http.MethodGet, "/v1/essays", nil)
+	listReq.Header.Set("Authorization", "Bearer "+token)
+	listW := httptest.NewRecorder()
+	r.ServeHTTP(listW, listReq)
+	if listW.Code != http.StatusOK {
+		t.Fatalf("list: got %d body=%s", listW.Code, listW.Body.String())
+	}
+	var mine []struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(listW.Body.Bytes(), &mine); err != nil {
+		t.Fatal(err)
+	}
+	if len(mine) != 1 {
+		t.Fatalf("expected exactly 1 submission for this user, got %d", len(mine))
+	}
+
+	otherListReq := httptest.NewRequest(http.MethodGet, "/v1/essays", nil)
+	otherListReq.Header.Set("Authorization", "Bearer "+otherToken)
+	otherListW := httptest.NewRecorder()
+	r.ServeHTTP(otherListW, otherListReq)
+	var theirs []struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(otherListW.Body.Bytes(), &theirs); err != nil {
+		t.Fatal(err)
+	}
+	if len(theirs) != 0 {
+		t.Fatalf("a user with no submissions must see an empty list, got %d", len(theirs))
+	}
+}
+
 // TestIntegration_SubmitEssay_AcceptsImmediatelyAndIncrementsStreak covers
 // spec User Story 1, acceptance scenario 1: submission is accepted
 // immediately (202), and the streak increments in the same transaction —

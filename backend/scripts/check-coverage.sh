@@ -4,25 +4,30 @@
 #
 # Constitution Principle II: coverage floor is 90%, reached incrementally
 # (Principle VI: small PRs). COVERAGE_FLOOR below is today's *provisional*
-# baseline, not yet 90% — specs/014-constitution-alignment-refactor/tasks.md
-# T060 (Polish) raises it to 90% once the essay/streak/social/gamification
-# test suites (US1-US3) land. Every PR must not lower the number below
-# whatever COVERAGE_FLOOR currently is; bump it upward as coverage improves,
-# never downward without a documented reason.
+# baseline, not yet 90%. Every PR must not lower the number below whatever
+# COVERAGE_FLOOR currently is; bump it upward as coverage improves, never
+# downward without a documented reason.
 #
-# 15 was measured against a live Postgres in CI (backend-ci.yml, 2026-08-22):
-# the full `go test ./...` run (all integration suites included) measured
-# 19.0% — 15 leaves headroom instead of sitting right at the observed number.
+# -coverpkg=./... matters: most real exercise of essay/streak/social/
+# gamification handler+repository code happens through tests/integration/
+# (a different package hitting the full HTTP router), not same-package unit
+# tests. Without -coverpkg, `go test ./...` only attributes coverage within
+# each test binary's own package and drastically understates the real
+# number — first measured wrong in backend-ci.yml (19.0%/15% floor); the
+# corrected measurement against a local live Postgres (2026-08-22, this
+# session) started at 55.2%, then 59.6% after closing two 0%-covered
+# handler paths (GET /v1/essays list, the whole gamification HTTP layer).
+# Floor set to 55 for headroom.
 #
 # Usage: ./check-coverage.sh (run from backend/app/)
 
 set -euo pipefail
 
-COVERAGE_FLOOR="${COVERAGE_FLOOR:-15}"
+COVERAGE_FLOOR="${COVERAGE_FLOOR:-55}"
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../app"
 
-go test -p 1 -coverprofile=/tmp/preuni-backend-coverage.out ./...
+go test -p 1 -coverpkg=./... -coverprofile=/tmp/preuni-backend-coverage.out ./...
 
 TOTAL=$(go tool cover -func=/tmp/preuni-backend-coverage.out | tail -1 | awk '{print $NF}' | tr -d '%')
 

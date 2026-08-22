@@ -95,11 +95,14 @@ omit = ["*/tests/*"]
 
 [tool.coverage.report]
 # Constitution Principle II: coverage floor is 90%, reached incrementally
-# (Principle VI: small PRs). 45 is today's *provisional* baseline (unit
-# suite alone measures ~51%; the full unit+integration+golden run in CI has
-# more surface to cover) — specs/014-constitution-alignment-refactor/tasks.md
-# T060 (Polish) raises this to 90 once US1-US3 land their test suites.
-fail_under = 45
+# (Principle VI: small PRs). 60 is today's *provisional* baseline, measured
+# against a live Postgres (2026-08-22): unit+integration together hit
+# 69.3% (up from the unit-only 51% first measured before a live DB was
+# available locally). Biggest remaining gap: src/workers/correction_worker.py
+# (0%) — process_one/CorrectionWorker.run are exercised only via
+# correction_repo functions directly in tests, not the worker orchestration
+# itself. Next: a worker-level integration test to close that gap.
+fail_under = 60
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
