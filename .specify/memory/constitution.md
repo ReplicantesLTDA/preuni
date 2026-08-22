@@ -1,17 +1,13 @@
 <!--
 Sync Impact Report
 ==================
-Version change: 2.0.0 → 2.1.0 (MINOR — new engineering-workflow principle added,
-no existing principle redefined or removed)
+Version change: 2.1.0 → 2.1.1 (PATCH — raised coverage floor 80% → 90% and
+scoped it explicitly across Go/Python/TypeScript; no principle added/removed)
 
-Modified principles: none redefined this amendment.
-Added:
-- (new) VI. Engineering Workflow (NON-NEGOTIABLE) — TDD enforced by pre-commit +
-  CI/CD, branch protection on main, PR-only changes with mandatory human review,
-  XP practice framing (AI as pair, human as reviewer/navigator).
+Modified: II. Testing Standards — coverage floor 80% → 90%, applies to all
+three codebases (Go monolith, Python correction service, TypeScript mobile).
 
-Added sections: none beyond principle VI (folded workflow gates into existing
-Quality Gates and Governance sections instead of a new top-level section).
+Added sections: none.
 Removed sections: none.
 
 Templates requiring updates:
@@ -88,7 +84,7 @@ Every piece of code merged to `main` must meet these standards:
 - **Integration tests required** for: API endpoints, database interactions, authentication flows, and third-party service boundaries (including the Go monolith ↔ correction service boundary)
 - **No test skipping**: `skip`, `xit`, `xtest`, or equivalent are forbidden in CI — comment them with a tracked issue instead
 - **Test names must describe behavior**: `it("returns 404 when user does not exist")` not `it("works")`
-- **Coverage floor**: Maintain ≥ 80% line coverage; new code must not lower the project average
+- **Coverage floor**: Maintain ≥ 90% line coverage across backend (Go), correction service (Python), and mobile (TypeScript); new code must not lower the project average; CI fails the build below the floor
 - **Real dependencies over mocks** at integration boundaries: mock only what you own or what is external and unreliable
 
 ### III. Gamification & UX Consistency
@@ -177,4 +173,4 @@ Every pull request must pass all of the following before merge:
   CI checks must be green, and at least one human reviewer must approve —
   no exceptions, including for AI-authored changes
 
-**Version**: 2.1.0 | **Ratified**: 2026-04-03 | **Last Amended**: 2026-08-22
+**Version**: 2.1.1 | **Ratified**: 2026-04-03 | **Last Amended**: 2026-08-22

@@ -23,7 +23,7 @@ PGDB="${PGDB:-preuni}"
 DIRECTION="${1:-up}"
 TARGET_SERVICE="${2:-}"
 
-SERVICES=(auth user content learning simulation dissertation)
+SERVICES=(auth user content learning simulation dissertation essay social gamification)
 
 run_migrate() {
     local svc="$1"

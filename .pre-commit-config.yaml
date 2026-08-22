@@ -1,0 +1,8 @@
+# Constitution Principle VI (Engineering Workflow, NON-NEGOTIABLE):
+# fast checks run here and block the commit; the full suite + coverage
+# gate runs in CI (.github/workflows/*.yml) on every push.
+#
+# Install: pip install pre-commit && pre-commit install
+#
+# Hooks are filled in by specs/014-constitution-alignment-refactor/tasks.md T019.
+repos: []
