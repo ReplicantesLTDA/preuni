@@ -59,19 +59,14 @@ def test_writer_rejects_forbidden_keys_nested() -> None:
 
 @pytest.mark.asyncio
 async def test_writer_persists_row(db_session) -> None:
-    # Need a correction row to satisfy FK. Create a user + correction first.
+    # `corrections.user_id` is an opaque UUID with no local FK (this
+    # service doesn't own identity — constitution Architecture section,
+    # research.md #2), so a correction row is all that's needed here.
     user_id = uuid.uuid4()
     correction_id = uuid.uuid4()
     await db_session.execute(
         text("""
-        INSERT INTO users (id, email, password_hash, tier, created_at, updated_at)
-        VALUES (:uid, :email, 'x', 'free', now(), now())
-    """),
-        {"uid": user_id, "email": f"u-{uuid.uuid4()}@x.test"},
-    )
-    await db_session.execute(
-        text("""
-        INSERT INTO corrections (id, user_id, essay_text, prompt_theme_title,
+        INSERT INTO correction.corrections (id, user_id, essay_text, prompt_theme_title,
                                   prompt_theme_context, input_hash, status,
                                   queued_at, eliminatory_flags, quota_consumed)
         VALUES (:cid, :uid, 'text', 'title', 'ctx', :hash, 'pending', now(),
@@ -93,7 +88,7 @@ async def test_writer_persists_row(db_session) -> None:
     row = (
         await db_session.execute(
             text(
-                "SELECT event_type, event_payload FROM correction_audit_logs WHERE correction_id = :cid"
+                "SELECT event_type, event_payload FROM correction.correction_audit_logs WHERE correction_id = :cid"
             ),
             {"cid": correction_id},
         )
