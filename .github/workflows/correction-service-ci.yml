@@ -62,7 +62,12 @@ jobs:
         run: pytest tests/unit -v --cov=src --cov-report=term-missing --cov-fail-under=45
 
       - name: integration tests
-        run: pytest tests/integration -v -m integration
+        # Not `-m integration` (the Makefile's test-int target uses that,
+        # but no test in this suite is actually marked @pytest.mark.integration
+        # -- pre-existing bug, same category as `lint-imports --root src`;
+        # CI caught it: `-m integration` deselects all 102 tests, exit 5).
+        # Directory-based selection is what the unit-test step already uses.
+        run: pytest tests/integration -v
 
       - name: golden dataset (fake provider — every PR, plumbing only)
         env:
