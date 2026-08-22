@@ -1,10 +1,12 @@
 import { ScrollView, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
-import { useToast } from '@/components/Toast';
 import { useTheme } from '@/theme';
 import { t } from '@/lib/i18n/pt-BR';
+import { useEssayList } from '@/features/essay/hooks';
+import { useStreak } from '@/features/streak/hooks';
 
 const SAMPLE_PROMPTS = [
   {
@@ -26,7 +28,9 @@ const SAMPLE_PROMPTS = [
 
 export default function RedacaoHome() {
   const { color, space, font, size } = useTheme();
-  const toast = useToast();
+  const router = useRouter();
+  const { data: streak } = useStreak();
+  const { data: essays } = useEssayList();
 
   return (
     <ScrollView
@@ -50,7 +54,7 @@ export default function RedacaoHome() {
           marginBottom: space[4],
         }}
       >
-        Pratique com temas do ENEM e receba feedback.
+        {streak ? t.trilha.streak(streak.currentStreak) : 'Pratique com temas do ENEM e receba feedback.'}
       </Text>
 
       <Card>
@@ -74,11 +78,7 @@ export default function RedacaoHome() {
         >
           Escolha um tema abaixo e comece quando quiser.
         </Text>
-        <Button
-          label="Escrever agora"
-          onPress={() => toast.show('Editor de redação em construção.', 'info')}
-          fullWidth
-        />
+        <Button label={t.redacao.writeNow} onPress={() => router.push('/redacao/write')} fullWidth />
       </Card>
 
       <View style={{ height: space[5] }} />
@@ -120,7 +120,7 @@ export default function RedacaoHome() {
             <Button
               label="Começar"
               variant="secondary"
-              onPress={() => toast.show('Tema em breve.', 'info')}
+              onPress={() => router.push({ pathname: '/redacao/write', params: { themeTitle: p.title, themeYear: p.year } })}
               fullWidth
             />
           </Card>
@@ -129,11 +129,43 @@ export default function RedacaoHome() {
 
       <View style={{ height: space[6] }} />
 
-      <EmptyState
-        title="Nenhuma redação enviada"
-        body="Quando você enviar uma redação, o histórico aparece aqui."
-        mascot="reading"
-      />
+      <Text
+        style={{
+          color: color.ink[1],
+          fontFamily: font.heading,
+          fontSize: size.lg,
+          marginBottom: space[2],
+        }}
+      >
+        Suas redações
+      </Text>
+
+      {essays && essays.length > 0 ? (
+        <View style={{ gap: space[3] }}>
+          {essays.map((e) => (
+            <Card key={e.id}>
+              <Button
+                label={
+                  e.status === 'pending'
+                    ? t.redacao.statusPending
+                    : e.status === 'failed'
+                      ? t.redacao.statusFailed
+                      : `Ver correção — ${new Date(e.submittedAt).toLocaleDateString('pt-BR')}`
+                }
+                variant="secondary"
+                onPress={() => router.push(`/redacao/${e.id}`)}
+                fullWidth
+              />
+            </Card>
+          ))}
+        </View>
+      ) : (
+        <EmptyState
+          title={t.redacao.emptyTitle}
+          body={t.redacao.emptyBody}
+          mascot="reading"
+        />
+      )}
     </ScrollView>
   );
 }

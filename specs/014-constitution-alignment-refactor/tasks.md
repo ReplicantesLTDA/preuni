@@ -85,25 +85,25 @@ Existing repo layout (see plan.md Project Structure): `backend/app/internal/<dom
 
 ### Tests for User Story 1 ⚠️
 
-- [ ] T024 [P] [US1] Unit tests for quota enforcement (free 1/day, Pro multi/day, UTC day boundary) in `backend/app/internal/essay/quota_test.go`
-- [ ] T025 [P] [US1] Unit tests for streak increment-on-submit and reset-on-missed-day in `backend/app/internal/streak/streak_test.go`
-- [ ] T026 [P] [US1] Integration test: `POST /v1/essays` → 202 → poll `GET /v1/essays/{id}` → `graded` with 5 competencies in `backend/tests/integration/essay_test.go`
-- [ ] T027 [P] [US1] Integration test: second same-day free-tier submission → 429 `quota_exhausted`; Pro-tier second submission → 202, in `backend/tests/integration/essay_quota_test.go`
-- [ ] T028 [P] [US1] Integration test: correction failure (typed error) surfaces as `essay_submissions.status = failed` without losing that day's streak credit, in `backend/tests/integration/essay_failure_test.go`
-- [ ] T029 [P] [US1] Python unit tests for `correction_jobs` claim → grade → complete flow in `corretor-redacao/tests/unit/test_correction_jobs.py`
+- [X] T024 [P] [US1] Unit tests for quota enforcement in `backend/app/internal/essay/domain/quota_test.go` — extracted a pure `QuotaExceeded(tier, alreadySubmittedToday)` decision function (same DB-free pattern as T025) instead of testing it only through the DB-backed repository; 3/3 pass
+- [X] T025 [P] [US1] Unit tests for streak increment-on-submit and reset-on-missed-day in `backend/app/internal/streak/domain/streak_test.go` — pure `NextStreak()` state machine, 6/6 pass, including the UTC-boundary edge case (23:59→00:01 crossing a day)
+- [X] T026 [P] [US1] Integration test in `backend/app/tests/integration/essay_test.go`: submit → 202 → streak +1 immediately; separately simulates the worker completing the job and verifies `ReconcileOnce` produces a 5-competency graded result. Confirmed to compile and skip gracefully without `TEST_DB_URL`; first live-DB run happens in CI.
+- [X] T027 [P] [US1] Integration test in `backend/app/tests/integration/essay_quota_test.go`: free-tier second same-day submission → 429 `QUOTA_EXCEEDED`; Pro-tier second submission → 202 without inflating the streak.
+- [X] T028 [P] [US1] Integration test in `backend/app/tests/integration/essay_failure_test.go`: a worker-side failure reconciles to `essay_submissions.status = failed` while the streak (already advanced at submission) is untouched.
+- [X] T029 [P] [US1] Already covered — Phase 2 (T014) rewrote `corretor-redacao/tests/integration/workers/{test_queue_claim,test_listen_notify,test_failure_classification,test_completed_invariants}.py` against the `correction_jobs` claim→grade→complete flow and it's CI-green (PR #52); no separate `test_correction_jobs.py` needed.
 
 ### Implementation for User Story 1
 
-- [ ] T030 [US1] Implement `essay_submissions` repository with per-day quota check in `backend/app/internal/essay/repository.go`
-- [ ] T031 [US1] Implement streak service (UTC-boundary increment/reset, updates `users.current_streak`/`longest_streak`/`last_submission_day`) in `backend/app/internal/streak/service.go`
-- [ ] T032 [US1] Implement `essay` → `correction_jobs` enqueue writer (same transaction as submission insert + streak update) in `backend/app/internal/essay/bridge.go`
-- [ ] T033 [US1] Implement `POST /v1/essays` and `GET /v1/essays/{id}`, `GET /v1/essays` handlers in `backend/app/internal/essay/handler.go`
-- [ ] T034 [US1] Implement reconciliation poller reading completed/failed `correction_jobs` rows into `essay_grades` / failed `essay_submissions`, including the grading-timeout failure path (spec Edge Cases, SC-001) in `backend/app/internal/essay/reconciler.go`
-- [ ] T035 [US1] Implement `GET /v1/streaks/me` handler in `backend/app/internal/streak/handler.go`
-- [ ] T036 [P] [US1] Update `corretor-redacao/src/workers/pipeline.py` to read job input from `correction_jobs` and write the graded result keyed by job id
-- [ ] T037 [P] [US1] Mobile: essay submission form + submit/poll hooks in `mobile/src/features/essay/{api.ts,hooks.ts,validation.ts}`
-- [ ] T038 [P] [US1] Mobile: streak display hook/component in `mobile/src/features/streak/{api.ts,hooks.ts}`
-- [ ] T039 [US1] Wire essay submission + streak display into `mobile/app/(tabs)/redacao/` screens
+- [X] T030 [US1] Implemented `Repository.Submit`/`GetByID`/`ListByUser` in `backend/app/internal/essay/repository/essay.go` — quota check via the T024 pure function, backed by a `FOR UPDATE` read of `users.students`
+- [X] T031 [US1] Implemented streak persistence in `backend/app/internal/streak/repository/streak.go` (`GetForUpdate`/`RecordSubmission`), driven by the T025 pure `NextStreak` function — reuses `users.students.streak_count`/`streak_last_active_date` (no separate `current_streak`/`last_submission_day` columns, per T007's decision)
+- [X] T032 [US1] The `essay_submissions` insert, streak update, and `correction_jobs` insert all run in one `pgx.Tx` inside `Repository.Submit` (no separate bridge.go needed — same file as T030, since it's one transaction, not a separable concern)
+- [X] T033 [US1] Implemented `POST /v1/essays`, `GET /v1/essays/{id}`, `GET /v1/essays` in `backend/app/internal/essay/handler/{submit_essay,get_essay,list_essays}.go`, wired via `backend/app/internal/essay/router/router.go` and mounted from `internal/router/router.go` (completes T015 for this domain)
+- [X] T034 [US1] Implemented `Repository.ReconcileOnce` in `backend/app/internal/essay/repository/reconciler.go` — completed/failed job handling plus a 10-minute grading timeout (spec SC-001); driven by a ticker goroutine in `cmd/server/main.go` (`runEssayReconciler`)
+- [X] T035 [US1] Implemented `GET /v1/streaks/me` in `backend/app/internal/streak/handler/get_streak.go`, wired via `internal/streak/router/router.go` (completes T015 for this domain)
+- [X] T036 [P] [US1] Already done — Phase 2 (T014) adapted `correction_repo.claim_next`/`mark_completed`/`mark_failed` to the bridge table; the worker pipeline itself (`src/workers/correction_worker.py`) needed zero changes
+- [X] T037 [P] [US1] Mobile: `mobile/src/features/essay/{api.ts,hooks.ts,validation.ts}` + `mobile/src/types/essay.ts` (zod schemas), `useSubmitEssay`/`useEssay` (polls while `pending`)/`useEssayList`
+- [X] T038 [P] [US1] Mobile: `mobile/src/features/streak/{api.ts,hooks.ts}`, `useStreak`
+- [X] T039 [US1] Wired into `mobile/app/(tabs)/redacao/`: `index.tsx` now shows the real streak + essay list, `write.tsx` (new) is the submission form, `[id].tsx` (new) polls and renders the 5-competency grade. `pnpm typecheck`/`pnpm lint` clean; `pnpm test --coverage` 79/79 passing, still above the T020 provisional floor (26.5/33.1/24.2/27.3% vs. 25/30/20/25) though narrower than before — no new mobile unit tests were added for the new screens (documented gap, not silently hidden; screens are mostly view logic, the testable decision logic (quota, streak) lives and is tested on the Go side)
 
 **Checkpoint**: User Story 1 fully functional and independently testable — this is the MVP
 

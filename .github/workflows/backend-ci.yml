@@ -60,7 +60,7 @@ jobs:
             exit 1
           fi
 
-      - name: run migrations
+      - name: run Go-owned migrations
         # infra/migrations/<schema>/*.sql are plain numbered SQL files (not
         # golang-migrate's up/down pair format, despite infra/scripts/migrate.sh's
         # docstring — a pre-existing repo inconsistency, out of scope here).
@@ -75,6 +75,24 @@ jobs:
               psql -h localhost -U preuni -d preuni -v ON_ERROR_STOP=1 -f "$f"
             done
           done
+
+      # The essay domain writes to correction.correction_jobs (contracts/
+      # internal-bridge.md) -- that schema is owned by corretor-redacao's
+      # own Alembic migrations, not infra/migrations/. research.md #1's
+      # design is a single shared Postgres instance, so backend-ci's DB
+      # needs both migration sets applied for essay-domain tests to exercise
+      # the real bridge write path.
+      - uses: astral-sh/setup-uv@v3
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: apply correction-service schema (for the essay<->correction bridge table)
+        working-directory: corretor-redacao
+        env:
+          DATABASE_URL: postgresql+asyncpg://preuni:preuni@localhost:5432/preuni
+        run: |
+          uv pip install --system -e ".[dev]"
+          alembic upgrade head
 
       - name: test + coverage gate
         run: bash backend/scripts/check-coverage.sh
