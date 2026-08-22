@@ -1,8 +1,11 @@
 """FastAPI app factory.
 
-Phase 4A scope: app boots, JSON logging middleware, Prometheus `/metrics`,
-OpenTelemetry span wrap, health routes. Auth + correction routers populated
-in subsequent phases (US1, US2, etc).
+Constitution v2.1.1 / specs/014-constitution-alignment-refactor: this
+service is internal-only now (research.md #2, #3). Essay submission,
+quota, and identity live in the Go monolith; the Go<->worker hand-off is
+DB-mediated via the `correction.correction_jobs` table (research.md #1),
+not HTTP, so there is no user-facing submission endpoint here. This app
+now serves only liveness/readiness probes and metrics.
 """
 
 from __future__ import annotations
@@ -16,7 +19,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
-from src.api.routes import auth, corrections, health, me
+from src.api.routes import health
 from src.observability import logging as obs_logging
 from src.observability import metrics as obs_metrics
 from src.observability import tracing as obs_tracing
@@ -38,9 +41,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="Corretor de Redação ENEM",
+        title="preuni correction service (internal)",
         version="0.1.0",
-        description="B2C API for automated ENEM essay correction.",
+        description="Internal essay-grading worker process for preuni. No public API surface.",
         lifespan=lifespan,
     )
 
@@ -96,9 +99,6 @@ def create_app() -> FastAPI:
         )
 
     app.include_router(health.router)
-    app.include_router(auth.router)
-    app.include_router(me.router)
-    app.include_router(corrections.router)
 
     return app
 

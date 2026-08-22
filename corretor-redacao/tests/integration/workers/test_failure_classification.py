@@ -1,46 +1,38 @@
-"""T100: failure classification — quota_consumed per error_codes.md FR-036."""
+"""T100: failure classification — quota_consumed per error_codes.md FR-036.
+
+Constitution v2.1.1 / specs/014-constitution-alignment-refactor: quota
+itself is enforced by the Go monolith now, but this service still reports
+whether a failure is provider/internal (quota_consumed=false) or
+user-attributable (quota_consumed=true) so Go's reconciler can decide
+whether to refund the day's submission.
+"""
 
 from __future__ import annotations
 
-import hashlib
 import os
 import pytest
 import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from src.db.models import Correction, User
-from src.db.models.enums import CorrectionStatus, UserTier
+from src.db.models import Correction, CorrectionJob
+from src.db.models.enums import CorrectionJobStatus, CorrectionStatus
 from src.db.repositories.correction_repo import claim_next, mark_failed
 from src.workers.failure_classifier import PROVIDER_ERROR_CODES, USER_ERROR_CODES, classify_failure
 
 
-async def _insert_user(session: AsyncSession) -> User:
-    u = User(
+async def _insert_pending_job(session: AsyncSession, n: int = 0) -> CorrectionJob:
+    job = CorrectionJob(
         id=uuid.uuid4(),
-        email=f"fc-{uuid.uuid4()}@example.com",
-        password_hash="x",
-        tier=UserTier.free,
-    )
-    session.add(u)
-    await session.flush()
-    return u
-
-
-async def _insert_pending(session: AsyncSession, user: User, n: int = 0) -> Correction:
-    text = f"essay text {n}"
-    c = Correction(
-        id=uuid.uuid4(),
-        user_id=user.id,
-        essay_text=text,
+        user_id=uuid.uuid4(),
+        essay_text=f"essay text {n}",
         prompt_theme_title="Tema",
         prompt_theme_context="Contexto do tema da redação.",
-        input_hash=hashlib.sha256(text.encode()).digest(),
-        status=CorrectionStatus.pending,
+        status=CorrectionJobStatus.pending,
     )
-    session.add(c)
+    session.add(job)
     await session.flush()
-    return c
+    return job
 
 
 @pytest.mark.parametrize(
@@ -85,8 +77,7 @@ def test_user_error_codes_set() -> None:
 
 @pytest.mark.asyncio
 async def test_mark_failed_provider_error_quota_false(db_session: AsyncSession) -> None:
-    user = await _insert_user(db_session)
-    correction = await _insert_pending(db_session, user)
+    job = await _insert_pending_job(db_session)
     await db_session.commit()
 
     _db = os.environ.get(
@@ -105,21 +96,26 @@ async def test_mark_failed_provider_error_quota_false(db_session: AsyncSession) 
                 quota_consumed=False,
             )
             await s.commit()
+            claimed_id = claimed.id
     finally:
         await engine.dispose()
 
     row = (
-        await db_session.execute(select(Correction).where(Correction.id == correction.id))
+        await db_session.execute(select(Correction).where(Correction.id == claimed_id))
     ).scalar_one()
     assert row.status == CorrectionStatus.failed
     assert row.quota_consumed is False
     assert row.error_code == "schema_violation"
 
+    job_row = (
+        await db_session.execute(select(CorrectionJob).where(CorrectionJob.id == job.id))
+    ).scalar_one()
+    assert job_row.status == CorrectionJobStatus.failed
+
 
 @pytest.mark.asyncio
 async def test_mark_failed_user_error_quota_true(db_session: AsyncSession) -> None:
-    user = await _insert_user(db_session)
-    correction = await _insert_pending(db_session, user, n=1)
+    job = await _insert_pending_job(db_session, n=1)
     await db_session.commit()
 
     _db = os.environ.get(
@@ -138,11 +134,13 @@ async def test_mark_failed_user_error_quota_true(db_session: AsyncSession) -> No
                 quota_consumed=True,
             )
             await s.commit()
+            claimed_id = claimed.id
     finally:
         await engine.dispose()
 
     row = (
-        await db_session.execute(select(Correction).where(Correction.id == correction.id))
+        await db_session.execute(select(Correction).where(Correction.id == claimed_id))
     ).scalar_one()
     assert row.status == CorrectionStatus.failed
     assert row.quota_consumed is True
+    assert job.id is not None

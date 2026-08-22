@@ -61,6 +61,26 @@ def upgrade() -> None:
     )
     op.create_index('correction_jobs_queue_idx', 'correction_jobs', ['queued_at'], unique=False, schema='correction', postgresql_where=sa.text("status = 'pending'"))
 
+    # The worker's LISTEN/NOTIFY wake-up (src/workers/correction_worker.py)
+    # used to fire from the Python INSERT path. Now that the Go monolith
+    # writes rows here directly (no Python code in that path), the NOTIFY
+    # moves to a DB trigger so the worker still wakes up immediately instead
+    # of relying solely on its 5s poll backstop.
+    op.execute("""
+        CREATE OR REPLACE FUNCTION correction.notify_correction_queued()
+        RETURNS trigger AS $$
+        BEGIN
+            PERFORM pg_notify('correction_queued', NEW.id::text);
+            RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+    """)
+    op.execute("""
+        CREATE TRIGGER correction_jobs_notify_queued
+        AFTER INSERT ON correction.correction_jobs
+        FOR EACH ROW EXECUTE FUNCTION correction.notify_correction_queued();
+    """)
+
     # Move the existing grading-pipeline tables into the `correction` schema.
     op.execute("ALTER TABLE corrections SET SCHEMA correction")
     op.execute("ALTER TABLE correction_audit_logs SET SCHEMA correction")
@@ -80,6 +100,8 @@ def downgrade() -> None:
     op.execute("ALTER TABLE correction.correction_audit_logs SET SCHEMA public")
     op.execute("ALTER TABLE correction.corrections SET SCHEMA public")
 
+    op.execute("DROP TRIGGER IF EXISTS correction_jobs_notify_queued ON correction.correction_jobs")
+    op.execute("DROP FUNCTION IF EXISTS correction.notify_correction_queued()")
     op.drop_index('correction_jobs_queue_idx', table_name='correction_jobs', schema='correction', postgresql_where=sa.text("status = 'pending'"))
     op.drop_table('correction_jobs', schema='correction')
     op.execute("DROP TYPE IF EXISTS correction.correction_job_status")

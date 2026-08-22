@@ -1,7 +1,10 @@
-"""CorrectionRepo — queue operations with quota enforcement.
+"""CorrectionRepo — claim-from-bridge-table + result persistence.
 
-Uses SERIALIZABLE isolation for quota check + enqueue to prevent concurrent
-submissions from racing past the monthly quota boundary (research R2).
+Constitution v2.1.1 / specs/014-constitution-alignment-refactor: quota
+enforcement and enqueueing now live entirely in the Go monolith
+(research.md #2; contracts/internal-bridge.md). This service no longer
+accepts end-user submissions — it claims rows the monolith already wrote
+to `correction_jobs`, grades them, and writes the result to `corrections`.
 """
 
 from __future__ import annotations
@@ -9,78 +12,16 @@ from __future__ import annotations
 import datetime as dt
 import hashlib
 import uuid
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.auth.quota import check_quota
-from src.db.models import Correction, User
-from src.db.models.enums import CorrectionStatus
+from src.db.models import Correction, CorrectionJob
+from src.db.models.enums import CorrectionJobStatus, CorrectionStatus
 
 
-def _input_hash(
-    essay_text: str,
-    prompt_theme_title: str,
-    prompt_theme_context: str,
-    motivational_texts: str | None,
-) -> bytes:
-    content = (
-        f"{essay_text}\x00{prompt_theme_title}\x00"
-        f"{prompt_theme_context}\x00{motivational_texts or ''}"
-    ).encode()
+def _input_hash(essay_text: str, prompt_theme_title: str, prompt_theme_context: str) -> bytes:
+    content = f"{essay_text}\x00{prompt_theme_title}\x00{prompt_theme_context}".encode()
     return hashlib.sha256(content).digest()
-
-
-async def enqueue_with_quota_check(
-    session: AsyncSession,
-    *,
-    user: User,
-    essay_text: str,
-    prompt_theme_title: str,
-    prompt_theme_context: str,
-    motivational_texts: str | None = None,
-) -> Correction:
-    """Quota check + INSERT in a SERIALIZABLE transaction.
-
-    Raises QuotaExhaustedError when the user is at/over their monthly limit.
-    The serializable isolation prevents two concurrent submissions at the
-    boundary from both succeeding.
-    """
-    await check_quota(session, user)
-
-    correction = Correction(
-        id=uuid.uuid4(),
-        user_id=user.id,
-        essay_text=essay_text,
-        prompt_theme_title=prompt_theme_title,
-        prompt_theme_context=prompt_theme_context,
-        motivational_texts=motivational_texts,
-        input_hash=_input_hash(
-            essay_text, prompt_theme_title, prompt_theme_context, motivational_texts
-        ),
-        status=CorrectionStatus.pending,
-    )
-    session.add(correction)
-    await session.flush()
-
-    await session.execute(
-        text("SELECT pg_notify('correction_queued', :cid)").bindparams(cid=str(correction.id))
-    )
-    return correction
-
-
-async def get_for_user(
-    session: AsyncSession,
-    *,
-    correction_id: uuid.UUID,
-    user_id: uuid.UUID,
-) -> Correction | None:
-    """Return a correction owned by user_id, or None (indistinguishable from not-found)."""
-    result = await session.execute(
-        select(Correction)
-        .where(Correction.id == correction_id)
-        .where(Correction.user_id == user_id)
-    )
-    return result.scalar_one_or_none()
 
 
 async def claim_next(
@@ -88,32 +29,63 @@ async def claim_next(
     *,
     worker_id: str,
 ) -> Correction | None:
-    """Claim the oldest pending correction with SELECT … FOR UPDATE SKIP LOCKED.
+    """Claim the oldest pending job with SELECT ... FOR UPDATE SKIP LOCKED.
 
-    Returns the claimed row (now status='processing') or None if the queue is empty.
-    The caller is responsible for committing the transaction.
+    Marks the `correction_jobs` row `processing`, creates the matching
+    `corrections` row (also `processing`), and returns that `Correction` —
+    the rest of the worker pipeline is unchanged from before this refactor,
+    it just no longer finds its row pre-created by an end-user request.
     """
     result = await session.execute(
-        select(Correction)
-        .where(Correction.status == CorrectionStatus.pending)
-        .order_by(Correction.queued_at)
+        select(CorrectionJob)
+        .where(CorrectionJob.status == CorrectionJobStatus.pending)
+        .order_by(CorrectionJob.queued_at)
         .limit(1)
         .with_for_update(skip_locked=True)
     )
-    correction = result.scalar_one_or_none()
-    if correction is None:
+    job = result.scalar_one_or_none()
+    if job is None:
         return None
 
     now = dt.datetime.now(dt.UTC)
-    correction.status = CorrectionStatus.processing
-    correction.started_at = now
-    correction.locked_at = now
-    correction.locked_by = worker_id
+    job.status = CorrectionJobStatus.processing
+    job.started_at = now
+
+    correction = Correction(
+        id=uuid.uuid4(),
+        user_id=job.user_id,
+        job_id=job.id,
+        essay_text=job.essay_text,
+        prompt_theme_title=job.prompt_theme_title,
+        prompt_theme_context=job.prompt_theme_context,
+        input_hash=_input_hash(job.essay_text, job.prompt_theme_title, job.prompt_theme_context),
+        status=CorrectionStatus.processing,
+        started_at=now,
+        locked_at=now,
+        locked_by=worker_id,
+    )
+    session.add(correction)
+    await session.flush()
     return correction
 
 
+async def _mark_job(
+    session: AsyncSession,
+    *,
+    job_id: uuid.UUID | None,
+    status: CorrectionJobStatus,
+) -> None:
+    if job_id is None:
+        return
+    job = await session.get(CorrectionJob, job_id)
+    if job is None:
+        return
+    job.status = status
+    job.completed_at = dt.datetime.now(dt.UTC)
+
+
 async def mark_completed(
-    session: AsyncSession,  # noqa: ARG001
+    session: AsyncSession,
     *,
     correction: Correction,
     final_score: int,
@@ -144,10 +116,11 @@ async def mark_completed(
     correction.model_identifier = model_identifier
     correction.output_schema_version = output_schema_version
     correction.quota_consumed = True
+    await _mark_job(session, job_id=correction.job_id, status=CorrectionJobStatus.completed)
 
 
 async def mark_failed(
-    session: AsyncSession,  # noqa: ARG001
+    session: AsyncSession,
     *,
     correction: Correction,
     error_code: str,
@@ -161,12 +134,7 @@ async def mark_failed(
     correction.error_code = error_code
     correction.error_message_pt_br = error_message_pt_br
     correction.quota_consumed = quota_consumed
+    await _mark_job(session, job_id=correction.job_id, status=CorrectionJobStatus.failed)
 
 
-__all__ = [
-    "claim_next",
-    "enqueue_with_quota_check",
-    "get_for_user",
-    "mark_completed",
-    "mark_failed",
-]
+__all__ = ["claim_next", "mark_completed", "mark_failed"]

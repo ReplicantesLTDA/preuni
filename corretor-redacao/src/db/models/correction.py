@@ -36,11 +36,15 @@ class Correction(Base):
     __tablename__ = "corrections"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-    )
+    # Opaque reference — the Go monolith owns identity, this service does
+    # not (constitution Architecture section; research.md #2). No local FK.
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    # The correction_jobs row (schema `correction`, same DB) that this
+    # result was produced for. No FK constraint: correction_jobs is the
+    # Go-writable bridge table and the two are linked by application code,
+    # not referential integrity, to keep the bridge table's contract narrow
+    # (contracts/internal-bridge.md).
+    job_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
 
     # Input.
     essay_text: Mapped[str] = mapped_column(Text, nullable=False)
@@ -145,4 +149,5 @@ class Correction(Base):
             "parent_correction_id",
             postgresql_where=(parent_correction_id.is_not(None)),
         ),
+        Index("corrections_job_idx", "job_id"),
     )

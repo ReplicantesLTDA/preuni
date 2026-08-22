@@ -1,16 +1,20 @@
-"""T102: completed correction row satisfies all invariants."""
+"""T102: completed correction row satisfies all invariants.
+
+Constitution v2.1.1 / specs/014-constitution-alignment-refactor: seeds a
+`correction_jobs` row (as Go would) instead of a `User` + pending
+`Correction` row.
+"""
 
 from __future__ import annotations
 
-import hashlib
 import os
 import pytest
 import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from src.db.models import Correction, CorrectionAuditLog, User
-from src.db.models.enums import AuditEventType, CorrectionStatus, UserTier
+from src.db.models import Correction, CorrectionAuditLog, CorrectionJob
+from src.db.models.enums import AuditEventType, CorrectionJobStatus, CorrectionStatus
 from src.db.repositories.audit_log_repo import AuditLogWriter
 from src.db.repositories.correction_repo import claim_next, mark_completed
 
@@ -20,41 +24,18 @@ _DB_URL = os.environ.get(
 )
 
 
-async def _worker_session():
-    engine = create_async_engine(_DB_URL, echo=False)
-    factory = async_sessionmaker(engine, expire_on_commit=False)
-    try:
-        yield factory
-    finally:
-        await engine.dispose()
-
-
-async def _insert_user(session: AsyncSession) -> User:
-    u = User(
+async def _insert_pending_job(session: AsyncSession) -> CorrectionJob:
+    job = CorrectionJob(
         id=uuid.uuid4(),
-        email=f"inv-{uuid.uuid4()}@example.com",
-        password_hash="x",
-        tier=UserTier.free,
-    )
-    session.add(u)
-    await session.flush()
-    return u
-
-
-async def _insert_pending(session: AsyncSession, user: User) -> Correction:
-    text = "essay invariant test"
-    c = Correction(
-        id=uuid.uuid4(),
-        user_id=user.id,
-        essay_text=text,
+        user_id=uuid.uuid4(),
+        essay_text="essay invariant test",
         prompt_theme_title="Tema",
         prompt_theme_context="Contexto do tema da redação.",
-        input_hash=hashlib.sha256(text.encode()).digest(),
-        status=CorrectionStatus.pending,
+        status=CorrectionJobStatus.pending,
     )
-    session.add(c)
+    session.add(job)
     await session.flush()
-    return c
+    return job
 
 
 COMPETENCIES = {
@@ -68,9 +49,7 @@ COMPETENCIES = {
 
 @pytest.mark.asyncio
 async def test_completed_final_score_equals_sum(db_session: AsyncSession) -> None:
-    user = await _insert_user(db_session)
-    correction = await _insert_pending(db_session, user)
-    correction_id = correction.id
+    await _insert_pending_job(db_session)
     await db_session.commit()
 
     engine = create_async_engine(_DB_URL, echo=False)
@@ -95,6 +74,7 @@ async def test_completed_final_score_equals_sum(db_session: AsyncSession) -> Non
                 output_schema_version="1",
             )
             await s.commit()
+            correction_id = claimed.id
     finally:
         await engine.dispose()
 
@@ -109,9 +89,7 @@ async def test_completed_final_score_equals_sum(db_session: AsyncSession) -> Non
 
 @pytest.mark.asyncio
 async def test_completed_has_provenance(db_session: AsyncSession) -> None:
-    user = await _insert_user(db_session)
-    correction = await _insert_pending(db_session, user)
-    correction_id = correction.id
+    await _insert_pending_job(db_session)
     await db_session.commit()
 
     engine = create_async_engine(_DB_URL, echo=False)
@@ -136,6 +114,7 @@ async def test_completed_has_provenance(db_session: AsyncSession) -> None:
                 output_schema_version="v1",
             )
             await s.commit()
+            correction_id = claimed.id
     finally:
         await engine.dispose()
 
@@ -149,9 +128,7 @@ async def test_completed_has_provenance(db_session: AsyncSession) -> None:
 
 @pytest.mark.asyncio
 async def test_completed_audit_log_event(db_session: AsyncSession) -> None:
-    user = await _insert_user(db_session)
-    correction = await _insert_pending(db_session, user)
-    correction_id = correction.id
+    await _insert_pending_job(db_session)
     await db_session.commit()
 
     engine = create_async_engine(_DB_URL, echo=False)
@@ -188,6 +165,7 @@ async def test_completed_audit_log_event(db_session: AsyncSession) -> None:
                 },
             )
             await s.commit()
+            correction_id = claimed.id
     finally:
         await engine.dispose()
 

@@ -1,5 +1,10 @@
 """T057: ORM models smoke — every entity from data-model.md is importable,
 has the right tablename, and exposes the columns the data model specifies.
+
+Constitution v2.1.1 / specs/014-constitution-alignment-refactor: identity
+models (User, ConsentRecord, RefreshToken, EmailVerificationToken) moved to
+the Go monolith and no longer exist here; `Correction`/`CorrectionJob` live
+in the `correction` Postgres schema (research.md #1).
 """
 
 from __future__ import annotations
@@ -11,6 +16,7 @@ def test_base_exposes_metadata() -> None:
     from src.db.models import Base
 
     assert Base.metadata is not None
+    assert Base.metadata.schema == "correction"
     assert len(Base.metadata.tables) > 0
 
 
@@ -18,51 +24,13 @@ def test_base_exposes_metadata() -> None:
     "module_path, class_name, tablename, required_columns",
     [
         (
-            "src.db.models.user",
-            "User",
-            "users",
-            {
-                "id",
-                "email",
-                "password_hash",
-                "tier",
-                "email_verified_at",
-                "created_at",
-                "updated_at",
-            },
-        ),
-        (
-            "src.db.models.consent_record",
-            "ConsentRecord",
-            "consent_records",
-            {
-                "id",
-                "user_id",
-                "guardian_name",
-                "guardian_relation",
-                "consent_text_sha256",
-                "accepted_at",
-            },
-        ),
-        (
-            "src.db.models.refresh_token",
-            "RefreshToken",
-            "refresh_tokens",
-            {"id", "user_id", "token_hash", "expires_at", "created_at"},
-        ),
-        (
-            "src.db.models.email_verification_token",
-            "EmailVerificationToken",
-            "email_verification_tokens",
-            {"id", "user_id", "token_hash", "expires_at", "created_at"},
-        ),
-        (
             "src.db.models.correction",
             "Correction",
             "corrections",
             {
                 "id",
                 "user_id",
+                "job_id",
                 "essay_text",
                 "prompt_theme_title",
                 "prompt_theme_context",
@@ -81,6 +49,22 @@ def test_base_exposes_metadata() -> None:
                 "model_identifier",
                 "output_schema_version",
                 "quota_consumed",
+            },
+        ),
+        (
+            "src.db.models.correction_job",
+            "CorrectionJob",
+            "correction_jobs",
+            {
+                "id",
+                "user_id",
+                "essay_text",
+                "prompt_theme_title",
+                "prompt_theme_context",
+                "status",
+                "queued_at",
+                "started_at",
+                "completed_at",
             },
         ),
         (
@@ -128,13 +112,10 @@ def test_all_models_registered_under_base() -> None:
     from src.db.models import Base
 
     expected = {
-        "users",
-        "consent_records",
-        "refresh_tokens",
-        "email_verification_tokens",
-        "corrections",
-        "grader_passes",
-        "correction_audit_logs",
+        "correction.corrections",
+        "correction.correction_jobs",
+        "correction.grader_passes",
+        "correction.correction_audit_logs",
     }
     actual = set(Base.metadata.tables.keys())
     missing = expected - actual

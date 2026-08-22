@@ -5,12 +5,22 @@ from __future__ import annotations
 import enum
 
 
-class UserTier(enum.StrEnum):
-    free = "free"
-    premium = "premium"
-
-
 class CorrectionStatus(enum.StrEnum):
+    pending = "pending"
+    processing = "processing"
+    completed = "completed"
+    failed = "failed"
+
+
+class CorrectionJobStatus(enum.StrEnum):
+    """Status of a row in the correction_jobs bridge table.
+
+    Mirrors CorrectionStatus but is a distinct DB enum type because it lives
+    on a table the Go monolith also reads (contracts/internal-bridge.md) —
+    keeping it separate means either side's status vocabulary can evolve
+    independently of the other's.
+    """
+
     pending = "pending"
     processing = "processing"
     completed = "completed"
@@ -29,4 +39,4 @@ class AuditEventType(enum.StrEnum):
     deleted = "deleted"
 
 
-__all__ = ["AuditEventType", "CorrectionStatus", "UserTier"]
+__all__ = ["AuditEventType", "CorrectionJobStatus", "CorrectionStatus"]
