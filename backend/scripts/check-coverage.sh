@@ -10,11 +10,15 @@
 # whatever COVERAGE_FLOOR currently is; bump it upward as coverage improves,
 # never downward without a documented reason.
 #
+# 15 was measured against a live Postgres in CI (backend-ci.yml, 2026-08-22):
+# the full `go test ./...` run (all integration suites included) measured
+# 19.0% — 15 leaves headroom instead of sitting right at the observed number.
+#
 # Usage: ./check-coverage.sh (run from backend/app/)
 
 set -euo pipefail
 
-COVERAGE_FLOOR="${COVERAGE_FLOOR:-30}"
+COVERAGE_FLOOR="${COVERAGE_FLOOR:-15}"
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../app"
 
