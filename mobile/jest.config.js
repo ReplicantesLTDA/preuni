@@ -24,21 +24,18 @@ module.exports = {
     '!src/**/index.{ts,tsx}',
   ],
   // Constitution Principle II: coverage floor is 90%, reached incrementally
-  // (Principle VI: small PRs). Raised significantly this pass: added
-  // contract tests for essay/streak/social/gamification api.ts + hooks.ts,
-  // plus screen-level tests for redacao/{index,write,[id]}.tsx,
-  // perfil/friends.tsx, and perfil/ranking.tsx (using the previously-unused
-  // tests/lib/queryWrapper.tsx harness). Also fixed collectCoverageFrom,
-  // which excluded every file literally named index.tsx -- that's Expo
-  // Router's convention for a tab's home screen, so it was hiding
-  // redacao/index.tsx, trilha/index.tsx, etc. from measurement entirely.
-  // Real number after both fixes: 39.6%. Floor set to 35 for headroom.
+  // (Principle VI: small PRs). 39.6% -> 50.5% after adding screen-level
+  // tests for the rest of the pre-existing perfil/* screens (edit,
+  // change-email, change-password, delete-account, data-export) --
+  // previously untested legacy code, in scope per explicit direction to
+  // push toward the full 90% target rather than just this feature's new
+  // domains. Floor set to 48 for headroom.
   coverageThreshold: {
     global: {
-      lines: 35,
-      statements: 35,
-      functions: 35,
-      branches: 35,
+      lines: 48,
+      statements: 48,
+      functions: 48,
+      branches: 45,
     },
   },
 };
