@@ -15,20 +15,30 @@ module.exports = {
     'src/**/*.{ts,tsx}',
     'app/**/*.{ts,tsx}',
     '!**/*.d.ts',
-    '!**/index.{ts,tsx}',
+    // Barrel re-export files only (e.g. src/features/auth/index.ts) -- NOT
+    // app/**/index.tsx, which is Expo Router's convention for every tab's
+    // home screen (redacao/index.tsx, trilha/index.tsx, ...). The old
+    // blanket '!**/index.{ts,tsx}' excluded those route screens from
+    // coverage entirely -- a real measurement bug found while adding
+    // screen tests for redacao/index.tsx (2026-08-22).
+    '!src/**/index.{ts,tsx}',
   ],
   // Constitution Principle II: coverage floor is 90%, reached incrementally
-  // (Principle VI: small PRs). Each new feature slice (essay/streak, then
-  // social) adds untested view code and edges this down slightly — lowered
-  // again here (measured 25.4/32.3/22.8/26.1% after 017) to leave headroom
-  // for US3 (gamification), rather than re-tuning every PR. tasks.md T060
-  // (Polish) raises this to 90 once all of US1-US3 have their own tests.
+  // (Principle VI: small PRs). Raised significantly this pass: added
+  // contract tests for essay/streak/social/gamification api.ts + hooks.ts,
+  // plus screen-level tests for redacao/{index,write,[id]}.tsx,
+  // perfil/friends.tsx, and perfil/ranking.tsx (using the previously-unused
+  // tests/lib/queryWrapper.tsx harness). Also fixed collectCoverageFrom,
+  // which excluded every file literally named index.tsx -- that's Expo
+  // Router's convention for a tab's home screen, so it was hiding
+  // redacao/index.tsx, trilha/index.tsx, etc. from measurement entirely.
+  // Real number after both fixes: 39.6%. Floor set to 35 for headroom.
   coverageThreshold: {
     global: {
-      lines: 20,
-      statements: 20,
-      functions: 15,
-      branches: 25,
+      lines: 35,
+      statements: 35,
+      functions: 35,
+      branches: 35,
     },
   },
 };
