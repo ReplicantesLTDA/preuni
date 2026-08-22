@@ -25,7 +25,9 @@ def _test_db_url() -> str:
     return os.environ.get("TEST_DATABASE_URL", DEFAULT_TEST_DB_URL)
 
 
-async def _insert_pending_job(session: AsyncSession, essay: str = "texto de teste") -> CorrectionJob:
+async def _insert_pending_job(
+    session: AsyncSession, essay: str = "texto de teste"
+) -> CorrectionJob:
     job = CorrectionJob(
         id=uuid.uuid4(),
         user_id=uuid.uuid4(),
@@ -76,7 +78,9 @@ async def test_poll_fallback_claims_without_notify(db_session: AsyncSession) -> 
     """claim_next() works even when the LISTEN mechanism is not active (poll path)."""
     from sqlalchemy import text
 
-    await db_session.execute(text("DELETE FROM correction.correction_jobs WHERE status = 'pending'"))
+    await db_session.execute(
+        text("DELETE FROM correction.correction_jobs WHERE status = 'pending'")
+    )
     await db_session.commit()
     job = await _insert_pending_job(db_session)
     await db_session.commit()

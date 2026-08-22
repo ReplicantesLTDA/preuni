@@ -94,6 +94,12 @@ source = ["src"]
 omit = ["*/tests/*"]
 
 [tool.coverage.report]
+# Constitution Principle II: coverage floor is 90%, reached incrementally
+# (Principle VI: small PRs). 45 is today's *provisional* baseline (unit
+# suite alone measures ~51%; the full unit+integration+golden run in CI has
+# more surface to cover) — specs/014-constitution-alignment-refactor/tasks.md
+# T060 (Polish) raises this to 90 once US1-US3 land their test suites.
+fail_under = 45
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",

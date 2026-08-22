@@ -3,6 +3,70 @@
 # gate runs in CI (.github/workflows/*.yml) on every push.
 #
 # Install: pip install pre-commit && pre-commit install
-#
-# Hooks are filled in by specs/014-constitution-alignment-refactor/tasks.md T019.
-repos: []
+
+repos:
+  - repo: local
+    hooks:
+      # gofmt/golangci-lint are scoped to changed files only (pass_filenames
+      # default) rather than the whole repo — the existing codebase has
+      # repo-wide formatting drift predating this pipeline (see
+      # .github/workflows/backend-ci.yml's comment); scoping to changed
+      # files means a commit only has to keep the files it touches clean.
+      - id: gofmt
+        name: gofmt (backend, changed files)
+        entry: bash -c 'out=$(gofmt -l "$@"); [ -z "$out" ] || { echo "$out"; exit 1; }' --
+        language: system
+        files: ^backend/.*\.go$
+
+      # Runs repo-wide (golangci-lint doesn't cleanly support a
+      # changed-files-only mode here) — expect it to also flag pre-existing
+      # issues untouched by your commit until that debt is cleaned up
+      # separately; treat new findings in files you touched as real.
+      - id: golangci-lint
+        name: golangci-lint (backend)
+        entry: bash -c 'cd backend/app && golangci-lint run --timeout=5m'
+        language: system
+        files: ^backend/.*\.go$
+        pass_filenames: false
+
+      - id: go-test-unit
+        name: go test -short (backend, fast subset)
+        entry: bash -c 'cd backend/app && go test -short ./...'
+        language: system
+        files: ^backend/.*\.go$
+        pass_filenames: false
+
+      - id: ruff-check
+        name: ruff check (corretor-redacao)
+        entry: bash -c 'cd corretor-redacao && ruff check src tests'
+        language: system
+        files: ^corretor-redacao/.*\.py$
+        pass_filenames: false
+
+      - id: ruff-format-check
+        name: ruff format --check (corretor-redacao)
+        entry: bash -c 'cd corretor-redacao && ruff format --check src tests'
+        language: system
+        files: ^corretor-redacao/.*\.py$
+        pass_filenames: false
+
+      - id: pytest-unit
+        name: pytest tests/unit (corretor-redacao, fast subset)
+        entry: bash -c 'cd corretor-redacao && pytest tests/unit -q'
+        language: system
+        files: ^corretor-redacao/.*\.py$
+        pass_filenames: false
+
+      - id: mobile-typecheck
+        name: tsc --noEmit (mobile)
+        entry: bash -c 'cd mobile && pnpm typecheck'
+        language: system
+        files: ^mobile/.*\.tsx?$
+        pass_filenames: false
+
+      - id: mobile-eslint
+        name: eslint (mobile)
+        entry: bash -c 'cd mobile && pnpm lint'
+        language: system
+        files: ^mobile/.*\.tsx?$
+        pass_filenames: false

@@ -17,6 +17,17 @@ module.exports = {
     '!**/*.d.ts',
     '!**/index.{ts,tsx}',
   ],
-  // TODO(012): restore { lines: 80, statements: 80, functions: 75, branches: 70 }
-  // once Phase 3 (US2) + Phase 4 (US1) tests land. Constitution II floor.
+  // Constitution Principle II: coverage floor is 90%, reached incrementally
+  // (Principle VI: small PRs). 25/30/20/25 is today's *provisional*
+  // baseline (measured ~28.5% lines pre-014) — specs/014-constitution-
+  // alignment-refactor/tasks.md T060 (Polish) raises this to 90 once the
+  // essay/streak/social/gamification screens (US1-US3) land their tests.
+  coverageThreshold: {
+    global: {
+      lines: 25,
+      statements: 25,
+      functions: 20,
+      branches: 30,
+    },
+  },
 };

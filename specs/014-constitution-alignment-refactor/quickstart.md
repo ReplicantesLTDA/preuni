@@ -41,15 +41,17 @@ curl http://localhost:8080/v1/streaks/me -H "Authorization: Bearer $TOKEN"
 ## Run the full test/coverage suite locally (mirrors CI)
 
 ```bash
-# Go
-cd backend/app && go test -p 1 -coverprofile=coverage.out ./... && go tool cover -func=coverage.out | tail -1
+# Go — same check CI runs (backend-ci.yml), floor tracked in backend/scripts/check-coverage.sh
+bash backend/scripts/check-coverage.sh
 
-# Python correction service
-cd corretor-redacao && make test-unit && make test-int && pytest --cov=src --cov-fail-under=90
+# Python correction service — floor tracked in corretor-redacao/pyproject.toml [tool.coverage.report]
+cd corretor-redacao && pytest tests/unit tests/integration --cov=src --cov-report=term-missing
 
-# Mobile
-cd mobile && pnpm test --coverage
+# Mobile — floor tracked in mobile/jest.config.js coverageThreshold
+cd mobile && pnpm test -- --coverage --runInBand
 ```
+
+All three floors are provisional baselines as of the CI/CD rollout (specs/014-constitution-alignment-refactor/tasks.md US4), not yet the constitution's 90% target — see the comments in each config file. Polish task T060 raises them to 90% once US1–US3 land their test suites.
 
 ## Install the pre-commit gate
 
