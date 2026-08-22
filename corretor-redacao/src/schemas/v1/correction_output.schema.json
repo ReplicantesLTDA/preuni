@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://corretor-enem.local/schemas/v1/correction_output.schema.json",
+  "title": "LLM Correction Output (v1)",
+  "description": "Hard contract for the LLM's structured output, validated runtime per Constitution Article IV. Free-form fallback is forbidden.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "eliminatory_flags",
+    "competencies",
+    "final_score"
+  ],
+  "properties": {
+    "eliminatory_flags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "off_topic",
+          "annulled",
+          "insufficient_text",
+          "not_dissertative_argumentative"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "annulment_reason_pt_br": {
+      "type": ["string", "null"],
+      "description": "Required only when 'annulled' is in eliminatory_flags."
+    },
+    "competencies": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["c1", "c2", "c3", "c4", "c5"],
+      "properties": {
+        "c1": { "$ref": "#/$defs/competency_entry" },
+        "c2": { "$ref": "#/$defs/competency_entry" },
+        "c3": { "$ref": "#/$defs/competency_entry" },
+        "c4": { "$ref": "#/$defs/competency_entry" },
+        "c5": { "$ref": "#/$defs/competency_entry" }
+      }
+    },
+    "final_score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000,
+      "description": "Must equal c1.score + c2.score + c3.score + c4.score + c5.score. Verified by the pipeline after JSON-Schema validation; mismatch counts as a schema failure."
+    }
+  },
+  "$defs": {
+    "competency_entry": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["score", "excerpt", "justification_pt_br"],
+      "properties": {
+        "score": {
+          "type": "integer",
+          "enum": [0, 40, 80, 120, 160, 200]
+        },
+        "excerpt": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Verbatim substring of the submitted essay (after whitespace normalization). The pipeline verifies substring presence; failure counts as a schema failure."
+        },
+        "justification_pt_br": {
+          "type": "string",
+          "minLength": 1
+        },
+        "improvement_path_pt_br": {
+          "type": ["string", "null"],
+          "description": "Required (non-null string) when score < 200; null or absent when score == 200. Conditional enforced by pipeline."
+        }
+      }
+    }
+  }
+}

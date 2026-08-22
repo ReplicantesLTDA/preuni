@@ -1,0 +1,757 @@
+openapi: 3.1.0
+info:
+  title: Corretor de Redação ENEM — MVP API
+  version: 2.0.0
+  description: |
+    B2C API for automated correction of ENEM essays.
+    All correction endpoints require a valid Bearer access token from an
+    email-verified account. Domain content (justifications, improvement paths,
+    user-facing error messages) is in Brazilian Portuguese (pt-BR).
+
+    Versioning: this contract is `v2.0.0` matching `spec.md` v2.0.0.
+
+servers:
+  - url: https://api.corretor-enem.local
+    description: Production (single VPS, Caddy TLS)
+  - url: http://localhost:8000
+    description: Local dev (docker-compose)
+
+security: []   # endpoints declare their own security requirement
+
+tags:
+  - name: auth
+  - name: me
+  - name: corrections
+
+paths:
+
+  /healthz:
+    get:
+      summary: Liveness probe
+      security: []
+      responses:
+        '200':
+          description: ok
+
+  /readyz:
+    get:
+      summary: Readiness probe (checks DB connection)
+      security: []
+      responses:
+        '200':
+          description: ready
+        '503':
+          description: not ready
+
+  # ----- AUTH ----------------------------------------------------------------
+
+  /auth/register:
+    post:
+      tags: [auth]
+      summary: Register a new student account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Account created, verification email sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/EmailAlreadyRegistered'
+
+  /auth/verify-email:
+    post:
+      tags: [auth]
+      summary: Verify email via single-use token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+      responses:
+        '204':
+          description: Email verified
+        '400':
+          $ref: '#/components/responses/InvalidToken'
+
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Exchange email + password for tokens
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+        '401':
+          $ref: '#/components/responses/InvalidCredentials'
+
+  /auth/refresh:
+    post:
+      tags: [auth]
+      summary: Exchange refresh token for a new access token (rotates refresh)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        '200':
+          description: Rotated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+        '401':
+          $ref: '#/components/responses/InvalidToken'
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: Revoke the presented refresh token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        '204':
+          description: Revoked
+
+  # ----- ME ------------------------------------------------------------------
+
+  /me:
+    get:
+      tags: [me]
+      summary: Get current user profile + quota
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  # ----- CORRECTIONS ---------------------------------------------------------
+
+  /corrections:
+    post:
+      tags: [corrections]
+      summary: Submit an essay for asynchronous correction
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: dry_run
+          description: |
+            When true, runs deterministic pre-validation (length, language,
+            theme completeness) and returns either a 200 with `ok_to_submit:true`
+            or a 4xx validation error, **without enqueueing or consuming quota**.
+          required: false
+          schema:
+            type: boolean
+            default: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitCorrectionRequest'
+      responses:
+        '202':
+          description: Accepted and enqueued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CorrectionAccepted'
+        '200':
+          description: Dry-run validation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DryRunOk'
+        '400':
+          $ref: '#/components/responses/InputValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/EmailUnverifiedOrConsentMissing'
+        '429':
+          $ref: '#/components/responses/QuotaExhausted'
+
+    get:
+      tags: [corrections]
+      summary: List the authenticated student's own corrections
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: cursor
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CorrectionListPage'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /corrections/{correction_id}:
+    parameters:
+      - in: path
+        name: correction_id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [corrections]
+      summary: Retrieve a correction (status-aware)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Status payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CorrectionEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFoundOrForbidden'
+
+  /corrections/{correction_id}/reevaluations:
+    parameters:
+      - in: path
+        name: correction_id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [corrections]
+      summary: Enqueue a re-evaluation of a prior correction
+      security: [{ bearerAuth: [] }]
+      responses:
+        '202':
+          description: New asynchronous job enqueued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CorrectionAccepted'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFoundOrForbidden'
+        '429':
+          $ref: '#/components/responses/QuotaExhausted'
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    Unauthenticated:
+      description: Missing or invalid access token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            unauthenticated:
+              value:
+                error_code: unauthenticated
+                message: Token de acesso ausente ou inválido.
+    EmailUnverifiedOrConsentMissing:
+      description: Email not verified, or required parental consent missing for a minor
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            email_unverified:
+              value:
+                error_code: email_unverified
+                message: Confirme seu e-mail antes de enviar redações.
+            parental_consent_required:
+              value:
+                error_code: parental_consent_required
+                message: É necessário o consentimento do responsável para usuários menores de 18 anos.
+    NotFoundOrForbidden:
+      description: Not found, or not owned by caller (indistinguishable by design)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            not_found:
+              value:
+                error_code: not_found
+                message: Correção não encontrada.
+    InputValidationError:
+      description: Pre-validation rejection (length, language, missing theme fields)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            length_too_short:
+              value:
+                error_code: length_too_short
+                message: A redação está abaixo do tamanho mínimo (500 caracteres ou 7 linhas).
+            length_too_long:
+              value:
+                error_code: length_too_long
+                message: A redação ultrapassa o tamanho máximo (3500 caracteres ou 50 linhas).
+            language_mismatch:
+              value:
+                error_code: language_mismatch
+                message: A redação deve estar em português brasileiro.
+            theme_missing_context:
+              value:
+                error_code: theme_missing_context
+                message: O tema deve incluir título e uma breve contextualização.
+    ValidationError:
+      description: Request body shape error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    QuotaExhausted:
+      description: Monthly quota exhausted
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/Error'
+              - type: object
+                properties:
+                  quota_reset_at:
+                    type: string
+                    format: date-time
+          examples:
+            quota_exhausted:
+              value:
+                error_code: quota_exhausted
+                message: Você atingiu o limite mensal de correções.
+                quota_reset_at: '2026-06-01T00:00:00Z'
+    InvalidCredentials:
+      description: Login failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InvalidToken:
+      description: Invalid or expired token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    EmailAlreadyRegistered:
+      description: Email taken
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+
+    # ----- Auth ----
+
+    RegisterRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 12
+        birth_date:
+          type: string
+          format: date
+          description: Required to determine if parental consent is needed (under 18).
+        parental_consent:
+          $ref: '#/components/schemas/ParentalConsent'
+
+    ParentalConsent:
+      type: object
+      required: [guardian_name, guardian_relation, consent_statement]
+      properties:
+        guardian_name:
+          type: string
+        guardian_relation:
+          type: string
+        consent_statement:
+          type: string
+          description: The pt-BR consent text the guardian agreed to (verbatim, will be hashed).
+
+    RegisterResponse:
+      type: object
+      required: [user_id, email, tier]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        tier:
+          type: string
+          enum: [free, premium]
+        verification_email_sent:
+          type: boolean
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    TokenPair:
+      type: object
+      required: [access_token, refresh_token, access_token_expires_in, refresh_token_expires_in, token_type]
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        access_token_expires_in:
+          type: integer
+          description: Seconds.
+        refresh_token_expires_in:
+          type: integer
+          description: Seconds.
+        token_type:
+          type: string
+          enum: [Bearer]
+
+    # ----- Profile ----
+
+    Profile:
+      type: object
+      required: [user_id, email, tier, quota_used_current_month, quota_limit, quota_reset_at]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        tier:
+          type: string
+          enum: [free, premium]
+        quota_used_current_month:
+          type: integer
+        quota_limit:
+          type: integer
+        quota_reset_at:
+          type: string
+          format: date-time
+
+    # ----- Correction submission ----
+
+    SubmitCorrectionRequest:
+      type: object
+      required: [essay_text, prompt_theme]
+      properties:
+        essay_text:
+          type: string
+          description: pt-BR; 500–3500 chars (with 7/50-line floors/ceilings per FR-002).
+        prompt_theme:
+          type: object
+          required: [title, context]
+          properties:
+            title:
+              type: string
+            context:
+              type: string
+        motivational_texts:
+          type: string
+
+    CorrectionAccepted:
+      type: object
+      required: [correction_id, status]
+      properties:
+        correction_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending]
+        reevaluation_of:
+          type: string
+          format: uuid
+
+    DryRunOk:
+      type: object
+      required: [ok_to_submit]
+      properties:
+        ok_to_submit:
+          type: boolean
+          enum: [true]
+
+    # ----- Correction retrieval ----
+
+    CorrectionEnvelope:
+      oneOf:
+        - $ref: '#/components/schemas/CorrectionPending'
+        - $ref: '#/components/schemas/CorrectionProcessing'
+        - $ref: '#/components/schemas/CorrectionCompleted'
+        - $ref: '#/components/schemas/CorrectionFailed'
+      discriminator:
+        propertyName: status
+        mapping:
+          pending: '#/components/schemas/CorrectionPending'
+          processing: '#/components/schemas/CorrectionProcessing'
+          completed: '#/components/schemas/CorrectionCompleted'
+          failed: '#/components/schemas/CorrectionFailed'
+
+    CorrectionBase:
+      type: object
+      required: [correction_id, status, issued_at]
+      properties:
+        correction_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, processing, completed, failed]
+        issued_at:
+          type: string
+          format: date-time
+        reevaluation_of:
+          type: string
+          format: uuid
+
+    CorrectionPending:
+      allOf:
+        - $ref: '#/components/schemas/CorrectionBase'
+        - type: object
+          properties:
+            status:
+              type: string
+              enum: [pending]
+
+    CorrectionProcessing:
+      allOf:
+        - $ref: '#/components/schemas/CorrectionBase'
+        - type: object
+          properties:
+            status:
+              type: string
+              enum: [processing]
+            started_at:
+              type: string
+              format: date-time
+
+    CorrectionCompleted:
+      allOf:
+        - $ref: '#/components/schemas/CorrectionBase'
+        - type: object
+          required:
+            - status
+            - completed_at
+            - prompt_version
+            - model_identifier
+            - inference_params
+            - output_schema_version
+            - final_score
+            - competencies
+            - eliminatory_flags
+          properties:
+            status:
+              type: string
+              enum: [completed]
+            completed_at:
+              type: string
+              format: date-time
+            prompt_version:
+              type: string
+              pattern: '^\d+\.\d+\.\d+$'
+            model_identifier:
+              type: string
+            output_schema_version:
+              type: string
+            inference_params:
+              type: object
+              additionalProperties: true
+            final_score:
+              type: integer
+              minimum: 0
+              maximum: 1000
+            competencies:
+              type: object
+              required: [c1, c2, c3, c4, c5]
+              properties:
+                c1: { $ref: '#/components/schemas/CompetencyEntry' }
+                c2: { $ref: '#/components/schemas/CompetencyEntry' }
+                c3: { $ref: '#/components/schemas/CompetencyEntry' }
+                c4: { $ref: '#/components/schemas/CompetencyEntry' }
+                c5: { $ref: '#/components/schemas/CompetencyEntry' }
+            eliminatory_flags:
+              type: array
+              items:
+                type: string
+                enum: [off_topic, annulled, insufficient_text, not_dissertative_argumentative]
+
+    CompetencyEntry:
+      type: object
+      required: [score, excerpt, justification_pt_br]
+      properties:
+        score:
+          type: integer
+          enum: [0, 40, 80, 120, 160, 200]
+        excerpt:
+          type: string
+          description: Verbatim substring of the submitted essay (normalized whitespace).
+        justification_pt_br:
+          type: string
+        improvement_path_pt_br:
+          type: string
+          description: Required when score < 200, omitted when score = 200.
+
+    CorrectionFailed:
+      allOf:
+        - $ref: '#/components/schemas/CorrectionBase'
+        - type: object
+          required: [status, completed_at, error_code, message_pt_br, quota_consumed]
+          properties:
+            status:
+              type: string
+              enum: [failed]
+            completed_at:
+              type: string
+              format: date-time
+            error_code:
+              type: string
+              enum:
+                - provider_rate_limited
+                - provider_timeout
+                - provider_unavailable
+                - schema_violation
+                - internal_error
+                - language_mismatch
+                - theme_missing_context
+                - length_too_short
+                - length_too_long
+            message_pt_br:
+              type: string
+            quota_consumed:
+              type: boolean
+
+    # ----- Listing ----
+
+    CorrectionListPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CorrectionSummary'
+        next_cursor:
+          type: string
+
+    CorrectionSummary:
+      type: object
+      required: [correction_id, issued_at, status, prompt_theme_title]
+      properties:
+        correction_id:
+          type: string
+          format: uuid
+        issued_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [pending, processing, completed, failed]
+        final_score:
+          type: integer
+          minimum: 0
+          maximum: 1000
+          nullable: true
+        prompt_theme_title:
+          type: string
+        eliminatory_flags:
+          type: array
+          items:
+            type: string
+
+    # ----- Error envelope ----
+
+    Error:
+      type: object
+      required: [error_code, message]
+      properties:
+        error_code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true

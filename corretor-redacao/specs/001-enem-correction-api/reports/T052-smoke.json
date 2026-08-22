@@ -1,0 +1,63 @@
+{
+  "type": "T052_smoke",
+  "timestamp": "2026-06-03T10:19:06.876433Z",
+  "model": "kimi-k2:1t",
+  "prompt_version": "1.0.8",
+  "essay_br_0001": {
+    "predicted": 480,
+    "expected": 400,
+    "delta": 80,
+    "latency_ms": 28595,
+    "per_comp": {
+      "c1": {
+        "pred": 80,
+        "exp": 80
+      },
+      "c2": {
+        "pred": 80,
+        "exp": 80
+      },
+      "c3": {
+        "pred": 80,
+        "exp": 80
+      },
+      "c4": {
+        "pred": 120,
+        "exp": 80
+      },
+      "c5": {
+        "pred": 120,
+        "exp": 80
+      }
+    }
+  },
+  "inep_001": {
+    "predicted": 960,
+    "expected": 1000,
+    "delta": -40,
+    "latency_ms": 20854,
+    "per_comp": {
+      "c1": {
+        "pred": 160,
+        "exp": 200
+      },
+      "c2": {
+        "pred": 200,
+        "exp": 200
+      },
+      "c3": {
+        "pred": 200,
+        "exp": 200
+      },
+      "c4": {
+        "pred": 200,
+        "exp": 200
+      },
+      "c5": {
+        "pred": 200,
+        "exp": 200
+      }
+    }
+  },
+  "notes": "Smoke run for T052. PROMPT_VERSION=1.0.8. v2.0.0 system.md TBD (only has per_competency prompts)."
+}

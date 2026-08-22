@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "001-*"]
+  pull_request:
+    branches: [main]
+
+env:
+  DATABASE_URL: postgresql+asyncpg://corretor:corretor@localhost:5432/corretor_test
+  TEST_DATABASE_URL: postgresql+asyncpg://corretor:corretor@localhost:5432/corretor_test
+  JWT_SECRET_KEY: ci-test-secret-key-with-enough-bytes-for-hs256
+  PYTHONPATH: src
+
+jobs:
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+      - name: Install dependencies
+        run: uv sync --frozen --extra dev
+      - name: Ruff format check
+        run: uv run ruff format --check src tests
+      - name: Ruff lint
+        run: uv run ruff check src tests
+      - name: Import linter
+        run: uv run lint-imports
+
+  tests-unit-and-integration:
+    name: Unit & Integration Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: corretor
+          POSTGRES_PASSWORD: corretor
+          POSTGRES_DB: corretor_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+      - name: Install dependencies
+        run: uv sync --frozen --extra dev
+      - name: Apply migrations
+        run: uv run alembic upgrade head
+      - name: Unit tests
+        run: uv run pytest tests/unit -v --tb=short
+      - name: Integration tests
+        run: uv run pytest tests/integration -v --tb=short
+
+  tests-golden:
+    name: Golden Dataset Tests (FakeProvider)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+      - name: Install dependencies
+        run: uv sync --frozen --extra dev
+      - name: Golden tests (fake provider)
+        env:
+          GOLDEN_PROVIDER: fake
+        run: uv run pytest tests/golden -v -s --tb=short
+      - name: Upload golden report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-metrics-${{ github.sha }}
+          path: specs/001-enem-correction-api/reports/
+          if-no-files-found: ignore
+
+  tests-golden-real:
+    name: Golden Dataset Tests (Real Provider)
+    runs-on: ubuntu-latest
+    needs: [lint, tests-unit-and-integration, tests-golden]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+      - name: Install dependencies
+        run: uv sync --frozen --extra dev
+      - name: Golden tests (real provider)
+        env:
+          GOLDEN_PROVIDER: auto
+          OLLAMA_CLOUD_API_KEY: ${{ secrets.OLLAMA_CLOUD_API_KEY }}
+        run: |
+          if [ -z "$OLLAMA_CLOUD_API_KEY" ]; then
+            echo "OLLAMA_CLOUD_API_KEY not set — skipping real provider tests"
+            exit 0
+          fi
+          uv run pytest tests/golden/test_golden_dataset.py -v -s --tb=short
