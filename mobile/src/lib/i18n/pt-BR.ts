@@ -1,0 +1,65 @@
+export const ptBR = {
+  common: {
+    save: 'Salvar',
+    cancel: 'Cancelar',
+    retry: 'Tentar novamente',
+    back: 'Voltar',
+    continue: 'Continuar',
+    loading: 'Carregando…',
+    errorTitle: 'Algo deu errado',
+    networkError: 'Sem conexão. Verifique sua internet.',
+  },
+  auth: {
+    welcomeTitle: 'Bem-vindo ao Preuni',
+    welcomeSubtitle: 'Sua jornada para o vestibular começa aqui.',
+    login: 'Entrar',
+    register: 'Criar conta',
+    email: 'E-mail',
+    password: 'Senha',
+    displayName: 'Como podemos te chamar?',
+    forgotPassword: 'Esqueci minha senha',
+    otpLogin: 'Entrar com código',
+    submit: 'Enviar',
+    otpTitle: 'Confirme seu e-mail',
+    otpSubtitle: 'Enviamos um código de 6 dígitos para',
+    resend: 'Reenviar código',
+    resendCooldown: (s: number) => `Aguarde ${s}s para reenviar`,
+    verified: 'E-mail verificado!',
+    invalidCredentials: 'E-mail ou senha incorretos.',
+    alreadyVerified: 'Seu e-mail já foi verificado.',
+  },
+  onboarding: {
+    welcome: 'Vamos personalizar sua jornada',
+    interests: 'O que você quer estudar primeiro?',
+    finish: 'Concluir',
+  },
+  perfil: {
+    title: 'Perfil',
+    signOut: 'Sair',
+    changeEmail: 'Alterar e-mail',
+    changePassword: 'Alterar senha',
+    deleteAccount: 'Excluir conta',
+    dataExport: 'Exportar meus dados',
+  },
+  trilha: {
+    title: 'Trilha',
+    nextStep: 'Próxima atividade',
+    streak: (n: number) => `${n} dia${n === 1 ? '' : 's'} de ofensiva`,
+    xp: (n: number) => `${n} XP`,
+    emptyTitle: 'Sua trilha está esperando',
+    emptyBody: 'Escolha uma matéria para começar.',
+  },
+  redacao: {
+    title: 'Redação',
+    emptyTitle: 'Nenhuma redação ainda',
+    emptyBody: 'Escolha um tema para começar a praticar.',
+  },
+  simulado: {
+    title: 'Simulado',
+    emptyTitle: 'Nenhum simulado realizado',
+    emptyBody: 'Comece um simulado para acompanhar seu desempenho.',
+  },
+} as const;
+
+export type Copy = typeof ptBR;
+export const t = ptBR;

@@ -2,7 +2,8 @@
         run-infra stop-infra run-backend stop-backend \
         run-web stop-web migrate \
         run-android build-android run-ios open-ios \
-        run-monolith test-monolith dev test-backend doctor
+        run-monolith test-monolith dev test-backend doctor \
+        mobile-install mobile-start mobile-test mobile-web mobile-lint
 
 ## bump-version patch|minor|major
 ##   Increments the version, tags the repo, and updates version.txt.
@@ -198,6 +199,31 @@ doctor:
 	@command -v go >/dev/null 2>&1 || { echo "✗ go not installed"; exit 1; }
 	@go version | grep -qE 'go1\.(2[4-9]|[3-9][0-9])' || { echo "✗ go 1.24+ required"; exit 1; }
 	@echo "✓ docker running, go 1.24+ available"
+
+## mobile-install
+##   Install dependencies for the React Native + Expo client.
+mobile-install:
+	cd mobile && pnpm install
+
+## mobile-start
+##   Start the Expo dev server (QR for Expo Go).
+mobile-start:
+	cd mobile && pnpm start
+
+## mobile-test
+##   Run mobile Jest test suite with coverage.
+mobile-test:
+	cd mobile && pnpm test --coverage
+
+## mobile-web
+##   Run Expo web dev server.
+mobile-web:
+	cd mobile && pnpm web
+
+## mobile-lint
+##   Lint + typecheck the mobile workspace.
+mobile-lint:
+	cd mobile && pnpm typecheck && pnpm lint
 
 help:
 	@grep -E '^## ' Makefile | sed 's/## //'
