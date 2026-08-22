@@ -107,8 +107,16 @@ async def test_mark_failed_provider_error_quota_false(db_session: AsyncSession) 
     assert row.quota_consumed is False
     assert row.error_code == "schema_violation"
 
+    # `job` is already in db_session's identity map (created via
+    # _insert_pending_job on this same session) -- a plain select() would
+    # return that cached, now-stale copy instead of the row `s` committed.
+    # populate_existing() forces a refresh from the DB.
     job_row = (
-        await db_session.execute(select(CorrectionJob).where(CorrectionJob.id == job.id))
+        await db_session.execute(
+            select(CorrectionJob)
+            .where(CorrectionJob.id == job.id)
+            .execution_options(populate_existing=True)
+        )
     ).scalar_one()
     assert job_row.status == CorrectionJobStatus.failed
 
@@ -143,4 +151,12 @@ async def test_mark_failed_user_error_quota_true(db_session: AsyncSession) -> No
     ).scalar_one()
     assert row.status == CorrectionStatus.failed
     assert row.quota_consumed is True
-    assert job.id is not None
+
+    job_row = (
+        await db_session.execute(
+            select(CorrectionJob)
+            .where(CorrectionJob.id == job.id)
+            .execution_options(populate_existing=True)
+        )
+    ).scalar_one()
+    assert job_row.status == CorrectionJobStatus.failed
