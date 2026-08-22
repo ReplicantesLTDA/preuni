@@ -20,7 +20,7 @@ const GradingTimeout = 10 * time.Minute
 // row is only ever transitioned out of "pending" once.
 func (r *Repository) ReconcileOnce(ctx context.Context) (reconciled int, err error) {
 	rows, err := r.db.Query(ctx, `
-		SELECT es.id, es.correction_job_id, es.submitted_at,
+		SELECT es.id, es.user_id, es.correction_job_id, es.submitted_at,
 		       cj.status, cj.completed_at
 		FROM essay.essay_submissions es
 		JOIN correction.correction_jobs cj ON cj.id = es.correction_job_id
@@ -32,6 +32,7 @@ func (r *Repository) ReconcileOnce(ctx context.Context) (reconciled int, err err
 
 	type pendingRow struct {
 		submissionID string
+		userID       string
 		jobID        string
 		submittedAt  time.Time
 		jobStatus    string
@@ -40,7 +41,7 @@ func (r *Repository) ReconcileOnce(ctx context.Context) (reconciled int, err err
 	for rows.Next() {
 		var pr pendingRow
 		var completedAt *time.Time
-		if err := rows.Scan(&pr.submissionID, &pr.jobID, &pr.submittedAt, &pr.jobStatus, &completedAt); err != nil {
+		if err := rows.Scan(&pr.submissionID, &pr.userID, &pr.jobID, &pr.submittedAt, &pr.jobStatus, &completedAt); err != nil {
 			rows.Close()
 			return 0, apperrors.Internal(err)
 		}
@@ -54,6 +55,9 @@ func (r *Repository) ReconcileOnce(ctx context.Context) (reconciled int, err err
 		case "completed":
 			if err := r.reconcileCompleted(ctx, pr.submissionID, pr.jobID); err != nil {
 				return reconciled, err
+			}
+			if r.gamification != nil {
+				_ = r.gamification.EnsureCurrentWeekEntry(ctx, pr.userID, now)
 			}
 			reconciled++
 		case "failed":

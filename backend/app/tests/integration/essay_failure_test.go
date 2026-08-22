@@ -43,7 +43,7 @@ func TestIntegration_SubmitEssay_CorrectionFailureDoesNotLoseStreakCredit(t *tes
 		t.Fatalf("mark job failed: %v", err)
 	}
 
-	essayRepo := essayrepo.NewRepository(pool, streakrepo.NewRepository())
+	essayRepo := essayrepo.NewRepository(pool, streakrepo.NewRepository(), nil)
 	if _, err := essayRepo.ReconcileOnce(ctx); err != nil {
 		t.Fatalf("ReconcileOnce: %v", err)
 	}

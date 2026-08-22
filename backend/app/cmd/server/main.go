@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/preuni/app/internal/config"
 	essayrepo "github.com/preuni/app/internal/essay/repository"
+	gamificationrepo "github.com/preuni/app/internal/gamification/repository"
 	"github.com/preuni/app/internal/router"
 	"github.com/preuni/pkg/logger"
 )
@@ -47,6 +48,36 @@ func runEssayReconciler(ctx context.Context, repo *essayrepo.Repository, log *lo
 	}
 }
 
+// weekCloseCheckInterval is how often the monolith checks whether the
+// previous UTC week needs closing (ranking/tier promotion). WeekClose
+// itself is idempotent (repository.WeekClose skips already-closed
+// tier-weeks), so a generous, infrequent check is enough — this isn't a
+// latency-sensitive path the way essay reconciliation is.
+const weekCloseCheckInterval = 1 * time.Hour
+
+// runWeekCloseJob periodically finalizes the most recently completed week
+// (domain.TierMovement promotion/demotion, medal awards) until ctx is
+// cancelled.
+func runWeekCloseJob(ctx context.Context, repo *gamificationrepo.Repository, log *logger.Logger) {
+	ticker := time.NewTicker(weekCloseCheckInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			n, err := repo.WeekClose(ctx, time.Now().UTC())
+			if err != nil {
+				log.Error("week-close tick failed", logger.Err(err))
+				continue
+			}
+			if n > 0 {
+				log.Info("week-close processed tiers", logger.Int("count", n))
+			}
+		}
+	}
+}
+
 func main() {
 	cfg := config.Load()
 	log := logger.New(cfg.LogLevel)
@@ -59,11 +90,12 @@ func main() {
 	}
 	defer pool.Close()
 
-	r, essayRepo := router.New(cfg, pool, log)
+	r, essayRepo, gamificationRepo := router.New(cfg, pool, log)
 
 	reconcileCtx, stopReconciler := context.WithCancel(context.Background())
 	defer stopReconciler()
 	go runEssayReconciler(reconcileCtx, essayRepo, log)
+	go runWeekCloseJob(reconcileCtx, gamificationRepo, log)
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,

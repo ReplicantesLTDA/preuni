@@ -93,6 +93,8 @@ export default function PerfilHome() {
       <Card>
         <MenuLink label={t.social.title} onPress={() => router.push('/(tabs)/perfil/friends')} />
         <Divider />
+        <MenuLink label={t.gamification.title} onPress={() => router.push('/(tabs)/perfil/ranking')} />
+        <Divider />
         <MenuLink label="Editar perfil" onPress={() => router.push('/(tabs)/perfil/edit')} />
         <Divider />
         <MenuLink label={t.perfil.changeEmail} onPress={() => router.push('/(tabs)/perfil/change-email')} />

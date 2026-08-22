@@ -154,7 +154,7 @@ func TestIntegration_SubmitEssay_ReconciliationGradesTheSubmission(t *testing.T)
 		t.Fatalf("mark job completed: %v", err)
 	}
 
-	essayRepo := essayrepo.NewRepository(pool, streakrepo.NewRepository())
+	essayRepo := essayrepo.NewRepository(pool, streakrepo.NewRepository(), nil)
 	if _, err := essayRepo.ReconcileOnce(ctx); err != nil {
 		t.Fatalf("ReconcileOnce: %v", err)
 	}

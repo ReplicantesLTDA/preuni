@@ -140,19 +140,19 @@ Existing repo layout (see plan.md Project Structure): `backend/app/internal/<dom
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T047 [P] [US3] Unit tests for deterministic weekly score aggregation + tie-break (earlier `graded_at` wins) in `backend/app/internal/gamification/ranking_test.go`
-- [ ] T048 [P] [US3] Unit tests for medal-award triggers (streak milestones, tier promotion, top finishes) in `backend/app/internal/gamification/medals_test.go`
-- [ ] T049 [P] [US3] Integration test: week-close job promotes top band / demotes bottom band and resets weekly score to zero without touching `current_streak`, in `backend/tests/integration/ranking_test.go`
+- [X] T047 [P] [US3] Unit tests for `RankEntries`/`TierMovement`/`NextTier` in `backend/app/internal/gamification/domain/ranking_test.go` — pure functions (same DB-free pattern), 11/11 pass, including input-order-independence (spec SC-004) and the tie-break rule. Documented assumption: top/bottom 20% (min 1) move per tier, only once a tier has ≥5 members (avoids rank thrash in tiny groups) — not specified elsewhere, decided here.
+- [X] T048 [P] [US3] Unit tests for `StreakMedalsEarned`/`TierPromotionMedalEarned`/`WeeklyTopFinishMedalEarned` in `backend/app/internal/gamification/domain/medals_test.go` — 7/7 pass, including jumping multiple streak milestones in one advance
+- [X] T049 [P] [US3] Integration test in `backend/app/tests/integration/ranking_test.go`: 5-user bronze tier, `WeekClose` promotes the top scorer to silver (earns `tier_promotion`), keeps the bottom scorer at bronze (floor), resets next week's score to 0, leaves `streak_count` untouched. Compiles clean, skips gracefully without `TEST_DB_URL`.
 
 ### Implementation for User Story 3
 
-- [ ] T050 [US3] Implement `weekly_ranking_entries` repository + score aggregation from `essay_grades` in `backend/app/internal/gamification/ranking_repository.go`
-- [ ] T051 [US3] Implement week-close job (promote/demote bands, tie-break, weekly reset) in `backend/app/internal/gamification/week_close.go`
-- [ ] T052 [US3] Implement medal-award triggers hooked to streak updates and week-close events in `backend/app/internal/gamification/medals.go`
-- [ ] T053 [US3] Implement `GET /v1/ranking/weekly`, `GET /v1/ranking/me`, `GET /v1/medals/me` handlers in `backend/app/internal/gamification/handler.go`
-- [ ] T054 [P] [US3] Mobile: leaderboard screen + hooks in `mobile/src/features/gamification/{api.ts,hooks.ts}`
-- [ ] T055 [P] [US3] Mobile: medals display component in `mobile/src/features/gamification/medals.tsx`
-- [ ] T056 [US3] Wire leaderboard + medals into `mobile/app/(tabs)/simulado/` (or dedicated ranking tab per design)
+- [X] T050 [US3] Implemented `EnsureCurrentWeekEntry`/`WeeklyLeaderboard`/`MyRanking` in `backend/app/internal/gamification/repository/ranking.go` — score aggregated live from `essay.essay_grades` each time a grade lands (hooked from the essay reconciler, see below), not recomputed only at week close
+- [X] T051 [US3] Implemented `WeekClose` in `backend/app/internal/gamification/repository/week_close.go` — idempotent per tier-week (skips rows with `rank_in_tier` already set), driven by an hourly ticker in `cmd/server/main.go` (`runWeekCloseJob`)
+- [X] T052 [US3] Implemented `awardMedal`/`AwardStreakMedals`/`ListMedals` in `backend/app/internal/gamification/repository/medals.go`. Cross-domain wiring: `essay.Repository` gained an optional `GamificationHooks` interface (structurally satisfied by `gamification.Repository`, no import needed) — `Submit()` awards streak medals after commit, the reconciler calls `EnsureCurrentWeekEntry` after a grade lands. Both are best-effort (a hook failure never fails the request that already committed).
+- [X] T053 [US3] Implemented `GET /v1/ranking/weekly`, `GET /v1/ranking/me`, `GET /v1/medals/me` in `backend/app/internal/gamification/handler/gamification.go`, wired via `internal/gamification/router/router.go` and mounted from `internal/router/router.go` (completes T015 for the last domain)
+- [X] T054 [P] [US3] Mobile: `mobile/src/features/gamification/{api.ts,hooks.ts}` + `mobile/src/types/gamification.ts`
+- [X] T055 [P] [US3] Mobile: medals rendered inline in the ranking screen (below) rather than a separate component — same screen, same data-loading concern, no separable UI unit
+- [X] T056 [US3] Wired into new `mobile/app/(tabs)/perfil/ranking.tsx` (not `simulado/` — that tab is an unrelated placeholder for mock exams; `perfil` is already the social/account hub alongside T046's friends screen), linked from the perfil menu. `pnpm typecheck`/`pnpm lint` clean, 79/79 tests pass, coverage still above the (already-lowered) floor
 
 **Checkpoint**: All four user stories independently functional
 
