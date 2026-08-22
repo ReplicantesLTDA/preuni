@@ -1,13 +1,18 @@
 <!--
 Sync Impact Report
 ==================
-Version change: 2.1.0 → 2.1.1 (PATCH — raised coverage floor 80% → 90% and
-scoped it explicitly across Go/Python/TypeScript; no principle added/removed)
+Version change: 2.1.1 → 2.2.0 (MINOR — new governing rule added to
+Principle VI: every migration must ship a working downgrade, no migration
+gaps, effective prospectively from this ratification date)
 
-Modified: II. Testing Standards — coverage floor 80% → 90%, applies to all
-three codebases (Go monolith, Python correction service, TypeScript mobile).
+Modified: VI. Engineering Workflow — added "Every migration is reversible,
+starting now" bullet; Quality Gates gained a matching checklist item.
+Pre-existing forward-only migrations (infra/migrations/*.sql,
+corretor-redacao's early Alembic revisions) are grandfathered — not
+retroactively blocked, but must gain a downgrade the next time they're
+touched.
 
-Added sections: none.
+Added sections: none (bullet added within existing Principle VI).
 Removed sections: none.
 
 Templates requiring updates:
@@ -144,6 +149,13 @@ ordinary, disciplined software engineering.
 - **Small, continuous integration**: work lands in small PRs merged
   frequently against an up-to-date `main`, not long-lived branches that
   diverge for weeks
+- **Every migration is reversible, starting now**: any migration that adds
+  an `upgrade`/forward step (Alembic revisions, `infra/migrations/*.sql`,
+  or equivalent) MUST ship with a working `downgrade`/rollback counterpart
+  in the same PR — no migration gaps. Applies prospectively from the date
+  this bullet was ratified; pre-existing forward-only migrations are not
+  retroactively blocked but MUST gain a downgrade before they are ever
+  edited again.
 
 ## Quality Gates
 
@@ -161,6 +173,7 @@ Every pull request must pass all of the following before merge:
 - [ ] Pre-commit hooks ran clean (unit tests + lint + type-check)
 - [ ] Full CI/CD pipeline is green on the PR's latest commit
 - [ ] At least one human approval is recorded on the PR
+- [ ] Any new migration includes a working downgrade/rollback
 
 ## Governance
 
@@ -173,4 +186,4 @@ Every pull request must pass all of the following before merge:
   CI checks must be green, and at least one human reviewer must approve —
   no exceptions, including for AI-authored changes
 
-**Version**: 2.1.1 | **Ratified**: 2026-04-03 | **Last Amended**: 2026-08-22
+**Version**: 2.2.0 | **Ratified**: 2026-04-03 | **Last Amended**: 2026-08-22
