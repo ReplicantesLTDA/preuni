@@ -15,17 +15,17 @@
 # each test binary's own package and drastically understates the real
 # number — first measured wrong in backend-ci.yml (19.0%/15% floor); the
 # corrected measurement against a local live Postgres (2026-08-22, this
-# session) started at 55.2%, then 59.6% after closing two 0%-covered
-# handler paths (GET /v1/essays list, the whole gamification HTTP layer),
-# then 60.5% after adding friends-domain error-path tests and an
-# essay->streak->gamification medal-award integration test. Floor set to
-# 58 for headroom.
+# session) started at 55.2%, then 59.6%, 60.5%, and now 64.0% after adding
+# validation-error-path tests across auth (change_password, change_email,
+# delete_account, otp, password_reset, refresh -- previously untested
+# branches on handlers that already existed pre-014) and the user domain's
+# onboarding/anonymize lifecycle endpoints. Floor set to 62 for headroom.
 #
 # Usage: ./check-coverage.sh (run from backend/app/)
 
 set -euo pipefail
 
-COVERAGE_FLOOR="${COVERAGE_FLOOR:-58}"
+COVERAGE_FLOOR="${COVERAGE_FLOOR:-62}"
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../app"
 
