@@ -9,6 +9,93 @@ import (
 	"testing"
 )
 
+// TestIntegration_Friends_ErrorPaths covers validation, self-friending,
+// duplicate requests, and accepting/removing as the wrong party.
+func TestIntegration_Friends_ErrorPaths(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	aID, aToken := registerTestUser(t, r)
+	bID, bToken := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, aID)
+	defer cleanupTestUser(ctx, t, pool, bID)
+
+	t.Run("missing addressee_id is rejected", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/v1/friends/requests", bytes.NewReader([]byte(`{}`)))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+aToken)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusUnprocessableEntity {
+			t.Fatalf("got %d, want 422, body=%s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("cannot friend yourself", func(t *testing.T) {
+		body, _ := json.Marshal(map[string]string{"addressee_id": aID})
+		req := httptest.NewRequest(http.MethodPost, "/v1/friends/requests", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+aToken)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusUnprocessableEntity {
+			t.Fatalf("got %d, want 422, body=%s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("duplicate pending request is a conflict", func(t *testing.T) {
+		body, _ := json.Marshal(map[string]string{"addressee_id": bID})
+		first := httptest.NewRequest(http.MethodPost, "/v1/friends/requests", bytes.NewReader(body))
+		first.Header.Set("Content-Type", "application/json")
+		first.Header.Set("Authorization", "Bearer "+aToken)
+		w1 := httptest.NewRecorder()
+		r.ServeHTTP(w1, first)
+		if w1.Code != http.StatusCreated {
+			t.Fatalf("first request: got %d, want 201, body=%s", w1.Code, w1.Body.String())
+		}
+
+		second := httptest.NewRequest(http.MethodPost, "/v1/friends/requests", bytes.NewReader(body))
+		second.Header.Set("Content-Type", "application/json")
+		second.Header.Set("Authorization", "Bearer "+aToken)
+		w2 := httptest.NewRecorder()
+		r.ServeHTTP(w2, second)
+		if w2.Code != http.StatusConflict {
+			t.Fatalf("second request: got %d, want 409, body=%s", w2.Code, w2.Body.String())
+		}
+	})
+
+	t.Run("the requester cannot accept their own outgoing request", func(t *testing.T) {
+		var friendshipID string
+		if err := pool.QueryRow(ctx, `SELECT id FROM social.friendships WHERE requester_id = $1 AND addressee_id = $2 AND status = 'pending'`, aID, bID).Scan(&friendshipID); err != nil {
+			t.Fatalf("find pending request: %v", err)
+		}
+		req := httptest.NewRequest(http.MethodPost, "/v1/friends/requests/"+friendshipID+"/accept", nil)
+		req.Header.Set("Authorization", "Bearer "+aToken)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("got %d, want 404, body=%s", w.Code, w.Body.String())
+		}
+
+		acceptReq := httptest.NewRequest(http.MethodPost, "/v1/friends/requests/"+friendshipID+"/accept", nil)
+		acceptReq.Header.Set("Authorization", "Bearer "+bToken)
+		acceptW := httptest.NewRecorder()
+		r.ServeHTTP(acceptW, acceptReq)
+		if acceptW.Code != http.StatusOK {
+			t.Fatalf("legit accept: got %d, want 200, body=%s", acceptW.Code, acceptW.Body.String())
+		}
+	})
+
+	t.Run("removing a nonexistent friendship 404s", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodDelete, "/v1/friends/00000000-0000-4000-a000-999999999999", nil)
+		req.Header.Set("Authorization", "Bearer "+aToken)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("got %d, want 404, body=%s", w.Code, w.Body.String())
+		}
+	})
+}
+
 // TestIntegration_Friends_RequestAcceptRevealsStreakAndGrade covers spec
 // User Story 2 acceptance scenarios 1-2: request -> accept -> both sides
 // see the other's streak, and a non-friend cannot.

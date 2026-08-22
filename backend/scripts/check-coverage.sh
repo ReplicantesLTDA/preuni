@@ -16,14 +16,16 @@
 # number — first measured wrong in backend-ci.yml (19.0%/15% floor); the
 # corrected measurement against a local live Postgres (2026-08-22, this
 # session) started at 55.2%, then 59.6% after closing two 0%-covered
-# handler paths (GET /v1/essays list, the whole gamification HTTP layer).
-# Floor set to 55 for headroom.
+# handler paths (GET /v1/essays list, the whole gamification HTTP layer),
+# then 60.5% after adding friends-domain error-path tests and an
+# essay->streak->gamification medal-award integration test. Floor set to
+# 58 for headroom.
 #
 # Usage: ./check-coverage.sh (run from backend/app/)
 
 set -euo pipefail
 
-COVERAGE_FLOOR="${COVERAGE_FLOOR:-55}"
+COVERAGE_FLOOR="${COVERAGE_FLOOR:-58}"
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../app"
 

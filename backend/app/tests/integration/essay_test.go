@@ -105,6 +105,42 @@ func TestIntegration_ListEssays_ReturnsOwnSubmissionsOnly(t *testing.T) {
 	}
 }
 
+// TestIntegration_SubmitEssay_CrossingSevenDaysAwardsMedal covers the
+// essay->streak->gamification wiring: a submission that advances the
+// streak from 6 to 7 must award the streak_7_day medal (best-effort hook,
+// GamificationHooks in essay.Repository.Submit).
+func TestIntegration_SubmitEssay_CrossingSevenDaysAwardsMedal(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, token := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+
+	yesterday := time.Now().UTC().AddDate(0, 0, -1).Format("2006-01-02")
+	if _, err := pool.Exec(ctx, `UPDATE users.students SET streak_count = 6, streak_last_active_date = $2 WHERE id = $1`, studentID, yesterday); err != nil {
+		t.Fatalf("seed streak: %v", err)
+	}
+
+	if w := submitEssay(t, r, token); w.Code != http.StatusAccepted {
+		t.Fatalf("submit: got %d body=%s", w.Code, w.Body.String())
+	}
+
+	var streak int
+	if err := pool.QueryRow(ctx, `SELECT streak_count FROM users.students WHERE id = $1`, studentID).Scan(&streak); err != nil {
+		t.Fatal(err)
+	}
+	if streak != 7 {
+		t.Fatalf("expected streak_count=7, got %d", streak)
+	}
+
+	var medalCount int
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM gamification.medals WHERE user_id = $1 AND type = 'streak_7_day'`, studentID).Scan(&medalCount); err != nil {
+		t.Fatal(err)
+	}
+	if medalCount != 1 {
+		t.Fatalf("expected exactly one streak_7_day medal, got %d", medalCount)
+	}
+}
+
 // TestIntegration_SubmitEssay_AcceptsImmediatelyAndIncrementsStreak covers
 // spec User Story 1, acceptance scenario 1: submission is accepted
 // immediately (202), and the streak increments in the same transaction —
