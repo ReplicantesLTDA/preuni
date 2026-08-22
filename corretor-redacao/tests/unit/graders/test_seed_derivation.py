@@ -18,17 +18,21 @@ def test_seed_differs_across_ids() -> None:
     assert a != b
 
 
-def test_seed_is_non_negative_int_fits_int64() -> None:
+def test_seed_fits_postgres_bigint() -> None:
+    """grader_passes.seed is a Postgres BIGINT (signed int64). A previous
+    unsigned interpretation overflowed that column for ~half of all
+    correction ids -- caught by tests/integration/workers/test_process_one.py
+    inserting a real grader_passes row end to end."""
     s = derive_seed(uuid.uuid4())
     assert isinstance(s, int)
-    assert 0 <= s < 2**64
+    assert -(2**63) <= s < 2**63
 
 
 def test_seed_known_value() -> None:
     # Pin behavior with a known UUID.
     cid = uuid.UUID("00000000-0000-0000-0000-000000000000")
-    # sha256(b"\x00" * 16)[:8] interpreted big-endian.
+    # sha256(b"\x00" * 16)[:8] interpreted big-endian, signed (BIGINT-safe).
     import hashlib
 
-    expected = int.from_bytes(hashlib.sha256(cid.bytes).digest()[:8], "big")
+    expected = int.from_bytes(hashlib.sha256(cid.bytes).digest()[:8], "big", signed=True)
     assert derive_seed(cid) == expected

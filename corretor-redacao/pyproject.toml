@@ -95,14 +95,20 @@ omit = ["*/tests/*"]
 
 [tool.coverage.report]
 # Constitution Principle II: coverage floor is 90%, reached incrementally
-# (Principle VI: small PRs). 60 is today's *provisional* baseline, measured
-# against a live Postgres (2026-08-22): unit+integration together hit
-# 69.3% (up from the unit-only 51% first measured before a live DB was
-# available locally). Biggest remaining gap: src/workers/correction_worker.py
-# (0%) — process_one/CorrectionWorker.run are exercised only via
-# correction_repo functions directly in tests, not the worker orchestration
-# itself. Next: a worker-level integration test to close that gap.
-fail_under = 60
+# (Principle VI: small PRs). 70 is today's *provisional* baseline, measured
+# against a live Postgres (2026-08-22): 74.06%, up from 69.3% after adding
+# tests/integration/workers/test_process_one.py, which exercises
+# process_one() end to end (grader_pass persistence, audit writes,
+# competency dict building) — previously only reached indirectly via
+# correction_repo functions, never the worker orchestration itself. That
+# test also caught a real bug: derive_seed() read its hash digest as an
+# *unsigned* int64, overflowing grader_passes.seed (a signed Postgres
+# BIGINT) for ~half of all correction ids -- fixed in single_grader.py.
+# Remaining gap: CorrectionWorker's LISTEN/NOTIFY run loop and
+# workers/entrypoint.py (0%) -- harder to test (needs a real asyncpg LISTEN
+# connection under async loop control), lower priority than the pipeline
+# logic already covered.
+fail_under = 70
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",

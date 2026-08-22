@@ -61,12 +61,18 @@ def derive_seed(correction_id: uuid.UUID, pass_index: int = 0) -> int:
 
     `pass_index` lets multi-pass graders derive distinct-but-deterministic seeds
     per pass: pass 0 = sha256(uuid), pass N = sha256(uuid || N_as_byte).
+
+    signed=True: this value is persisted to grader_passes.seed, a Postgres
+    BIGINT (signed int64, -2**63..2**63-1). Reading the 8 hash bytes as an
+    *unsigned* int64 (the previous behavior) produces values up to 2**64-1
+    for roughly half of all inputs -- those overflow BIGINT and the INSERT
+    fails. A negative seed is still a perfectly valid, deterministic seed.
     """
     if pass_index == 0:
         digest = hashlib.sha256(correction_id.bytes).digest()
     else:
         digest = hashlib.sha256(correction_id.bytes + pass_index.to_bytes(4, "big")).digest()
-    return int.from_bytes(digest[:8], "big")
+    return int.from_bytes(digest[:8], "big", signed=True)
 
 
 @dataclass(slots=True)
