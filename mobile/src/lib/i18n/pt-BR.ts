@@ -64,6 +64,15 @@ export const ptBR = {
     overallScore: 'Nota geral',
     quotaExceeded: 'Você já usou sua redação gratuita de hoje. Volte amanhã ou assine o Pro.',
   },
+  social: {
+    title: 'Amigos',
+    empty: 'Você ainda não tem amigos. Adicione alguém para acompanhar a ofensiva e as notas.',
+    addFriend: 'Adicionar amigo',
+    addFriendPlaceholder: 'ID do usuário',
+    requestSent: 'Pedido de amizade enviado.',
+    remove: 'Remover amigo',
+    noGradeYet: 'Ainda sem redação corrigida',
+  },
   simulado: {
     title: 'Simulado',
     emptyTitle: 'Nenhum simulado realizado',

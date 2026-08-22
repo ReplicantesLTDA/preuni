@@ -16,6 +16,7 @@ import (
 	essayrepo "github.com/preuni/app/internal/essay/repository"
 	essayrouter "github.com/preuni/app/internal/essay/router"
 	"github.com/preuni/app/internal/mail"
+	socialrouter "github.com/preuni/app/internal/social/router"
 	streakrouter "github.com/preuni/app/internal/streak/router"
 	userrepo "github.com/preuni/app/internal/user/repository"
 	userrouter "github.com/preuni/app/internal/user/router"
@@ -66,6 +67,11 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *logger.Logger) (chi.Router,
 	})
 
 	essayRepo := essayrouter.Mount(r, essayrouter.Deps{
+		Pool:          pool,
+		JWTSigningKey: cfg.JWTSigningKey,
+	})
+
+	socialrouter.Mount(r, socialrouter.Deps{
 		Pool:          pool,
 		JWTSigningKey: cfg.JWTSigningKey,
 	})
