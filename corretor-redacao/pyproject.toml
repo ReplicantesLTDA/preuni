@@ -104,11 +104,18 @@ omit = ["*/tests/*"]
 # test also caught a real bug: derive_seed() read its hash digest as an
 # *unsigned* int64, overflowing grader_passes.seed (a signed Postgres
 # BIGINT) for ~half of all correction ids -- fixed in single_grader.py.
-# Remaining gap: CorrectionWorker's LISTEN/NOTIFY run loop and
-# workers/entrypoint.py (0%) -- harder to test (needs a real asyncpg LISTEN
-# connection under async loop control), lower priority than the pipeline
-# logic already covered.
-fail_under = 70
+# 74.13% -> 77.71% after deleting src/config/settings.py, which was fully
+# dead code: a pydantic-settings tree left over from the pre-014 FastAPI
+# service, never imported anywhere once the Go monolith took over identity/
+# config (confirmed via grep -- zero importers). 77.71% -> 78.74% after
+# testing entrypoint._build_provider(), which also caught a real bug: it
+# called OllamaProvider(..., model=model, ...) but the constructor's
+# keyword is model_id -- every worker process start would have crashed
+# with a TypeError before processing a single job. Fixed.
+# Remaining gap: CorrectionWorker's LISTEN/NOTIFY run loop (harder to test
+# -- needs a real asyncpg LISTEN connection under async loop control),
+# lower priority than the pipeline logic already covered.
+fail_under = 77
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",

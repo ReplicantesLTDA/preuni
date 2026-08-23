@@ -20,7 +20,7 @@ def _build_provider() -> OllamaProvider:
         "https://api.ollama.ai" if api_key else "http://ollama:11434",
     )
     model = os.environ.get("OLLAMA_MODEL", "kimi-k2:1t")
-    return OllamaProvider(base_url=base_url, model=model, api_key=api_key or None)
+    return OllamaProvider(base_url=base_url, model_id=model, api_key=api_key or None)
 
 
 async def _main() -> None:
