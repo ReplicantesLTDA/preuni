@@ -57,6 +57,39 @@ def test_writer_rejects_forbidden_keys_nested() -> None:
         )
 
 
+def test_writer_rejects_forbidden_keys_nested_in_a_list() -> None:
+    writer = AuditLogWriter(session=None)
+    with pytest.raises(ForbiddenAuditKeyError):
+        writer._validate_payload(
+            AuditEventType.submitted,
+            {"text_length_chars": 100, "items": [{"email": "x@y"}]},
+        )
+
+
+def test_writer_rejects_a_non_dict_payload() -> None:
+    writer = AuditLogWriter(session=None)
+    with pytest.raises(TypeError):
+        writer._validate_payload(AuditEventType.submitted, "not-a-dict")  # type: ignore[arg-type]
+
+
+def test_writer_rejects_an_unknown_event_type() -> None:
+    writer = AuditLogWriter(session=None)
+    with pytest.raises(UnknownAuditKeyError):
+        writer._validate_payload("not_a_real_event_type", {})  # type: ignore[arg-type]
+
+
+@pytest.mark.asyncio
+async def test_write_without_a_session_raises() -> None:
+    writer = AuditLogWriter(session=None)
+    with pytest.raises(RuntimeError, match="requires a session"):
+        await writer.write(
+            correction_id=uuid.uuid4(),
+            input_hash=b"\x00" * 32,
+            event_type=AuditEventType.submitted,
+            payload={"text_length_chars": 1234, "text_length_lines": 7, "language_detected": "pt"},
+        )
+
+
 @pytest.mark.asyncio
 async def test_writer_persists_row(db_session) -> None:
     # `corrections.user_id` is an opaque UUID with no local FK (this

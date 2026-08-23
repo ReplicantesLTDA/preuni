@@ -44,6 +44,13 @@ def test_metrics_can_be_incremented() -> None:
     m.errors_total.labels(error_code="provider_timeout").inc()
 
 
+def test_initialize_app_info_sets_the_info_metric() -> None:
+    m.initialize_app_info(version="1.2.3", commit="abc123")
+    out = generate_latest(m.REGISTRY).decode("utf-8")
+    assert 'version="1.2.3"' in out
+    assert 'commit="abc123"' in out
+
+
 def test_e2e_latency_buckets_cover_spec_p95() -> None:
     # Spec FR-023: p95 e2e correction latency under 90s.
     # Bucket array should include 90 so we can measure the gate explicitly.
