@@ -19,15 +19,22 @@
 # validation-error-path tests across auth (change_password, change_email,
 # delete_account, otp, password_reset, refresh -- previously untested
 # branches on handlers that already existed pre-014) and the user domain's
-# onboarding/anonymize lifecycle endpoints, and now 64.4% after covering
+# onboarding/anonymize lifecycle endpoints, then 64.4% after covering
 # essay.Repository.scanSubmission's not-found branch (GET /v1/essays/{id}
-# for an unknown id). Floor set to 63 for headroom.
+# for an unknown id), and now 68.6% after adding success-path tests for
+# change_password, change_email (request+confirm), delete_account, and
+# email/verify-resend -- these handlers previously only had their
+# missing-field validation branch tested (auth_validation_test.go), never
+# their actual success path, which had left CredentialsRepository's
+# UpdatePasswordHash/UpdateEmail/Anonymize and
+# RefreshTokenRepository.RevokeAllForCredential completely untested.
+# Floor set to 67 for headroom.
 #
 # Usage: ./check-coverage.sh (run from backend/app/)
 
 set -euo pipefail
 
-COVERAGE_FLOOR="${COVERAGE_FLOOR:-63}"
+COVERAGE_FLOOR="${COVERAGE_FLOOR:-67}"
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../app"
 
