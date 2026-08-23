@@ -133,6 +133,28 @@ func TestIntegration_SubmitEssay_ReconcileOnce_TimesOutStalePendingSubmission(t 
 	}
 }
 
+// TestIntegration_SubmitEssay_NoStudentRowReturns404 covers
+// streak.Repository.GetForUpdate's pgx.ErrNoRows branch: a valid JWT for a
+// credential whose users.students row doesn't exist (simulated here by
+// deleting it directly -- in practice this only happens if student
+// provisioning failed at register time, which register.go treats as
+// non-fatal). Previously untested.
+func TestIntegration_SubmitEssay_NoStudentRowReturns404(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, token := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+
+	if _, err := pool.Exec(ctx, `DELETE FROM users.students WHERE id = $1`, studentID); err != nil {
+		t.Fatalf("delete student row: %v", err)
+	}
+
+	w := submitEssay(t, r, token)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("submit essay with no backing student row: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
 // TestIntegration_GetEssay_UnknownIDReturns404 covers the not-found branch
 // of essay.Repository.scanSubmission (pgx.ErrNoRows -> apperrors.NotFound),
 // which the graded-flow tests never exercise since they only ever fetch a

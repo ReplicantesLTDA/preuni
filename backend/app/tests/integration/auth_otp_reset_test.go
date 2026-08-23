@@ -480,6 +480,40 @@ func TestIntegration_VerifyEmail_AlreadyVerifiedIsConflict(t *testing.T) {
 	}
 }
 
+// TestIntegration_OTPLoginRequest_NoOTPForUnverifiedEmail covers
+// OTPLoginRequestHandler's background goroutine "email found but not
+// verified" branch, previously untested.
+func TestIntegration_OTPLoginRequest_NoOTPForUnverifiedEmail(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, _ := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+	email := studentEmail(t, ctx, pool, studentID)
+
+	body, _ := json.Marshal(map[string]string{"email": email})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/otp/request", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusAccepted {
+		t.Fatalf("otp request: got %d body=%s", w.Code, w.Body.String())
+	}
+
+	// Give the background goroutine a moment to run, then confirm it did
+	// NOT create an OTP (unverified emails never get a login code).
+	time.Sleep(50 * time.Millisecond)
+	var count int
+	if err := pool.QueryRow(ctx,
+		`SELECT count(*) FROM auth.otp_codes WHERE credential_id = $1 AND purpose = 'LOGIN_OTP'`,
+		studentID,
+	).Scan(&count); err != nil {
+		t.Fatalf("query otp count: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("expected no OTP for an unverified email, got %d", count)
+	}
+}
+
 func markVerified(t *testing.T, ctx context.Context, pool *pgxpool.Pool, credentialID string) {
 	t.Helper()
 	if _, err := pool.Exec(ctx, `UPDATE auth.credentials SET email_verified = true WHERE id = $1`, credentialID); err != nil {

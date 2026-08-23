@@ -89,6 +89,22 @@ func TestIntegration_Ranking_MeAndWeeklyEndpoints(t *testing.T) {
 // spec User Story 3 acceptance scenarios 2 & 4: at week close, the top
 // band of a tier promotes and the bottom band demotes, weekly scores reset
 // to zero for the new week, and the user's all-time streak is untouched.
+// TestIntegration_Ranking_Weekly_DefaultsToBronzeTier covers
+// WeeklyLeaderboard's "no ?tier= query param" default branch, previously
+// untested (every other test passes tier=bronze explicitly).
+func TestIntegration_Ranking_Weekly_DefaultsToBronzeTier(t *testing.T) {
+	r, _ := setup(t)
+	_, token := registerTestUser(t, r)
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/ranking/weekly", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("ranking/weekly with no tier param: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
 // TestIntegration_Medals_EmptyForFreshUser covers ListMedals' empty-result
 // branch, which TestIntegration_Ranking_MeAndWeeklyEndpoints never reaches
 // (that test's user has already submitted an essay).

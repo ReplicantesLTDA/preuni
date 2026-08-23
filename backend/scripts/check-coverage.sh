@@ -55,6 +55,12 @@
 # duplicate email), LogoutHandler (success + unknown-token branches,
 # entirely untested before), DeleteAccountHandler (empty-body decode-
 # fails branch), and SubmitEssayHandler (missing-field validation).
+# 74.8% -> 75.2% after another batch: mail.render's unsupported-type
+# branch, WeeklyLeaderboard's default-tier branch, the OTP-login request
+# goroutine's unverified-email no-op branch, and submitting an essay for
+# a credential with no backing users.students row (streak.GetForUpdate's
+# not-found branch -- simulates the register.go non-fatal provisioning-
+# failure path).
 # Floor set to 74 for headroom.
 #
 # Usage: ./check-coverage.sh (run from backend/app/)
