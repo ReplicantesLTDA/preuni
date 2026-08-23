@@ -78,14 +78,22 @@
 # gamification's AwardStreakMedals/ListMedals, social's friendship repo.
 # Also added CredentialsRepository.UpdateEmail's duplicate-email 409
 # branch (previously unreachable via any real change-email flow, same
-# shape as the Create duplicate-username gap fixed earlier).
-# Floor set to 77 for headroom.
+# shape as the Create duplicate-username gap fixed earlier). 78.1% ->
+# 78.7% after more canceled-context fault injection (essay.ListByUser,
+# gamification.EnsureCurrentWeekEntry/WeeklyLeaderboard/WeekClose,
+# social.ListFriends, user.Update) and direct unit tests for
+# StudentRepository's unexported contains/join/itoa helpers' previously
+# unreachable branches (Update() always calls them with found/non-empty
+# input). Remaining gap: reconciler.go and streak.go take an already-open
+# pgx.Tx rather than the pool, so canceling ctx after Begin() doesn't
+# reliably fail them -- needs a proper broken-tx harness, not attempted.
+# Floor set to 78 for headroom.
 #
 # Usage: ./check-coverage.sh (run from backend/app/)
 
 set -euo pipefail
 
-COVERAGE_FLOOR="${COVERAGE_FLOOR:-77}"
+COVERAGE_FLOOR="${COVERAGE_FLOOR:-78}"
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../app"
 
