@@ -119,10 +119,11 @@ omit = ["*/tests/*"]
 # _llm_error_to_code/_llm_error_message_pt_br (0% before) and
 # MultiPassGrader (40% before, entirely untested despite being a real
 # selectable GRADER=multi_pass mode).
+# 82.18% -> 85.63% after adding the same contract-test treatment to
+# PerCompetencyGrader (41% before -- same shape of gap MultiPassGrader had).
 # Remaining gap: CorrectionWorker's LISTEN/NOTIFY run loop (harder to test
-# -- needs a real asyncpg LISTEN connection under async loop control) and
-# PerCompetencyGrader (41%, same shape of gap MultiPassGrader had).
-fail_under = 81
+# -- needs a real asyncpg LISTEN connection under async loop control).
+fail_under = 85
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
