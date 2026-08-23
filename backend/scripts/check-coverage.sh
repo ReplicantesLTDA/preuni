@@ -50,13 +50,18 @@
 # 73.6% -> 74.2% after covering ChangePasswordHandler (wrong current
 # password, weak new password), OTPLoginVerifyHandler (unknown email),
 # and ChangeEmailConfirmHandler (no OTP ever requested) branches.
-# Floor set to 73 for headroom.
+# 74.2% -> 74.8% after a batched round covering VerifyEmailHandler
+# (unknown email), RegisterHandler (weak password, empty display name,
+# duplicate email), LogoutHandler (success + unknown-token branches,
+# entirely untested before), DeleteAccountHandler (empty-body decode-
+# fails branch), and SubmitEssayHandler (missing-field validation).
+# Floor set to 74 for headroom.
 #
 # Usage: ./check-coverage.sh (run from backend/app/)
 
 set -euo pipefail
 
-COVERAGE_FLOOR="${COVERAGE_FLOOR:-73}"
+COVERAGE_FLOOR="${COVERAGE_FLOOR:-74}"
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../app"
 

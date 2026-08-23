@@ -67,4 +67,16 @@ func TestIntegration_Auth_ValidationErrorPaths(t *testing.T) {
 			t.Fatalf("got %d, want 422, body=%s", w.Code, w.Body.String())
 		}
 	})
+
+	t.Run("submit essay with missing fields is a validation error", func(t *testing.T) {
+		body, _ := json.Marshal(map[string]string{"prompt_theme_title": "Tema"})
+		req := httptest.NewRequest(http.MethodPost, "/v1/essays", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusUnprocessableEntity {
+			t.Fatalf("got %d, want 422, body=%s", w.Code, w.Body.String())
+		}
+	})
 }

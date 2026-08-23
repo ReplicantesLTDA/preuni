@@ -301,6 +301,164 @@ func TestIntegration_RefreshToken_RotatesAndReturnsNewTokens(t *testing.T) {
 	}
 }
 
+// TestIntegration_VerifyEmail_UnknownEmailIsRejected covers
+// VerifyEmailHandler's FindByEmail-fails branch, previously untested.
+func TestIntegration_VerifyEmail_UnknownEmailIsRejected(t *testing.T) {
+	r, _ := setup(t)
+
+	body, _ := json.Marshal(map[string]string{"email": "nobody-here@preuni.test", "otp": "123456"})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/email/verify", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("verify for an unknown email: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
+// TestIntegration_Register_WeakPasswordIsRejected covers RegisterHandler's
+// domain.NewCredentials-fails branch, previously untested.
+func TestIntegration_Register_WeakPasswordIsRejected(t *testing.T) {
+	r, _ := setup(t)
+
+	email := fmt.Sprintf("weak-pw+%d@preuni.test", time.Now().UnixNano())
+	body, _ := json.Marshal(map[string]string{
+		"email": email, "password": "short", "display_name": "Weak Pw",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/register", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("register with a weak password: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
+// TestIntegration_Register_EmptyDisplayNameIsRejected covers
+// RegisterHandler's validateDisplayName-fails branch, previously untested.
+func TestIntegration_Register_EmptyDisplayNameIsRejected(t *testing.T) {
+	r, _ := setup(t)
+
+	email := fmt.Sprintf("empty-name+%d@preuni.test", time.Now().UnixNano())
+	body, _ := json.Marshal(map[string]string{
+		"email": email, "password": "P@ssw0rd123", "display_name": "   ",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/register", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("register with an empty display name: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
+// TestIntegration_Register_DuplicateEmailIsRejected covers
+// RegisterHandler's credRepo.Create-fails (conflict) branch, previously
+// untested.
+func TestIntegration_Register_DuplicateEmailIsRejected(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, _ := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+	email := studentEmail(t, ctx, pool, studentID)
+
+	body, _ := json.Marshal(map[string]string{
+		"email": email, "password": "P@ssw0rd123", "display_name": "Duplicate",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/register", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusConflict {
+		t.Fatalf("register with a duplicate email: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
+// TestIntegration_Logout_RevokesTheGivenRefreshToken covers LogoutHandler's
+// success path, previously entirely untested.
+func TestIntegration_Logout_RevokesTheGivenRefreshToken(t *testing.T) {
+	r, _ := setup(t)
+
+	email := fmt.Sprintf("logout-integ+%d@preuni.test", time.Now().UnixNano())
+	regBody, _ := json.Marshal(map[string]string{
+		"email": email, "password": "P@ssw0rd123", "display_name": "Logout Integ",
+	})
+	regReq := httptest.NewRequest(http.MethodPost, "/v1/auth/register", bytes.NewReader(regBody))
+	regReq.Header.Set("Content-Type", "application/json")
+	regW := httptest.NewRecorder()
+	r.ServeHTTP(regW, regReq)
+	if regW.Code != http.StatusCreated {
+		t.Fatalf("register: got %d body=%s", regW.Code, regW.Body.String())
+	}
+	var reg struct {
+		StudentID    string `json:"student_id"`
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+	}
+	if err := json.Unmarshal(regW.Body.Bytes(), &reg); err != nil {
+		t.Fatal(err)
+	}
+
+	body, _ := json.Marshal(map[string]string{"refresh_token": reg.RefreshToken})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/logout", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+reg.AccessToken)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("logout: got %d body=%s", w.Code, w.Body.String())
+	}
+
+	// The revoked refresh token no longer works.
+	refreshBody, _ := json.Marshal(map[string]string{"refresh_token": reg.RefreshToken})
+	refreshReq := httptest.NewRequest(http.MethodPost, "/v1/auth/refresh", bytes.NewReader(refreshBody))
+	refreshReq.Header.Set("Content-Type", "application/json")
+	refreshW := httptest.NewRecorder()
+	r.ServeHTTP(refreshW, refreshReq)
+	if refreshW.Code != http.StatusUnauthorized {
+		t.Fatalf("expected the revoked refresh token to be rejected: got %d body=%s", refreshW.Code, refreshW.Body.String())
+	}
+}
+
+// TestIntegration_Logout_UnknownTokenStillReturns204 covers LogoutHandler's
+// "treat unknown token as already revoked" branch, previously untested.
+func TestIntegration_Logout_UnknownTokenStillReturns204(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, token := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+
+	body, _ := json.Marshal(map[string]string{"refresh_token": "not-a-real-refresh-token"})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/logout", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("logout with an unknown token: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
+// TestIntegration_DeleteAccount_EmptyBodySkipsConfirmationCheck covers
+// DeleteAccountHandler's decode-fails branch: json.NewDecoder on an empty
+// body returns an error, so the `err == nil` guard around the confirmation
+// check is skipped entirely and the account is deleted anyway. Previously
+// untested -- every other delete_account test sends a JSON body.
+func TestIntegration_DeleteAccount_EmptyBodySkipsConfirmationCheck(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, token := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+
+	req := httptest.NewRequest(http.MethodDelete, "/v1/auth/account", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("delete account with an empty body: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
 // TestIntegration_VerifyEmail_AlreadyVerifiedIsConflict covers
 // VerifyEmailHandler's "already verified" branch, which the register->verify
 // flow in auth_flow_test.go never reaches (it only verifies once).
