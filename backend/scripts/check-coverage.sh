@@ -105,7 +105,13 @@
 # canceled-context tests for ChangePasswordHandler, SubmitEssayHandler,
 # the auth-domain DeleteAccountHandler, and RegisterHandler (a brand-new
 # email, so this hits credRepo.Create's generic-failure branch, not the
-# already-covered duplicate-email 409).
+# already-covered duplicate-email 409). 80.6% -> 80.8% after covering
+# router.buildSender's two branches (Noop fallback vs. real
+# *mail.SMTPSender) -- a pure config-branching function, zero coverage
+# before. Remaining gaps mostly need a *second* DB call to fail after a
+# first one succeeds (single-cancel-before-request can't target that),
+# or breaking crypto/rand/HMAC internals (not real fault injection) --
+# diminishing returns confirmed across two dedicated passes now.
 # Floor set to 80 for headroom.
 #
 # Usage: ./check-coverage.sh (run from backend/app/)
