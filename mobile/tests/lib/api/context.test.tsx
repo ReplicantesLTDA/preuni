@@ -42,8 +42,11 @@ describe('ApiProvider / useApi', () => {
     fetchMock.install();
     fetchMock.on('GET', '/v1/ping', { status: 200, body: {} });
     const originalEnv = process.env.NODE_ENV;
-    // @ts-expect-error -- test-only override of a normally-readonly env var
-    process.env.NODE_ENV = 'development';
+    // NODE_ENV's readonly-ness in @types/node varies by platform/CI
+    // resolution -- `as any` bypasses it portably instead of a
+    // suppression comment, which becomes an "unused directive" error on
+    // whichever environment doesn't consider the assignment an error.
+    (process.env as any).NODE_ENV = 'development';
     const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 
     try {
@@ -55,8 +58,7 @@ describe('ApiProvider / useApi', () => {
       await waitFor(() => expect(logSpy).toHaveBeenCalled());
       expect(logSpy.mock.calls[0]?.[0]).toMatch(/\[api\] GET \/v1\/ping/);
     } finally {
-      // @ts-expect-error -- restoring the same test-only override
-      process.env.NODE_ENV = originalEnv;
+      (process.env as any).NODE_ENV = originalEnv;
       logSpy.mockRestore();
       fetchMock.reset();
     }
