@@ -34,7 +34,7 @@ class PIIScrubFilter:
 
     def _scrub_dict(self, data: dict[str, Any]) -> dict[str, Any]:
         """Recursively scrub forbidden keys from a dictionary."""
-        scrubbed = {}
+        scrubbed: dict[str, Any] = {}
         for key, value in data.items():
             if key in PII_FORBIDDEN_KEYS:
                 raise ValueError(
@@ -134,7 +134,8 @@ def configure_logging(
 
 def get_logger(name: str) -> structlog.BoundLogger:
     """Get a configured logger instance."""
-    return structlog.get_logger(name)
+    logger: structlog.BoundLogger = structlog.get_logger(name)
+    return logger
 
 
 # Initialize logger

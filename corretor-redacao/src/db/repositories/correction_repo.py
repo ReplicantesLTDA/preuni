@@ -14,6 +14,7 @@ import hashlib
 import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Any
 
 from src.db.models import Correction, CorrectionJob
 from src.db.models.enums import CorrectionJobStatus, CorrectionStatus
@@ -94,8 +95,8 @@ async def mark_completed(
     c3_score: int,
     c4_score: int,
     c5_score: int,
-    competencies: dict,
-    eliminatory_flags: list,
+    competencies: dict[str, Any],
+    eliminatory_flags: list[Any],
     prompt_version: str,
     model_identifier: str,
     output_schema_version: str,

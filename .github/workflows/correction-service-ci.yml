@@ -48,15 +48,23 @@ jobs:
       - name: ruff
         run: ruff check src tests
 
-      - name: mypy (non-blocking — pre-existing debt, tracked separately from this PR's scope)
-        continue-on-error: true
-        run: mypy src tests
+      - name: mypy
+        run: mypy src
 
       - name: import-linter
         run: lint-imports
 
       - name: alembic upgrade head
         run: alembic upgrade head
+
+      # Constitution VI: every migration must ship a working downgrade.
+      # This proves it, not just asserts it -- downgrade every revision on
+      # a clean DB, then re-upgrade so the schema is back at head for the
+      # test steps below.
+      - name: alembic migration round-trip (downgrade base -> upgrade head)
+        run: |
+          alembic downgrade base
+          alembic upgrade head
 
       - name: unit + integration tests with coverage gate
         # Not `-m integration` (the Makefile's test-int target uses that,

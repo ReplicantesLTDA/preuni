@@ -104,7 +104,11 @@ def downgrade() -> None:
     op.execute("DROP FUNCTION IF EXISTS correction.notify_correction_queued()")
     op.drop_index('correction_jobs_queue_idx', table_name='correction_jobs', schema='correction', postgresql_where=sa.text("status = 'pending'"))
     op.drop_table('correction_jobs', schema='correction')
-    op.execute("DROP TYPE IF EXISTS correction.correction_job_status")
+    # sa.Enum(name=...) creates the type in the connection's default
+    # search_path schema (public), not the table's schema='correction' --
+    # a mismatch that left this type orphaned after downgrade until this
+    # fix (caught by a downgrade-base -> upgrade-head round-trip check).
+    op.execute("DROP TYPE IF EXISTS public.correction_job_status")
 
     op.create_table(
         'users',

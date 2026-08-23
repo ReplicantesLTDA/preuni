@@ -29,10 +29,12 @@ dependencies = [
     "fastapi>=0.100.0",
     "uvicorn[standard]>=0.30.0",
     "pydantic>=2.0.0",
-    "pydantic-settings>=2.0.0",
-    
+
     # HTTP client
     "httpx>=0.24.0",
+    # Transitive-dependency CVE floors (security-ci.yml's pip-audit gate):
+    "starlette>=0.48.0",  # GHSA fixed in fastapi's starlette dep, PYSEC-2026-248/249
+    "h2>=4.4.1",  # PYSEC-2026-3628
     
     # Data validation
     "jsonschema>=4.20.0",
@@ -64,6 +66,7 @@ dev = [
     "pytest-cov>=4.1.0",
     "ruff>=0.1.0",
     "mypy>=1.7.0",
+    "types-jsonschema>=4.0",
     "import-linter>=2.0",
     "httpx[http2]>=0.24.0",
 ]
@@ -181,6 +184,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "opentelemetry.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "asyncpg"
 ignore_missing_imports = true
 
 [tool.ruff]

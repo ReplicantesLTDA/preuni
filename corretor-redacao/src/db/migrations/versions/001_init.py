@@ -187,3 +187,11 @@ def downgrade() -> None:
     op.drop_index('users_email_idx', table_name='users')
     op.drop_table('users')
     # ### end Alembic commands ###
+
+    # Alembic's autogenerate doesn't emit these: op.drop_table() removes a
+    # column using an Enum type but leaves the Postgres ENUM TYPE itself
+    # behind, orphaned. Without dropping them here, a downgrade-to-base ->
+    # upgrade-to-head round-trip fails on re-CREATE TYPE (already exists).
+    op.execute("DROP TYPE IF EXISTS user_tier")
+    op.execute("DROP TYPE IF EXISTS correction_status")
+    op.execute("DROP TYPE IF EXISTS audit_event_type")
