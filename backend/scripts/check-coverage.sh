@@ -27,14 +27,15 @@
 # missing-field validation branch tested (auth_validation_test.go), never
 # their actual success path, which had left CredentialsRepository's
 # UpdatePasswordHash/UpdateEmail/Anonymize and
-# RefreshTokenRepository.RevokeAllForCredential completely untested.
-# Floor set to 67 for headroom.
+# RefreshTokenRepository.RevokeAllForCredential completely untested, and
+# now 69.2% after covering GET /v1/students/me/data-export (0% before).
+# Floor set to 68 for headroom.
 #
 # Usage: ./check-coverage.sh (run from backend/app/)
 
 set -euo pipefail
 
-COVERAGE_FLOOR="${COVERAGE_FLOOR:-67}"
+COVERAGE_FLOOR="${COVERAGE_FLOOR:-68}"
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../app"
 

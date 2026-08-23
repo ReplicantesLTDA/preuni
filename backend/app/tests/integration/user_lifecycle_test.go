@@ -2,6 +2,7 @@ package integration_test
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -65,5 +66,44 @@ func TestIntegration_DeleteStudent_Anonymizes(t *testing.T) {
 	}
 	if xpTotal != 0 {
 		t.Fatalf("expected xp_total reset to 0, got %d", xpTotal)
+	}
+}
+
+// TestIntegration_DataExport_ReturnsProfile covers GET
+// /v1/students/me/data-export, which had 0% coverage.
+func TestIntegration_DataExport_ReturnsProfile(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, token := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/students/me/data-export", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("got %d, want 200, body=%s", w.Code, w.Body.String())
+	}
+	if ct := w.Header().Get("Content-Type"); ct != "application/json" {
+		t.Fatalf("expected Content-Type application/json, got %q", ct)
+	}
+	if cd := w.Header().Get("Content-Disposition"); cd == "" {
+		t.Fatalf("expected a Content-Disposition attachment header")
+	}
+
+	var export struct {
+		ExportedAt string `json:"exported_at"`
+		Profile    struct {
+			ID string `json:"id"`
+		} `json:"profile"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &export); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
+	if export.Profile.ID != studentID {
+		t.Fatalf("expected profile.id %q, got %q", studentID, export.Profile.ID)
+	}
+	if export.ExportedAt == "" {
+		t.Fatal("expected a non-empty exported_at timestamp")
 	}
 }
