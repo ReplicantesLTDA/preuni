@@ -15,17 +15,19 @@
 # each test binary's own package and drastically understates the real
 # number — first measured wrong in backend-ci.yml (19.0%/15% floor); the
 # corrected measurement against a local live Postgres (2026-08-22, this
-# session) started at 55.2%, then 59.6%, 60.5%, and now 64.0% after adding
+# session) started at 55.2%, then 59.6%, 60.5%, then 64.0% after adding
 # validation-error-path tests across auth (change_password, change_email,
 # delete_account, otp, password_reset, refresh -- previously untested
 # branches on handlers that already existed pre-014) and the user domain's
-# onboarding/anonymize lifecycle endpoints. Floor set to 62 for headroom.
+# onboarding/anonymize lifecycle endpoints, and now 64.4% after covering
+# essay.Repository.scanSubmission's not-found branch (GET /v1/essays/{id}
+# for an unknown id). Floor set to 63 for headroom.
 #
 # Usage: ./check-coverage.sh (run from backend/app/)
 
 set -euo pipefail
 
-COVERAGE_FLOOR="${COVERAGE_FLOOR:-62}"
+COVERAGE_FLOOR="${COVERAGE_FLOOR:-63}"
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../app"
 

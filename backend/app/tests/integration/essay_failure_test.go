@@ -76,3 +76,22 @@ func TestIntegration_SubmitEssay_CorrectionFailureDoesNotLoseStreakCredit(t *tes
 		t.Fatalf("streak credit must survive a grading failure: expected current_streak=1, got %d", streak.CurrentStreak)
 	}
 }
+
+// TestIntegration_GetEssay_UnknownIDReturns404 covers the not-found branch
+// of essay.Repository.scanSubmission (pgx.ErrNoRows -> apperrors.NotFound),
+// which the graded-flow tests never exercise since they only ever fetch a
+// submission they just created.
+func TestIntegration_GetEssay_UnknownIDReturns404(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, token := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+
+	getReq := httptest.NewRequest(http.MethodGet, "/v1/essays/00000000-0000-4000-a000-000000000999", nil)
+	getReq.Header.Set("Authorization", "Bearer "+token)
+	getW := httptest.NewRecorder()
+	r.ServeHTTP(getW, getReq)
+	if getW.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 for an unknown essay id, got %d body=%s", getW.Code, getW.Body.String())
+	}
+}
