@@ -99,7 +99,13 @@
 # reconciler.go), so canceled-context fault injection worked directly;
 # HTTP-layer canceled-context tests added for DeleteStudent, DataExport,
 # UpdateStudent (a real PATCH body, so the DB call fails, not JSON
-# decoding), gamification's WeeklyLeaderboard, and MyMedals.
+# decoding), gamification's WeeklyLeaderboard, and MyMedals. 80.2% ->
+# 80.6% after RefreshTokenHandler's unknown-token branch (a real
+# nonexistent refresh_token string, no context tricks) and HTTP-layer
+# canceled-context tests for ChangePasswordHandler, SubmitEssayHandler,
+# the auth-domain DeleteAccountHandler, and RegisterHandler (a brand-new
+# email, so this hits credRepo.Create's generic-failure branch, not the
+# already-covered duplicate-email 409).
 # Floor set to 80 for headroom.
 #
 # Usage: ./check-coverage.sh (run from backend/app/)
