@@ -86,6 +86,80 @@ func TestIntegration_PasswordReset_ConfirmSucceeds(t *testing.T) {
 	}
 }
 
+// TestIntegration_OTPLoginRequest_GeneratesOTPForVerifiedUser covers
+// OTPLoginRequestHandler's success branch (email found + verified), which
+// runs in a background goroutine and was otherwise only exercised via its
+// "missing email still 202s" validation branch.
+func TestIntegration_OTPLoginRequest_GeneratesOTPForVerifiedUser(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, _ := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+	markVerified(t, ctx, pool, studentID)
+	email := studentEmail(t, ctx, pool, studentID)
+
+	body, _ := json.Marshal(map[string]string{"email": email})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/otp/request", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusAccepted {
+		t.Fatalf("otp request: got %d body=%s", w.Code, w.Body.String())
+	}
+
+	waitForOTP(t, ctx, pool, studentID, "LOGIN_OTP")
+}
+
+// TestIntegration_PasswordResetRequest_GeneratesOTPForVerifiedUser is the
+// same coverage gap as above, for PasswordResetRequestHandler.
+func TestIntegration_PasswordResetRequest_GeneratesOTPForVerifiedUser(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, _ := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+	markVerified(t, ctx, pool, studentID)
+	email := studentEmail(t, ctx, pool, studentID)
+
+	body, _ := json.Marshal(map[string]string{"email": email})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/password/reset/request", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusAccepted {
+		t.Fatalf("password reset request: got %d body=%s", w.Code, w.Body.String())
+	}
+
+	waitForOTP(t, ctx, pool, studentID, "PASSWORD_RESET")
+}
+
+func markVerified(t *testing.T, ctx context.Context, pool *pgxpool.Pool, credentialID string) {
+	t.Helper()
+	if _, err := pool.Exec(ctx, `UPDATE auth.credentials SET email_verified = true WHERE id = $1`, credentialID); err != nil {
+		t.Fatalf("mark verified: %v", err)
+	}
+}
+
+// waitForOTP polls for the request handlers' background goroutine to
+// persist its OTP row, up to a couple seconds.
+func waitForOTP(t *testing.T, ctx context.Context, pool *pgxpool.Pool, credentialID, purpose string) {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		var count int
+		if err := pool.QueryRow(ctx,
+			`SELECT count(*) FROM auth.otp_codes WHERE credential_id = $1 AND purpose = $2 AND used_at IS NULL`,
+			credentialID, purpose,
+		).Scan(&count); err != nil {
+			t.Fatalf("poll for otp: %v", err)
+		}
+		if count > 0 {
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Fatalf("timed out waiting for a %s otp to be generated", purpose)
+}
+
 // seedOTP inserts an OTP row directly, bypassing the async request handlers
 // that would normally create one, with a known code so the test can present
 // it back to the confirm/verify endpoint.

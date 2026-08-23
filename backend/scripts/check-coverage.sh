@@ -32,13 +32,16 @@
 # and now 70.8% after covering OTPLoginVerifyHandler and PasswordResetHandler
 # (confirm side)'s success paths, seeding a known OTP row directly since
 # their request-side handlers generate one asynchronously in a goroutine.
-# Floor set to 70 for headroom.
+# 70.8% -> 71.8% after covering those same request-side handlers' success
+# branch too (email found + verified -> OTP generated), polling for the
+# background goroutine's DB write instead of racing it.
+# Floor set to 71 for headroom.
 #
 # Usage: ./check-coverage.sh (run from backend/app/)
 
 set -euo pipefail
 
-COVERAGE_FLOOR="${COVERAGE_FLOOR:-70}"
+COVERAGE_FLOOR="${COVERAGE_FLOOR:-71}"
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../app"
 
