@@ -133,6 +133,99 @@ func TestIntegration_PasswordResetRequest_GeneratesOTPForVerifiedUser(t *testing
 	waitForOTP(t, ctx, pool, studentID, "PASSWORD_RESET")
 }
 
+// TestIntegration_PasswordReset_UnknownEmailIsRejected covers
+// PasswordResetHandler's FindByEmail-fails branch (anti-enumeration shape:
+// same "invalid or expired code" as a bad OTP), previously untested.
+func TestIntegration_PasswordReset_UnknownEmailIsRejected(t *testing.T) {
+	r, _ := setup(t)
+
+	body, _ := json.Marshal(map[string]string{
+		"email": "nobody-here@preuni.test", "otp": "123456", "new_password": "Senha1234",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/password/reset/confirm", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("password reset for an unknown email: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
+// TestIntegration_PasswordReset_WeakNewPasswordIsRejected covers
+// PasswordResetHandler's ValidatePassword branch, previously untested.
+func TestIntegration_PasswordReset_WeakNewPasswordIsRejected(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, _ := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+	email := studentEmail(t, ctx, pool, studentID)
+
+	body, _ := json.Marshal(map[string]string{
+		"email": email, "otp": "123456", "new_password": "short",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/password/reset/confirm", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("password reset with a weak new password: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
+// TestIntegration_Login_UnknownEmailIsUnauthorized covers LoginHandler's
+// FindByEmail-fails branch, previously untested.
+func TestIntegration_Login_UnknownEmailIsUnauthorized(t *testing.T) {
+	r, _ := setup(t)
+
+	body, _ := json.Marshal(map[string]string{"email": "nobody-here@preuni.test", "password": "whatever123"})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/login", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("login with an unknown email: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
+// TestIntegration_Login_UnverifiedEmailIsForbidden covers LoginHandler's
+// EmailVerified check, previously untested for login specifically.
+func TestIntegration_Login_UnverifiedEmailIsForbidden(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, _ := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+	email := studentEmail(t, ctx, pool, studentID)
+
+	body, _ := json.Marshal(map[string]string{"email": email, "password": "P@ssw0rd123"})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/login", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("login with an unverified email: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
+// TestIntegration_Login_WrongPasswordIsUnauthorized covers LoginHandler's
+// CheckPassword-fails branch, previously untested.
+func TestIntegration_Login_WrongPasswordIsUnauthorized(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, _ := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+	markVerified(t, ctx, pool, studentID)
+	email := studentEmail(t, ctx, pool, studentID)
+
+	body, _ := json.Marshal(map[string]string{"email": email, "password": "TotallyWrong123"})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/login", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("login with the wrong password: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
 // TestIntegration_RefreshToken_RotatesAndReturnsNewTokens covers
 // RefreshTokenHandler's success path (find, rotate, issue), previously
 // only exercised via its missing-field validation branch.

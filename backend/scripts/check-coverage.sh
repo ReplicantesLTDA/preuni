@@ -43,14 +43,17 @@
 # genuinely dead functions with zero call sites anywhere in src/ or
 # tests/ (auth/domain: OTPCode.IsExpired, OTPCode.IsUsed,
 # Credentials.UpdatePassword; testhelper: MustEnv) -- confirmed dead via
-# grep before removal, not just low-coverage.
-# Floor set to 71 for headroom.
+# grep before removal, not just low-coverage. 73.2% -> 73.6% after
+# covering PasswordResetHandler (unknown email, weak new password) and
+# LoginHandler (unknown email, unverified email, wrong password) branches
+# that only had their happy path or missing-field validation tested.
+# Floor set to 73 for headroom.
 #
 # Usage: ./check-coverage.sh (run from backend/app/)
 
 set -euo pipefail
 
-COVERAGE_FLOOR="${COVERAGE_FLOOR:-71}"
+COVERAGE_FLOOR="${COVERAGE_FLOOR:-73}"
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../app"
 
