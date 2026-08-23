@@ -33,9 +33,9 @@ module.exports = {
   // bootstrap wiring / trivial one-liners with low unit-test ROI.
   coverageThreshold: {
     global: {
-      lines: 79,
-      statements: 79,
-      functions: 75,
+      lines: 80,
+      statements: 80,
+      functions: 76,
       branches: 66,
     },
   },
