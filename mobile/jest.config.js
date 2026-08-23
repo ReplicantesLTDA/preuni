@@ -24,15 +24,16 @@ module.exports = {
     '!src/**/index.{ts,tsx}',
   ],
   // Constitution Principle II: coverage floor is 90%, reached incrementally
-  // (Principle VI: small PRs). 50.5% -> 59.3% after adding screen tests for
-  // trilha/index.tsx, simulado/index.tsx, and all 3 onboarding screens --
-  // previously untested legacy code. Floor set to 57 for headroom.
+  // (Principle VI: small PRs). 59.3% -> 77.0% after adding screen tests for
+  // all 6 (auth) route screens (login, register, otp-login, password-reset,
+  // verify-email, welcome) -- previously untested legacy code. Floor set to
+  // 74 for headroom.
   coverageThreshold: {
     global: {
-      lines: 57,
-      statements: 57,
-      functions: 55,
-      branches: 52,
+      lines: 74,
+      statements: 74,
+      functions: 70,
+      branches: 62,
     },
   },
 };
