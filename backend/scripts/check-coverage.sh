@@ -39,7 +39,11 @@
 # previously only exercised via its missing-field validation branch.
 # 72.1% -> 72.3% after covering ReconcileOnce's "still pending, past
 # GradingTimeout" default branch, previously only its completed/failed
-# job-status branches were tested.
+# job-status branches were tested. 72.5% -> 73.2% after deleting four
+# genuinely dead functions with zero call sites anywhere in src/ or
+# tests/ (auth/domain: OTPCode.IsExpired, OTPCode.IsUsed,
+# Credentials.UpdatePassword; testhelper: MustEnv) -- confirmed dead via
+# grep before removal, not just low-coverage.
 # Floor set to 71 for headroom.
 #
 # Usage: ./check-coverage.sh (run from backend/app/)

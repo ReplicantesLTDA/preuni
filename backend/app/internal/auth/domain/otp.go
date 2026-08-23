@@ -10,15 +10,15 @@ import (
 )
 
 const (
-	otpLength     = 6
-	otpExpiry     = 15 * time.Minute
+	otpLength = 6
+	otpExpiry = 15 * time.Minute
 )
 
 // OTPPurpose enumerates the valid uses for an OTP code.
 type OTPPurpose string
 
 const (
-	OTPPurposeEmailVerify  OTPPurpose = "EMAIL_VERIFY"
+	OTPPurposeEmailVerify   OTPPurpose = "EMAIL_VERIFY"
 	OTPPurposePasswordReset OTPPurpose = "PASSWORD_RESET"
 	OTPPurposeLoginOTP      OTPPurpose = "LOGIN_OTP"
 	OTPPurposeEmailChange   OTPPurpose = "EMAIL_CHANGE"
@@ -51,16 +51,6 @@ func GenerateOTP() (plaintext, hash string, expiresAt time.Time, err error) {
 func HashOTP(plaintext string) string {
 	sum := sha256.Sum256([]byte(plaintext))
 	return hex.EncodeToString(sum[:])
-}
-
-// IsExpired reports whether the OTP has passed its expiry time.
-func (o *OTPCode) IsExpired() bool {
-	return time.Now().After(o.ExpiresAt)
-}
-
-// IsUsed reports whether the OTP has already been consumed.
-func (o *OTPCode) IsUsed() bool {
-	return o.UsedAt != nil
 }
 
 // randomDigits generates a cryptographically-random string of n decimal digits.

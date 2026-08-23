@@ -12,13 +12,13 @@ const bcryptCost = 12
 
 // Credentials represents an auth record for a student.
 type Credentials struct {
-	ID               string
-	Email            string
-	PasswordHash     string
-	EmailVerified    bool
-	EmailVerifiedAt  *time.Time
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID              string
+	Email           string
+	PasswordHash    string
+	EmailVerified   bool
+	EmailVerifiedAt *time.Time
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 // NewCredentials validates the email and password, hashes the password,
@@ -59,19 +59,6 @@ func (c *Credentials) CheckPassword(password string) error {
 	if err != nil {
 		return apperrors.Unauthorized("invalid credentials")
 	}
-	return nil
-}
-
-// UpdatePassword re-hashes and replaces the password hash.
-func (c *Credentials) UpdatePassword(newPassword string) error {
-	if err := ValidatePassword(newPassword); err != nil {
-		return err
-	}
-	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcryptCost)
-	if err != nil {
-		return apperrors.Internal(err)
-	}
-	c.PasswordHash = string(hash)
 	return nil
 }
 
