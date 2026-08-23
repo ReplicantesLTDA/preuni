@@ -27,16 +27,22 @@ module.exports = {
   // (Principle VI: small PRs). 77.0% -> 78.4% after adding tests for
   // app/index.tsx and app/+not-found.tsx (root-level redirects), then
   // 80.9% after covering (tabs)/perfil/index.tsx (the profile hub screen,
-  // 0% before -- 128 lines) and (tabs)/perfil/edit.tsx's save/cancel flow.
-  // Floor set to 79 for headroom. app/_layout.tsx and the per-tab
-  // _layout.tsx Stack wrappers intentionally left untested -- native-module
-  // bootstrap wiring / trivial one-liners with low unit-test ROI.
+  // 0% before -- 128 lines) and (tabs)/perfil/edit.tsx's save/cancel flow,
+  // then 81.1% after trilha CTA/subject-tile interactions, and now 82.9%
+  // after a batched round: features/perfil/hooks.ts's useUploadAvatar
+  // (dev-stub path)/useDeleteMe/useChangeEmailConfirm (0% before),
+  // errorMessages.ts's fallback + authErrorByCode (0% before, no test
+  // file existed), and change-email.tsx's request-error/confirm-success/
+  // confirm-error branches. Floor set to 82 for headroom. app/_layout.tsx
+  // and the per-tab _layout.tsx Stack wrappers intentionally left untested
+  // -- native-module bootstrap wiring / trivial one-liners with low
+  // unit-test ROI.
   coverageThreshold: {
     global: {
-      lines: 80,
-      statements: 80,
-      functions: 76,
-      branches: 66,
+      lines: 82,
+      statements: 82,
+      functions: 78,
+      branches: 68,
     },
   },
 };
