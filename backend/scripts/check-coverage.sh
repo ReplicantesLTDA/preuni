@@ -123,14 +123,18 @@
 # LogoutHandler's Revoke-fails, OnboardingHandler's FindByID-fails,
 # essay.getGrade's Internal(err) branch, VerifyEmailHandler's
 # MarkUsed/MarkEmailVerified-fails. This technique generalizes to any
-# other remaining "second-call" gap in the codebase.
-# Floor set to 81 for headroom.
+# other remaining "second-call" gap in the codebase. 81.9% -> 83.4%
+# after applying the same technique to ChangePasswordHandler,
+# ChangeEmailConfirmHandler, PasswordResetHandler (confirm),
+# OTPLoginVerifyHandler, and DeleteAccountHandler's second/third/fourth-
+# call failure branches (12 sub-cases, each verified 3x for flakiness).
+# Floor set to 83 for headroom.
 #
 # Usage: ./check-coverage.sh (run from backend/app/)
 
 set -euo pipefail
 
-COVERAGE_FLOOR="${COVERAGE_FLOOR:-81}"
+COVERAGE_FLOOR="${COVERAGE_FLOOR:-83}"
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../app"
 
