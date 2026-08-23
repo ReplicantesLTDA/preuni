@@ -60,7 +60,11 @@
 # goroutine's unverified-email no-op branch, and submitting an essay for
 # a credential with no backing users.students row (streak.GetForUpdate's
 # not-found branch -- simulates the register.go non-fatal provisioning-
-# failure path).
+# failure path). 75.2% -> 75.5% after adding pure-domain unit tests for
+# NewCredentials, HashPassword (incl. its previously-untested bcrypt-
+# 72-byte-limit error branch, a real gap between what ValidatePassword
+# allows (255 chars) and what bcrypt accepts), and tierIndex's unknown-
+# tier fallback.
 # Floor set to 74 for headroom.
 #
 # Usage: ./check-coverage.sh (run from backend/app/)

@@ -9,6 +9,15 @@ func at(h int) time.Time {
 	return time.Date(2026, 8, 22, h, 0, 0, 0, time.UTC)
 }
 
+func TestTierIndex_UnknownTierDefaultsToZero(t *testing.T) {
+	// tierOrder only contains the 5 known tiers; an unrecognized value
+	// (e.g. from stale/corrupt data) must fall back to index 0 rather than
+	// panicking -- previously untested.
+	if got := tierIndex(Tier("not-a-real-tier")); got != 0 {
+		t.Fatalf("expected 0 for an unknown tier, got %d", got)
+	}
+}
+
 func TestRankEntries_OrdersByScoreDescending(t *testing.T) {
 	entries := []ScoreEntry{
 		{UserID: "a", Score: 600, EarliestGradedAt: at(1)},
