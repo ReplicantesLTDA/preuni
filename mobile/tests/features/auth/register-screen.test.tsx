@@ -66,4 +66,23 @@ describe('RegisterScreen', () => {
     expect(await findByText('Esse e-mail já está em uso.')).toBeTruthy();
     expect(mockReplace).not.toHaveBeenCalled();
   });
+
+  it('shows a field error for a server-side validation failure', async () => {
+    fetchMock.on('POST', '/v1/auth/register', {
+      status: 422,
+      body: { error: { field: 'displayName', message: 'Nome inválido.' } },
+    });
+
+    const { getByLabelText, getByText, findByText } = render(<RegisterScreen />, {
+      wrapper: buildWrapper().Wrapper,
+    });
+
+    fireEvent.changeText(getByLabelText('Como podemos te chamar?'), 'Maria');
+    fireEvent.changeText(getByLabelText('E-mail'), 'maria@preuni.com');
+    fireEvent.changeText(getByLabelText('Senha'), 'Senha1234');
+    fireEvent.press(getByText('Enviar'));
+
+    expect(await findByText('Nome inválido.')).toBeTruthy();
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
 });

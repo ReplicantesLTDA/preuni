@@ -58,4 +58,39 @@ describe('PasswordResetScreen', () => {
     expect(await findByText('O código tem 6 dígitos.')).toBeTruthy();
     expect(mockReplace).not.toHaveBeenCalled();
   });
+
+  it('shows a toast when the request step fails', async () => {
+    fetchMock.on('POST', '/v1/auth/password/reset/request', {
+      status: 429,
+      body: { error: { message: 'Muitas tentativas.' } },
+    });
+
+    const { getByLabelText, getByText, findByText } = render(<PasswordResetScreen />, {
+      wrapper: buildWrapper().Wrapper,
+    });
+
+    fireEvent.changeText(getByLabelText('E-mail'), 'maria@preuni.com');
+    fireEvent.press(getByText('Enviar código'));
+
+    expect(await findByText('Muitas tentativas.')).toBeTruthy();
+  });
+
+  it('rejects a weak new password on the confirm step without submitting', async () => {
+    fetchMock.on('POST', '/v1/auth/password/reset/request', { status: 200, body: {} });
+
+    const { getByLabelText, getByText, findByText } = render(<PasswordResetScreen />, {
+      wrapper: buildWrapper().Wrapper,
+    });
+
+    fireEvent.changeText(getByLabelText('E-mail'), 'maria@preuni.com');
+    fireEvent.press(getByText('Enviar código'));
+    await findByText('Código enviado para maria@preuni.com.');
+
+    fireEvent.changeText(getByLabelText('Código de verificação'), '123456');
+    fireEvent.changeText(getByLabelText('Nova senha'), 'Ab1');
+    fireEvent.press(getByText('Atualizar senha'));
+
+    expect(await findByText('A senha precisa ter pelo menos 8 caracteres.')).toBeTruthy();
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
 });

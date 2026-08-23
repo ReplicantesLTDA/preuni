@@ -72,6 +72,24 @@ describe('LoginScreen', () => {
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
+  it('shows a field error for a server-side validation failure', async () => {
+    fetchMock.on('POST', '/v1/auth/login', {
+      status: 422,
+      body: { error: { field: 'email', message: 'Esse e-mail parece inválido.' } },
+    });
+
+    const { getByLabelText, findByText, getByRole } = render(<LoginScreen />, {
+      wrapper: buildWrapper().Wrapper,
+    });
+
+    fireEvent.changeText(getByLabelText('E-mail'), 'maria@preuni.com');
+    fireEvent.changeText(getByLabelText('Senha'), 'Senha1234');
+    fireEvent.press(getByRole('button', { name: 'Entrar' }));
+
+    expect(await findByText('Esse e-mail parece inválido.')).toBeTruthy();
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
   it('navigates to password reset and register screens', () => {
     const { getByText } = render(<LoginScreen />, { wrapper: buildWrapper().Wrapper });
 

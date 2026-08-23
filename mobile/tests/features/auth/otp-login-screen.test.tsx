@@ -68,4 +68,38 @@ describe('OtpLoginScreen', () => {
     expect(await findByText('Código inválido.')).toBeTruthy();
     expect(mockReplace).not.toHaveBeenCalled();
   });
+
+  it('shows a toast when the request step fails', async () => {
+    fetchMock.on('POST', '/v1/auth/otp/request', {
+      status: 429,
+      body: { error: { message: 'Muitas tentativas.' } },
+    });
+
+    const { getByLabelText, getByText, findByText } = render(<OtpLoginScreen />, {
+      wrapper: buildWrapper().Wrapper,
+    });
+
+    fireEvent.changeText(getByLabelText('E-mail'), 'maria@preuni.com');
+    fireEvent.press(getByText('Enviar código'));
+
+    expect(await findByText('Muitas tentativas.')).toBeTruthy();
+  });
+
+  it('rejects a code shorter than 6 digits on the otp step without submitting', async () => {
+    fetchMock.on('POST', '/v1/auth/otp/request', { status: 200, body: {} });
+
+    const { getByLabelText, getByText, findByText } = render(<OtpLoginScreen />, {
+      wrapper: buildWrapper().Wrapper,
+    });
+
+    fireEvent.changeText(getByLabelText('E-mail'), 'maria@preuni.com');
+    fireEvent.press(getByText('Enviar código'));
+    await findByText('Enviamos um código para maria@preuni.com.');
+
+    fireEvent.changeText(getByLabelText('Código de verificação'), '123');
+    fireEvent.press(getByText('Entrar'));
+
+    expect(await findByText('O código tem 6 dígitos.')).toBeTruthy();
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
 });
