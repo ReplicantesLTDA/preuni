@@ -1,28 +1,58 @@
 <!--
 Sync Impact Report
 ==================
-Version change: 2.1.1 → 2.2.0 (MINOR — new governing rule added to
-Principle VI: every migration must ship a working downgrade, no migration
-gaps, effective prospectively from this ratification date)
+Version change: 2.2.0 → 2.3.0 (MINOR — new Principle VII: Security &
+Secrets added; Principle II strengthened with mandatory, blocking
+per-language type-checking; Principle VI's migration-reversibility bullet
+strengthened from "ship a downgrade" to "prove the downgrade works";
+Governance gained ADR discipline)
 
-Modified: VI. Engineering Workflow — added "Every migration is reversible,
-starting now" bullet; Quality Gates gained a matching checklist item.
-Pre-existing forward-only migrations (infra/migrations/*.sql,
-corretor-redacao's early Alembic revisions) are grandfathered — not
-retroactively blocked, but must gain a downgrade the next time they're
-touched.
+Modified:
+- II. Testing Standards — added a mandatory, blocking type-check bullet
+  per language (Go compiler, `tsc --noEmit`, mypy strict) with an
+  explicit "no `Any`/`interface{}` across an API boundary" rule.
+- VI. Engineering Workflow — the migration-reversibility bullet now
+  requires the downgrade to be proven (round-trip executed), not just
+  present. Python: `alembic downgrade base && upgrade head` in CI. Go:
+  adopted a `NNN_name.down.sql` sibling-file convention (no migration
+  tool in use) with a grandfather list
+  (`infra/migrations/.grandfathered`) for pre-existing forward-only
+  migrations, a presence-check gate, and a round-trip runner that
+  activates automatically per schema once that schema's whole chain has
+  downgrades.
+- Quality Gates — gained matching checklist items for the type-check and
+  round-trip gates, plus new Security & Secrets items.
+- Governance — added ADR discipline: non-trivial architectural decisions
+  get a numbered file under `docs/decisions/`, not just constitution
+  prose or PR descriptions.
 
-Added sections: none (bullet added within existing Principle VI).
+Added sections:
+- VII. Security & Secrets (NON-NEGOTIABLE) — secrets never in the repo,
+  gitleaks secret-scanning (pre-commit + CI, baseline-aware), and
+  per-language dependency vulnerability audits.
+
 Removed sections: none.
 
+Context: prompted by comparing against a reference constitution from
+another (work) project; SSO/Key Vault/RBAC/Teams-specific pieces were
+deliberately not adopted (no multi-user staff access to gate). CD/deploy
+principles were deliberately deferred — no real deploy target exists yet.
+Full rationale and alternatives considered: docs/decisions/0001-*.md.
+
 Templates requiring updates:
-- .specify/templates/plan-template.md — ⚠ pending (verify Constitution Check
-  gate references principle V once a plan touches the correction service)
+- .specify/templates/plan-template.md — ⚠ pending (verify Constitution
+  Check gate references principle VII once a plan touches secrets/deps)
 - .specify/templates/spec-template.md — ✅ no changes needed (generic)
 - .specify/templates/tasks-template.md — ✅ no changes needed (generic)
 - .specify/templates/commands/*.md — ✅ no agent-specific references found
 
-Follow-up TODOs: none — all placeholders resolved from user input this session.
+Follow-up TODOs:
+- backend/app's go.mod declares `go 1.25.0` while this constitution and
+  CLAUDE.md say "Go 1.24" — a pre-existing discrepancy, not touched by
+  this amendment; worth reconciling separately.
+- mobile's `pnpm audit` gate blocks on critical only (34 high/moderate
+  findings are transitive Expo/Metro build-tooling debt, tracked but not
+  yet fixed) — revisit as Expo SDK releases catch up.
 -->
 
 # preuni.com.br Constitution
@@ -91,6 +121,7 @@ Every piece of code merged to `main` must meet these standards:
 - **Test names must describe behavior**: `it("returns 404 when user does not exist")` not `it("works")`
 - **Coverage floor**: Maintain ≥ 90% line coverage across backend (Go), correction service (Python), and mobile (TypeScript); new code must not lower the project average; CI fails the build below the floor
 - **Real dependencies over mocks** at integration boundaries: mock only what you own or what is external and unreliable
+- **Type-checking is mandatory and blocking, per language**: Go's compiler enforces this by construction; the correction service runs `mypy` in `strict` mode (`corretor-redacao/pyproject.toml`'s `[tool.mypy]`) and mobile runs `tsc --noEmit` — both block CI and pre-commit, no `continue-on-error` exceptions. No `Any` (Python) or an untyped/`any`-shaped payload crosses an API boundary (HTTP request/response bodies, the Go↔correction-service bridge table, the mobile↔backend wire format) without a concrete type or schema on both sides
 
 ### III. Gamification & UX Consistency
 
@@ -149,13 +180,49 @@ ordinary, disciplined software engineering.
 - **Small, continuous integration**: work lands in small PRs merged
   frequently against an up-to-date `main`, not long-lived branches that
   diverge for weeks
-- **Every migration is reversible, starting now**: any migration that adds
-  an `upgrade`/forward step (Alembic revisions, `infra/migrations/*.sql`,
-  or equivalent) MUST ship with a working `downgrade`/rollback counterpart
-  in the same PR — no migration gaps. Applies prospectively from the date
-  this bullet was ratified; pre-existing forward-only migrations are not
-  retroactively blocked but MUST gain a downgrade before they are ever
-  edited again.
+- **Every migration is reversible, and CI proves it, starting now**: any
+  migration that adds an `upgrade`/forward step (Alembic revisions,
+  `infra/migrations/*.sql`, or equivalent) MUST ship with a working
+  `downgrade`/rollback counterpart in the same PR — no migration gaps —
+  and CI MUST actually execute the round-trip, not just check the
+  downgrade exists. Correction service: `alembic downgrade base &&
+  alembic upgrade head` runs in CI on every push. Go monolith:
+  `infra/migrations/<schema>/NNN_name.sql` pairs with a sibling
+  `NNN_name.down.sql`; `backend/scripts/check-migration-downgrades.sh`
+  gates on the pairing existing, and `backend/scripts/migrate-round-trip.sh`
+  actually executes the round-trip for any schema whose entire migration
+  chain has downgrades. Applies prospectively from the date this bullet
+  was ratified; pre-existing forward-only migrations are grandfathered
+  (`infra/migrations/.grandfathered`) — not retroactively blocked, but
+  MUST gain a downgrade (and be removed from that list) before they are
+  ever edited again.
+
+### VII. Security & Secrets (NON-NEGOTIABLE)
+
+- **Secrets never reach the repo**: no API key, DB credential, JWT
+  signing key, or LLM provider token is ever committed, in code, config,
+  `.env` files, or fixtures — real config lives in local `.env` files
+  (gitignored) or CI/CD secret stores, never in git history
+- **Secret scanning runs on every commit and every push**: `gitleaks`
+  runs in pre-commit (`gitleaks protect --staged`) and in CI
+  (`.github/workflows/security-ci.yml`), both baseline-aware
+  (`.gitleaks-baseline.json` — the pre-existing, confirmed-harmless
+  test-fixture findings frozen at v2.3.0's ratification). A real secret
+  is never added to the baseline — it's rotated and the leak is treated
+  as an incident, not silenced
+- **Dependency vulnerability audits run per language, every PR**:
+  `govulncheck` (Go), `pip-audit` (correction service), `pnpm audit`
+  (mobile) — in `security-ci.yml`. A newly-introduced dependency with a
+  known critical vulnerability blocks merge; exceptions for pre-existing,
+  not-safely-fixable transitive findings must be documented inline in
+  the workflow file with the specific reason (see mobile's `pnpm audit`
+  step for the current example) — the same "non-blocking with a
+  documented plan" pattern this repo already uses for pre-existing
+  gofmt/golangci-lint debt, never a silent gap
+- **No enterprise-specific security theater**: SSO, RBAC, and centralized
+  secret-vault tooling (Key Vault, etc.) are deliberately NOT required
+  here — preuni has no multi-user staff access to gate. Re-evaluate if
+  that changes
 
 ## Quality Gates
 
@@ -173,11 +240,22 @@ Every pull request must pass all of the following before merge:
 - [ ] Pre-commit hooks ran clean (unit tests + lint + type-check)
 - [ ] Full CI/CD pipeline is green on the PR's latest commit
 - [ ] At least one human approval is recorded on the PR
-- [ ] Any new migration includes a working downgrade/rollback
+- [ ] Any new migration includes a working downgrade/rollback, and CI's round-trip step covers it once its schema's whole chain is paired
+- [ ] Type-checks pass and block (Go compiler, `mypy` strict, `tsc --noEmit`) — no `continue-on-error` on any of them
+- [ ] Secret scanning (`gitleaks`) is clean against the current baseline
+- [ ] Dependency vulnerability audits (`govulncheck`, `pip-audit`, `pnpm audit`) show no new critical/high finding
+- [ ] A non-trivial architectural decision in this PR has a corresponding `docs/decisions/NNNN-*.md` entry
 
 ## Governance
 
 - This Constitution supersedes all other practices and informal agreements
+- **Architectural decisions get an ADR**: any non-trivial, hard-to-reverse
+  choice (a new dependency category, a schema/ownership boundary, a
+  security posture trade-off, adopting or rejecting a tool) gets a
+  numbered entry in `docs/decisions/` (template: `docs/decisions/template.md`)
+  — context, decision, alternatives considered, consequences — instead of
+  living only in constitution prose, a PR description, or nowhere. Small,
+  easily-reversed choices don't need one; when in doubt, write it
 - Amendments require: written proposal, team discussion, documented rationale, and update to this file
 - All code reviews must verify compliance with these principles — "it works" is not sufficient approval
 - Exceptions must be documented inline with a comment referencing a tracked issue and an expiry plan
@@ -186,4 +264,4 @@ Every pull request must pass all of the following before merge:
   CI checks must be green, and at least one human reviewer must approve —
   no exceptions, including for AI-authored changes
 
-**Version**: 2.2.0 | **Ratified**: 2026-04-03 | **Last Amended**: 2026-08-22
+**Version**: 2.3.0 | **Ratified**: 2026-04-03 | **Last Amended**: 2026-08-23

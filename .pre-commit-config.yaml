@@ -7,6 +7,26 @@
 repos:
   - repo: local
     hooks:
+      # Constitution VII (Security & Secrets, NON-NEGOTIABLE): secrets
+      # must never reach a commit. Runs repo-wide, not changed-files-only
+      # — a leaked secret in any file is a real leak, not "pre-existing
+      # debt" to defer.
+      - id: gitleaks
+        name: gitleaks (secret scanning)
+        entry: gitleaks protect --staged --verbose --redact --baseline-path=.gitleaks-baseline.json
+        language: system
+        pass_filenames: false
+
+      # Constitution VI: any new/touched infra/migrations/*.sql needs a
+      # matching *.down.sql sibling (see check-migration-downgrades.sh's
+      # own header for the full rule).
+      - id: migration-downgrade-check
+        name: migration downgrade check
+        entry: bash backend/scripts/check-migration-downgrades.sh
+        language: system
+        files: ^infra/migrations/.*\.sql$
+        pass_filenames: false
+
       # gofmt/golangci-lint are scoped to changed files only (pass_filenames
       # default) rather than the whole repo — the existing codebase has
       # repo-wide formatting drift predating this pipeline (see
@@ -48,6 +68,15 @@ repos:
         entry: bash -c 'cd corretor-redacao && ruff format --check src tests'
         language: system
         files: ^corretor-redacao/.*\.py$
+        pass_filenames: false
+
+      # Runs repo-wide (mypy's cache makes this cheap on repeat runs) --
+      # src/ only, matching pyproject.toml's [tool.mypy] exclude = ["tests/"].
+      - id: mypy
+        name: mypy (corretor-redacao)
+        entry: bash -c 'cd corretor-redacao && mypy src'
+        language: system
+        files: ^corretor-redacao/src/.*\.py$
         pass_filenames: false
 
       - id: pytest-unit
