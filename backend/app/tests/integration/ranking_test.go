@@ -148,6 +148,39 @@ func TestIntegration_Ranking_Me_404sForAUserWithNoCurrentWeekEntry(t *testing.T)
 	}
 }
 
+// TestIntegration_Gamification_CanceledContextReturnsInternalError covers
+// awardMedal/AwardStreakMedals/ListMedals' apperrors.Internal(err) branches
+// (75%/75%/54.5% before) via a canceled context -- real pgx behavior (a
+// client disconnect or request timeout in production), not a mock.
+func TestIntegration_Gamification_CanceledContextReturnsInternalError(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, _ := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+
+	repo := gamificationrepo.NewRepository(pool)
+
+	canceled, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	t.Run("AwardStreakMedals", func(t *testing.T) {
+		// 0 -> 7 days crosses the 7-day milestone, so this actually reaches
+		// awardMedal's INSERT (and its canceled-context failure), not just
+		// an empty StreakMedalsEarned no-op.
+		err := repo.AwardStreakMedals(canceled, studentID, 0, 7)
+		if err == nil {
+			t.Fatal("expected an error from a canceled context")
+		}
+	})
+
+	t.Run("ListMedals", func(t *testing.T) {
+		_, err := repo.ListMedals(canceled, studentID)
+		if err == nil {
+			t.Fatal("expected an error from a canceled context")
+		}
+	})
+}
+
 func TestIntegration_WeekClose_PromotesTopDemotesBottomAndResetsScore(t *testing.T) {
 	r, pool := setup(t)
 	ctx := context.Background()

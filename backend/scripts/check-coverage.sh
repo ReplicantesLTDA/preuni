@@ -69,14 +69,23 @@
 # in-process email adapter's Send (success/validation-failure/
 # underlying-failure), defaultUsername's short-id branch, and Create's
 # duplicate-username 409 branch (isDuplicateKeyError, previously
-# unreachable via any real registration flow).
-# Floor set to 76 for headroom.
+# unreachable via any real registration flow). 76.7% -> 78.1% after
+# reaching real apperrors.Internal(err) branches across the auth/
+# gamification/social repositories via an already-canceled
+# context.Context -- genuine pgx behavior (the same error a real client
+# disconnect or request timeout produces in production), not a mock.
+# Covered: CredentialsRepository, OTPRepository, RefreshTokenRepository,
+# gamification's AwardStreakMedals/ListMedals, social's friendship repo.
+# Also added CredentialsRepository.UpdateEmail's duplicate-email 409
+# branch (previously unreachable via any real change-email flow, same
+# shape as the Create duplicate-username gap fixed earlier).
+# Floor set to 77 for headroom.
 #
 # Usage: ./check-coverage.sh (run from backend/app/)
 
 set -euo pipefail
 
-COVERAGE_FLOOR="${COVERAGE_FLOOR:-76}"
+COVERAGE_FLOOR="${COVERAGE_FLOOR:-77}"
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../app"
 

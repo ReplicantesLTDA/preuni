@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	socialrepo "github.com/preuni/app/internal/social/repository"
 )
 
 // TestIntegration_Friends_ErrorPaths covers validation, self-friending,
@@ -231,4 +233,51 @@ func TestIntegration_Friends_ReRequestAfterRemovalIsTreatedAsNew(t *testing.T) {
 	if w.Code != http.StatusCreated {
 		t.Fatalf("re-request after removal: got %d, want 201, body=%s", w.Code, w.Body.String())
 	}
+}
+
+// TestIntegration_SocialRepository_CanceledContextReturnsInternalError
+// covers SendRequest, AcceptRequest, and RemoveFriend's
+// apperrors.Internal(err) branches via a canceled context -- real pgx
+// behavior (a client disconnect or request timeout in production), not a
+// mock.
+func TestIntegration_SocialRepository_CanceledContextReturnsInternalError(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	aID, _ := registerTestUser(t, r)
+	bID, _ := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, aID)
+	defer cleanupTestUser(ctx, t, pool, bID)
+
+	repo := socialrepo.NewRepository(pool)
+
+	canceled, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	t.Run("SendRequest", func(t *testing.T) {
+		_, err := repo.SendRequest(canceled, aID, bID)
+		if err == nil {
+			t.Fatal("expected an error from a canceled context")
+		}
+	})
+
+	// Seed a real pending friendship (with a valid, non-canceled context)
+	// so AcceptRequest/RemoveFriend's own DB calls are what fail.
+	friendshipID, err := repo.SendRequest(ctx, aID, bID)
+	if err != nil {
+		t.Fatalf("seed friend request: %v", err)
+	}
+
+	t.Run("AcceptRequest", func(t *testing.T) {
+		err := repo.AcceptRequest(canceled, friendshipID, bID)
+		if err == nil {
+			t.Fatal("expected an error from a canceled context")
+		}
+	})
+
+	t.Run("RemoveFriend", func(t *testing.T) {
+		err := repo.RemoveFriend(canceled, friendshipID, aID)
+		if err == nil {
+			t.Fatal("expected an error from a canceled context")
+		}
+	})
 }
