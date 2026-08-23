@@ -112,10 +112,17 @@ omit = ["*/tests/*"]
 # called OllamaProvider(..., model=model, ...) but the constructor's
 # keyword is model_id -- every worker process start would have crashed
 # with a TypeError before processing a single job. Fixed.
+# 78.74% -> 82.18% after (a) noticing local Postgres had silently exited
+# mid-session -- DB-backed integration tests were skipping instead of
+# running, quietly understating every number below; restarting it
+# recovered ~4pp on its own -- and (b) adding unit tests for
+# _llm_error_to_code/_llm_error_message_pt_br (0% before) and
+# MultiPassGrader (40% before, entirely untested despite being a real
+# selectable GRADER=multi_pass mode).
 # Remaining gap: CorrectionWorker's LISTEN/NOTIFY run loop (harder to test
-# -- needs a real asyncpg LISTEN connection under async loop control),
-# lower priority than the pipeline logic already covered.
-fail_under = 77
+# -- needs a real asyncpg LISTEN connection under async loop control) and
+# PerCompetencyGrader (41%, same shape of gap MultiPassGrader had).
+fail_under = 81
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
