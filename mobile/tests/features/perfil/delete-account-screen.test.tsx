@@ -38,4 +38,19 @@ describe('DeleteAccountScreen', () => {
 
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/(auth)/welcome'));
   });
+
+  it('shows a toast when deletion fails', async () => {
+    fetchMock.on('DELETE', '/v1/students/me', {
+      status: 500,
+      bodyText: '{"error":{"code":"INTERNAL_ERROR","message":"boom"}}',
+    });
+    const { Wrapper } = buildWrapper();
+    const { getByText, getByLabelText, findByText } = render(<DeleteAccountScreen />, { wrapper: Wrapper });
+
+    fireEvent.changeText(getByLabelText('Digite "EXCLUIR" para confirmar'), 'EXCLUIR');
+    fireEvent.press(getByText('Excluir minha conta'));
+
+    expect(await findByText('boom')).toBeTruthy();
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
 });

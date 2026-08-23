@@ -48,4 +48,21 @@ describe('ChangePasswordScreen', () => {
     await waitFor(() => expect(mockBack).toHaveBeenCalled());
     expect(captured).toMatchObject({ current_password: 'oldpass1', new_password: 'newpass1' });
   });
+
+  it('shows a toast when the change fails', async () => {
+    fetchMock.on('POST', '/v1/auth/password/change', {
+      status: 422,
+      body: { error: { field: 'current_password', message: 'Current password is incorrect' } },
+    });
+    const { Wrapper } = buildWrapper();
+    const { getByLabelText, getByText, findByText } = render(<ChangePasswordScreen />, { wrapper: Wrapper });
+
+    fireEvent.changeText(getByLabelText('Senha atual'), 'wrongpass1');
+    fireEvent.changeText(getByLabelText('Nova senha'), 'newpass1');
+    fireEvent.changeText(getByLabelText('Confirmar nova senha'), 'newpass1');
+    fireEvent.press(getByText('Atualizar senha'));
+
+    expect(await findByText('Current password is incorrect')).toBeTruthy();
+    expect(mockBack).not.toHaveBeenCalled();
+  });
 });

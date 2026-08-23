@@ -33,16 +33,25 @@ module.exports = {
   // (dev-stub path)/useDeleteMe/useChangeEmailConfirm (0% before),
   // errorMessages.ts's fallback + authErrorByCode (0% before, no test
   // file existed), and change-email.tsx's request-error/confirm-success/
-  // confirm-error branches. Floor set to 82 for headroom. app/_layout.tsx
-  // and the per-tab _layout.tsx Stack wrappers intentionally left untested
-  // -- native-module bootstrap wiring / trivial one-liners with low
-  // unit-test ROI.
+  // confirm-error branches, and now 86.2% after a large batch: lib/auth/
+  // tokenStore.ts (native SecureStore + web localStorage branches),
+  // stores/sessionStore.ts, lib/query/{keys,client}.ts, lib/api/context.tsx,
+  // features/auth/hooks.ts (persistSession's embedded-student branch,
+  // useStudentMe, useVerifyEmail), default-prop branches across several
+  // shared components (Card, ScreenContainer, Skeleton, ErrorState, Toast,
+  // Button, TopStatusBar, NextActivityCard, SubjectGrid), and more
+  // onError-toast branches in perfil/social screens. Floor set to 85 for
+  // headroom. app/_layout.tsx and the per-tab _layout.tsx Stack wrappers
+  // intentionally left untested -- native-module bootstrap wiring /
+  // trivial one-liners with low unit-test ROI. Remaining real gaps:
+  // redacao/index.tsx, redacao/write.tsx, trilha/index.tsx,
+  // perfil/index.tsx (lines 94-109), useFonts.ts.
   coverageThreshold: {
     global: {
-      lines: 82,
-      statements: 82,
-      functions: 78,
-      branches: 68,
+      lines: 85,
+      statements: 85,
+      functions: 82,
+      branches: 73,
     },
   },
 };

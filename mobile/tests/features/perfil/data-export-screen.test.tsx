@@ -24,4 +24,17 @@ describe('DataExportScreen', () => {
 
     await waitFor(() => expect(called).toBe(true));
   });
+
+  it('shows a toast when the export request fails', async () => {
+    fetchMock.on('GET', '/v1/students/me/data-export', {
+      status: 500,
+      bodyText: '{"error":{"code":"INTERNAL_ERROR","message":"boom"}}',
+    });
+    const { Wrapper } = buildWrapper();
+    const { getByText, findByText } = render(<DataExportScreen />, { wrapper: Wrapper });
+
+    fireEvent.press(getByText('Solicitar exportação'));
+
+    expect(await findByText('boom')).toBeTruthy();
+  });
 });
