@@ -48,6 +48,19 @@ async def test_session_rolls_back_on_error(test_engine) -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_session_dependency_rolls_back_on_exception(test_engine) -> None:
+    """The get_session() dependency itself (not session_factory directly)
+    must roll back and re-raise -- its except/finally branch was untested."""
+    from src.db.session import get_session
+
+    gen = get_session(engine=test_engine)
+    session = await anext(gen)
+    with pytest.raises(RuntimeError, match="forced"):
+        await gen.athrow(RuntimeError("forced"))
+    assert session.in_transaction() is False
+
+
+@pytest.mark.asyncio
 async def test_get_session_dependency_yields_session(test_engine) -> None:
     """FastAPI / worker should be able to grab a session via the injectable."""
     from src.db.session import get_session

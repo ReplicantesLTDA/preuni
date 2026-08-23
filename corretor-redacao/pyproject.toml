@@ -124,9 +124,12 @@ omit = ["*/tests/*"]
 # 85.63% -> 86.29% after covering observability.tracing's configure_tracing
 # (33% before -- only ever exercised implicitly via api.main's disabled-
 # tracing startup path).
+# 86.29% -> 87.98% after covering observability.logging's context-var
+# helpers/ContextVarsFilter/configure_logging (62% before, both 100% now)
+# and db.session.get_session's rollback-on-exception branch (100% now).
 # Remaining gap: CorrectionWorker's LISTEN/NOTIFY run loop (harder to test
 # -- needs a real asyncpg LISTEN connection under async loop control).
-fail_under = 86
+fail_under = 87
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
