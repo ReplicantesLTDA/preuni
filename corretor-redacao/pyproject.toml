@@ -132,10 +132,12 @@ omit = ["*/tests/*"]
 # observability.metrics.initialize_app_info -- all 100% now.
 # 88.56% -> 89.22% after covering scripts/correct_essay.py's motivational-
 # texts file read, _make_provider's ollama branch, and _typed_error's
-# generic-LLMError fallback (92% now).
-# Remaining gap: CorrectionWorker's LISTEN/NOTIFY run loop (harder to test
-# -- needs a real asyncpg LISTEN connection under async loop control) and
-# tracing.py's OTLP-exporter-failure branch (needs a real network failure).
+# generic-LLMError fallback (92% now), then 89.66% after covering
+# entrypoint._main by mocking CorrectionWorker.run (entrypoint.py 100% now).
+# Remaining gap: CorrectionWorker's LISTEN/NOTIFY run loop itself (harder to
+# test -- needs a real asyncpg LISTEN connection under async loop control)
+# and tracing.py's OTLP-exporter-failure branch (needs a real network
+# failure). Floor kept at 89 -- real number is 89.66%, just under 90%.
 fail_under = 89
 exclude_lines = [
     "pragma: no cover",
