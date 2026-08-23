@@ -89,6 +89,31 @@ func TestIntegration_Ranking_MeAndWeeklyEndpoints(t *testing.T) {
 // spec User Story 3 acceptance scenarios 2 & 4: at week close, the top
 // band of a tier promotes and the bottom band demotes, weekly scores reset
 // to zero for the new week, and the user's all-time streak is untouched.
+// TestIntegration_Medals_EmptyForFreshUser covers ListMedals' empty-result
+// branch, which TestIntegration_Ranking_MeAndWeeklyEndpoints never reaches
+// (that test's user has already submitted an essay).
+func TestIntegration_Medals_EmptyForFreshUser(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, token := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/medals/me", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("medals/me: got %d body=%s", w.Code, w.Body.String())
+	}
+	var medals []any
+	if err := json.Unmarshal(w.Body.Bytes(), &medals); err != nil {
+		t.Fatal(err)
+	}
+	if len(medals) != 0 {
+		t.Fatalf("expected no medals for a fresh user, got %d", len(medals))
+	}
+}
+
 func TestIntegration_WeekClose_PromotesTopDemotesBottomAndResetsScore(t *testing.T) {
 	r, pool := setup(t)
 	ctx := context.Background()

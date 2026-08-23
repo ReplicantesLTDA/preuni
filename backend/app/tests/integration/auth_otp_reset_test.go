@@ -132,6 +132,27 @@ func TestIntegration_PasswordResetRequest_GeneratesOTPForVerifiedUser(t *testing
 	waitForOTP(t, ctx, pool, studentID, "PASSWORD_RESET")
 }
 
+// TestIntegration_VerifyEmail_AlreadyVerifiedIsConflict covers
+// VerifyEmailHandler's "already verified" branch, which the register->verify
+// flow in auth_flow_test.go never reaches (it only verifies once).
+func TestIntegration_VerifyEmail_AlreadyVerifiedIsConflict(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, _ := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+	markVerified(t, ctx, pool, studentID)
+	email := studentEmail(t, ctx, pool, studentID)
+
+	body, _ := json.Marshal(map[string]string{"email": email, "otp": "000000"})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/email/verify", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusConflict {
+		t.Fatalf("verify for already-verified email: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
 func markVerified(t *testing.T, ctx context.Context, pool *pgxpool.Pool, credentialID string) {
 	t.Helper()
 	if _, err := pool.Exec(ctx, `UPDATE auth.credentials SET email_verified = true WHERE id = $1`, credentialID); err != nil {
