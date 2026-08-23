@@ -34,7 +34,9 @@
 # their request-side handlers generate one asynchronously in a goroutine.
 # 70.8% -> 71.8% after covering those same request-side handlers' success
 # branch too (email found + verified -> OTP generated), polling for the
-# background goroutine's DB write instead of racing it.
+# background goroutine's DB write instead of racing it. 71.9% -> 72.1%
+# after covering RefreshTokenHandler's success path (rotate + re-issue),
+# previously only exercised via its missing-field validation branch.
 # Floor set to 71 for headroom.
 #
 # Usage: ./check-coverage.sh (run from backend/app/)

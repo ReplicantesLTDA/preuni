@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -130,6 +131,66 @@ func TestIntegration_PasswordResetRequest_GeneratesOTPForVerifiedUser(t *testing
 	}
 
 	waitForOTP(t, ctx, pool, studentID, "PASSWORD_RESET")
+}
+
+// TestIntegration_RefreshToken_RotatesAndReturnsNewTokens covers
+// RefreshTokenHandler's success path (find, rotate, issue), previously
+// only exercised via its missing-field validation branch.
+func TestIntegration_RefreshToken_RotatesAndReturnsNewTokens(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, _ := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+
+	// registerTestUser doesn't capture refresh_token, so grab it directly
+	// with a fresh registration on this same handler.
+	email := fmt.Sprintf("refresh-integ+%d@preuni.test", time.Now().UnixNano())
+	regBody, _ := json.Marshal(map[string]string{
+		"email": email, "password": "P@ssw0rd123", "display_name": "Refresh Integ",
+	})
+	regReq := httptest.NewRequest(http.MethodPost, "/v1/auth/register", bytes.NewReader(regBody))
+	regReq.Header.Set("Content-Type", "application/json")
+	regW := httptest.NewRecorder()
+	r.ServeHTTP(regW, regReq)
+	if regW.Code != http.StatusCreated {
+		t.Fatalf("register: got %d body=%s", regW.Code, regW.Body.String())
+	}
+	var reg struct {
+		StudentID    string `json:"student_id"`
+		RefreshToken string `json:"refresh_token"`
+	}
+	if err := json.Unmarshal(regW.Body.Bytes(), &reg); err != nil {
+		t.Fatal(err)
+	}
+	defer cleanupTestUser(ctx, t, pool, reg.StudentID)
+
+	body, _ := json.Marshal(map[string]string{"refresh_token": reg.RefreshToken})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/refresh", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("refresh: got %d body=%s", w.Code, w.Body.String())
+	}
+	var resp struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp.RefreshToken == "" || resp.RefreshToken == reg.RefreshToken {
+		t.Fatalf("expected a newly rotated refresh token, got %q", resp.RefreshToken)
+	}
+
+	// The old (rotated-out) refresh token no longer works.
+	oldBody, _ := json.Marshal(map[string]string{"refresh_token": reg.RefreshToken})
+	oldReq := httptest.NewRequest(http.MethodPost, "/v1/auth/refresh", bytes.NewReader(oldBody))
+	oldReq.Header.Set("Content-Type", "application/json")
+	oldW := httptest.NewRecorder()
+	r.ServeHTTP(oldW, oldReq)
+	if oldW.Code != http.StatusUnauthorized {
+		t.Fatalf("expected the rotated-out token to be rejected: got %d body=%s", oldW.Code, oldW.Body.String())
+	}
 }
 
 // TestIntegration_VerifyEmail_AlreadyVerifiedIsConflict covers
