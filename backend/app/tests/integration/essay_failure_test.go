@@ -77,6 +77,62 @@ func TestIntegration_SubmitEssay_CorrectionFailureDoesNotLoseStreakCredit(t *tes
 	}
 }
 
+// TestIntegration_SubmitEssay_ReconcileOnce_TimesOutStalePendingSubmission
+// covers ReconcileOnce's "still pending, past GradingTimeout" default
+// branch -- previously only its "completed" and "failed" job-status
+// branches were tested.
+func TestIntegration_SubmitEssay_ReconcileOnce_TimesOutStalePendingSubmission(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, token := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+
+	w := submitEssay(t, r, token)
+	if w.Code != http.StatusAccepted {
+		t.Fatalf("submit: got %d body=%s", w.Code, w.Body.String())
+	}
+	var resp struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
+
+	// Backdate submitted_at past GradingTimeout (10m) so this submission is
+	// stale, but leave its correction_jobs row 'pending' (never completed or
+	// failed) -- ReconcileOnce's timeout branch is the only thing that can
+	// resolve a submission stuck like this.
+	if _, err := pool.Exec(ctx,
+		`UPDATE essay.essay_submissions SET submitted_at = now() - interval '11 minutes' WHERE id = $1`,
+		resp.ID,
+	); err != nil {
+		t.Fatalf("backdate submitted_at: %v", err)
+	}
+
+	essayRepo := essayrepo.NewRepository(pool, streakrepo.NewRepository(), nil)
+	reconciled, err := essayRepo.ReconcileOnce(ctx)
+	if err != nil {
+		t.Fatalf("ReconcileOnce: %v", err)
+	}
+	if reconciled < 1 {
+		t.Fatalf("expected at least 1 submission reconciled (timed out), got %d", reconciled)
+	}
+
+	getReq := httptest.NewRequest(http.MethodGet, "/v1/essays/"+resp.ID, nil)
+	getReq.Header.Set("Authorization", "Bearer "+token)
+	getW := httptest.NewRecorder()
+	r.ServeHTTP(getW, getReq)
+	var got struct {
+		Status string `json:"status"`
+	}
+	if err := json.Unmarshal(getW.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Status != "failed" {
+		t.Fatalf("expected status=failed after a grading timeout, got %q", got.Status)
+	}
+}
+
 // TestIntegration_GetEssay_UnknownIDReturns404 covers the not-found branch
 // of essay.Repository.scanSubmission (pgx.ErrNoRows -> apperrors.NotFound),
 // which the graded-flow tests never exercise since they only ever fetch a

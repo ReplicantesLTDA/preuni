@@ -37,6 +37,9 @@
 # background goroutine's DB write instead of racing it. 71.9% -> 72.1%
 # after covering RefreshTokenHandler's success path (rotate + re-issue),
 # previously only exercised via its missing-field validation branch.
+# 72.1% -> 72.3% after covering ReconcileOnce's "still pending, past
+# GradingTimeout" default branch, previously only its completed/failed
+# job-status branches were tested.
 # Floor set to 71 for headroom.
 #
 # Usage: ./check-coverage.sh (run from backend/app/)
