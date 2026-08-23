@@ -130,10 +130,13 @@ omit = ["*/tests/*"]
 # 87.98% -> 88.56% after covering the remaining edge branches in
 # audit_log_repo, correction_repo._mark_job, schemas.load_schema, and
 # observability.metrics.initialize_app_info -- all 100% now.
+# 88.56% -> 89.22% after covering scripts/correct_essay.py's motivational-
+# texts file read, _make_provider's ollama branch, and _typed_error's
+# generic-LLMError fallback (92% now).
 # Remaining gap: CorrectionWorker's LISTEN/NOTIFY run loop (harder to test
 # -- needs a real asyncpg LISTEN connection under async loop control) and
 # tracing.py's OTLP-exporter-failure branch (needs a real network failure).
-fail_under = 88
+fail_under = 89
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
