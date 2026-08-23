@@ -47,6 +47,9 @@
 # covering PasswordResetHandler (unknown email, weak new password) and
 # LoginHandler (unknown email, unverified email, wrong password) branches
 # that only had their happy path or missing-field validation tested.
+# 73.6% -> 74.2% after covering ChangePasswordHandler (wrong current
+# password, weak new password), OTPLoginVerifyHandler (unknown email),
+# and ChangeEmailConfirmHandler (no OTP ever requested) branches.
 # Floor set to 73 for headroom.
 #
 # Usage: ./check-coverage.sh (run from backend/app/)

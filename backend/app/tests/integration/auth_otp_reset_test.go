@@ -111,6 +111,21 @@ func TestIntegration_OTPLoginRequest_GeneratesOTPForVerifiedUser(t *testing.T) {
 	waitForOTP(t, ctx, pool, studentID, "LOGIN_OTP")
 }
 
+// TestIntegration_OTPLogin_VerifyUnknownEmailIsRejected covers
+// OTPLoginVerifyHandler's FindByEmail-fails branch, previously untested.
+func TestIntegration_OTPLogin_VerifyUnknownEmailIsRejected(t *testing.T) {
+	r, _ := setup(t)
+
+	body, _ := json.Marshal(map[string]string{"email": "nobody-here@preuni.test", "otp": "123456"})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/otp/verify", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("otp verify for an unknown email: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
 // TestIntegration_PasswordResetRequest_GeneratesOTPForVerifiedUser is the
 // same coverage gap as above, for PasswordResetRequestHandler.
 func TestIntegration_PasswordResetRequest_GeneratesOTPForVerifiedUser(t *testing.T) {

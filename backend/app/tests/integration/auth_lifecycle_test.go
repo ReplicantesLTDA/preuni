@@ -65,6 +65,50 @@ func TestIntegration_ChangePassword_Succeeds(t *testing.T) {
 	}
 }
 
+// TestIntegration_ChangePassword_WrongCurrentPasswordIsRejected covers
+// ChangePasswordHandler's CheckPassword-fails branch, previously untested.
+func TestIntegration_ChangePassword_WrongCurrentPasswordIsRejected(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, token := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+
+	body, _ := json.Marshal(map[string]string{
+		"current_password": "TotallyWrong123",
+		"new_password":     "N3wP@ssw0rd456",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/password/change", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("change password with the wrong current password: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
+// TestIntegration_ChangePassword_WeakNewPasswordIsRejected covers
+// ChangePasswordHandler's ValidatePassword branch, previously untested.
+func TestIntegration_ChangePassword_WeakNewPasswordIsRejected(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, token := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+
+	body, _ := json.Marshal(map[string]string{
+		"current_password": "P@ssw0rd123",
+		"new_password":     "short",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/password/change", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("change password with a weak new password: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
 // TestIntegration_ChangeEmail_RequestThenConfirmSucceeds covers both
 // ChangeEmail handlers' success paths -- OTPRepository.Create/MarkUsed and
 // CredentialsRepository.UpdateEmail -- previously only exercised via their
@@ -109,6 +153,26 @@ func TestIntegration_ChangeEmail_RequestThenConfirmSucceeds(t *testing.T) {
 
 	if got := studentEmail(t, ctx, pool, studentID); got != newEmail {
 		t.Fatalf("email not updated: got %q, want %q", got, newEmail)
+	}
+}
+
+// TestIntegration_ChangeEmail_ConfirmWithoutAnyOTPIsRejected covers
+// ChangeEmailConfirmHandler's FindActiveByCredentialAndPurpose-fails
+// branch (no OTP was ever requested), previously untested.
+func TestIntegration_ChangeEmail_ConfirmWithoutAnyOTPIsRejected(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, token := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+
+	body, _ := json.Marshal(map[string]string{"new_email": "new+" + studentID + "@preuni.test", "otp": "123456"})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/email/change/confirm", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("change email confirm without any OTP requested: got %d body=%s", w.Code, w.Body.String())
 	}
 }
 
