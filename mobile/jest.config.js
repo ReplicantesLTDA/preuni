@@ -24,16 +24,17 @@ module.exports = {
     '!src/**/index.{ts,tsx}',
   ],
   // Constitution Principle II: coverage floor is 90%, reached incrementally
-  // (Principle VI: small PRs). 59.3% -> 77.0% after adding screen tests for
-  // all 6 (auth) route screens (login, register, otp-login, password-reset,
-  // verify-email, welcome) -- previously untested legacy code. Floor set to
-  // 74 for headroom.
+  // (Principle VI: small PRs). 77.0% -> 78.4% after adding tests for
+  // app/index.tsx and app/+not-found.tsx (root-level redirects). Floor set
+  // to 76 for headroom. app/_layout.tsx intentionally left untested --
+  // it's native-module bootstrap wiring (fonts, splash screen, gesture
+  // handler) with low unit-test ROI.
   coverageThreshold: {
     global: {
-      lines: 74,
-      statements: 74,
-      functions: 70,
-      branches: 62,
+      lines: 76,
+      statements: 76,
+      functions: 72,
+      branches: 63,
     },
   },
 };
