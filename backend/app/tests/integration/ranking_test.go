@@ -114,6 +114,24 @@ func TestIntegration_Medals_EmptyForFreshUser(t *testing.T) {
 	}
 }
 
+// TestIntegration_Ranking_Me_404sForAUserWithNoCurrentWeekEntry covers
+// MyRanking's not-found branch, which TestIntegration_Ranking_MeAndWeeklyEndpoints
+// never reaches (that test always calls EnsureCurrentWeekEntry first).
+func TestIntegration_Ranking_Me_404sForAUserWithNoCurrentWeekEntry(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, token := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/ranking/me", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("ranking/me for a fresh user: got %d, want 404, body=%s", w.Code, w.Body.String())
+	}
+}
+
 func TestIntegration_WeekClose_PromotesTopDemotesBottomAndResetsScore(t *testing.T) {
 	r, pool := setup(t)
 	ctx := context.Background()
