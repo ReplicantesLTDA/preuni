@@ -134,11 +134,18 @@ omit = ["*/tests/*"]
 # texts file read, _make_provider's ollama branch, and _typed_error's
 # generic-LLMError fallback (92% now), then 89.66% after covering
 # entrypoint._main by mocking CorrectionWorker.run (entrypoint.py 100% now).
-# Remaining gap: CorrectionWorker's LISTEN/NOTIFY run loop itself (harder to
-# test -- needs a real asyncpg LISTEN connection under async loop control)
-# and tracing.py's OTLP-exporter-failure branch (needs a real network
-# failure). Floor kept at 89 -- real number is 89.66%, just under 90%.
-fail_under = 89
+# 89.66% -> 92.89% (constitution's 90% floor reached) after actually
+# testing CorrectionWorker.run()'s LISTEN/NOTIFY loop: starts a real
+# worker against the test DB, seeds a pending correction_jobs row, lets
+# the poll backstop claim+grade it via FakeProvider, then stops the
+# worker and asserts the correction reached 'completed' with the right
+# score (correction_worker.py 60% -> 94%). Also covered tracing.py's
+# OTLP-exporter-failure branch by mocking OTLPSpanExporter to raise
+# (tracing.py 100% now).
+# Remaining gap: correction_worker.py lines 237-252,306,326 -- the
+# _listen_task's own exception handler when asyncpg.connect itself fails;
+# would need to break the real DB connection mid-test, low value.
+fail_under = 92
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
