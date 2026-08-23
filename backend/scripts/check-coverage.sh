@@ -64,14 +64,19 @@
 # NewCredentials, HashPassword (incl. its previously-untested bcrypt-
 # 72-byte-limit error branch, a real gap between what ValidatePassword
 # allows (255 chars) and what bcrypt accepts), and tierIndex's unknown-
-# tier fallback.
-# Floor set to 74 for headroom.
+# tier fallback. 75.5% -> 76.7% after covering internal/config (0%
+# before, pure env-var parsing -- Load/getEnv/envInt/require), the
+# in-process email adapter's Send (success/validation-failure/
+# underlying-failure), defaultUsername's short-id branch, and Create's
+# duplicate-username 409 branch (isDuplicateKeyError, previously
+# unreachable via any real registration flow).
+# Floor set to 76 for headroom.
 #
 # Usage: ./check-coverage.sh (run from backend/app/)
 
 set -euo pipefail
 
-COVERAGE_FLOOR="${COVERAGE_FLOOR:-74}"
+COVERAGE_FLOOR="${COVERAGE_FLOOR:-76}"
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../app"
 
