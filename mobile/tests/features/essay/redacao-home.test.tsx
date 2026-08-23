@@ -46,6 +46,60 @@ describe('RedacaoHome', () => {
     await waitFor(() => expect(getByText('Nenhuma redação ainda')).toBeTruthy());
   });
 
+  it('shows pending and failed status labels for their respective essays', async () => {
+    fetchMock.on('GET', '/v1/streaks/me', {
+      status: 200,
+      body: { current_streak: 0, longest_streak: 0, last_active_day: null },
+    });
+    fetchMock.on('GET', '/v1/essays', {
+      status: 200,
+      body: [
+        { id: '00000000-0000-4000-a000-000000000002', status: 'pending', submitted_at: '2026-08-22T12:00:00Z' },
+        { id: '00000000-0000-4000-a000-000000000003', status: 'failed', submitted_at: '2026-08-22T12:00:00Z' },
+      ],
+    });
+
+    const { Wrapper } = buildWrapper();
+    const { getByText } = render(<RedacaoHome />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(getByText('Corrigindo sua redação…')).toBeTruthy());
+    expect(getByText('Não foi possível corrigir esta redação.')).toBeTruthy();
+  });
+
+  it('navigates to an essay detail screen when tapped', async () => {
+    fetchMock.on('GET', '/v1/streaks/me', {
+      status: 200,
+      body: { current_streak: 0, longest_streak: 0, last_active_day: null },
+    });
+    fetchMock.on('GET', '/v1/essays', {
+      status: 200,
+      body: [{ id: '00000000-0000-4000-a000-000000000004', status: 'pending', submitted_at: '2026-08-22T12:00:00Z' }],
+    });
+
+    const { Wrapper } = buildWrapper();
+    const { getByText } = render(<RedacaoHome />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(getByText('Corrigindo sua redação…')).toBeTruthy());
+    fireEvent.press(getByText('Corrigindo sua redação…'));
+    expect(mockPush).toHaveBeenCalledWith('/redacao/00000000-0000-4000-a000-000000000004');
+  });
+
+  it('navigates to the write screen with the chosen theme', async () => {
+    fetchMock.on('GET', '/v1/streaks/me', {
+      status: 200,
+      body: { current_streak: 0, longest_streak: 0, last_active_day: null },
+    });
+    fetchMock.on('GET', '/v1/essays', { status: 200, body: [] });
+
+    const { Wrapper } = buildWrapper();
+    const { getAllByText } = render(<RedacaoHome />, { wrapper: Wrapper });
+
+    fireEvent.press(getAllByText('Começar')[0]!);
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({ pathname: '/redacao/write' }),
+    );
+  });
+
   it('navigates to the write screen', async () => {
     fetchMock.on('GET', '/v1/streaks/me', {
       status: 200,

@@ -40,18 +40,22 @@ module.exports = {
   // useStudentMe, useVerifyEmail), default-prop branches across several
   // shared components (Card, ScreenContainer, Skeleton, ErrorState, Toast,
   // Button, TopStatusBar, NextActivityCard, SubjectGrid), and more
-  // onError-toast branches in perfil/social screens. Floor set to 85 for
-  // headroom. app/_layout.tsx and the per-tab _layout.tsx Stack wrappers
-  // intentionally left untested -- native-module bootstrap wiring /
-  // trivial one-liners with low unit-test ROI. Remaining real gaps:
-  // redacao/index.tsx, redacao/write.tsx, trilha/index.tsx,
-  // perfil/index.tsx (lines 94-109), useFonts.ts.
+  // onError-toast branches in perfil/social screens, and now 87.3% after
+  // redacao/index.tsx (pending/failed status labels, essay-item nav,
+  // sample-prompt nav), write.tsx (429 quota-exceeded + generic-error
+  // toast branches), perfil/index.tsx (all 6 remaining menu links), and
+  // useFonts.ts (mocked expo-font, both loaded/error branches). Floor set
+  // to 86 for headroom. app/_layout.tsx and the per-tab _layout.tsx Stack
+  // wrappers intentionally left untested -- native-module bootstrap wiring
+  // / trivial one-liners with low unit-test ROI. Remaining real gaps:
+  // trilha/index.tsx's RefreshControl.onRefresh (needs a testID added)
+  // and computeGreeting's time-of-day branches (needs Date mocking).
   coverageThreshold: {
     global: {
-      lines: 85,
-      statements: 85,
-      functions: 82,
-      branches: 73,
+      lines: 86,
+      statements: 86,
+      functions: 84,
+      branches: 76,
     },
   },
 };

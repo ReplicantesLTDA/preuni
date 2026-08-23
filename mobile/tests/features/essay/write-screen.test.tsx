@@ -43,4 +43,38 @@ describe('WriteEssayScreen', () => {
 
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/redacao/00000000-0000-4000-a000-000000000001'));
   });
+
+  it('shows the quota-exceeded toast on a 429', async () => {
+    fetchMock.on('POST', '/v1/essays', {
+      status: 429,
+      body: { error: { message: 'Muitas tentativas.' } },
+    });
+    const { Wrapper } = buildWrapper();
+    const { getByLabelText, getByText, findByText } = render(<WriteEssayScreen />, { wrapper: Wrapper });
+
+    fireEvent.changeText(getByLabelText('Título do tema'), 'Tema');
+    fireEvent.changeText(getByLabelText('Contexto do tema'), 'Contexto');
+    fireEvent.changeText(getByLabelText('Sua redação'), 'Texto da redação');
+    fireEvent.press(getByText('Enviar redação'));
+
+    expect(await findByText('Você já usou sua redação gratuita de hoje. Volte amanhã ou assine o Pro.')).toBeTruthy();
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it('shows a generic toast on any other submission failure', async () => {
+    fetchMock.on('POST', '/v1/essays', {
+      status: 500,
+      body: { error: { message: 'boom' } },
+    });
+    const { Wrapper } = buildWrapper();
+    const { getByLabelText, getByText, findByText } = render(<WriteEssayScreen />, { wrapper: Wrapper });
+
+    fireEvent.changeText(getByLabelText('Título do tema'), 'Tema');
+    fireEvent.changeText(getByLabelText('Contexto do tema'), 'Contexto');
+    fireEvent.changeText(getByLabelText('Sua redação'), 'Texto da redação');
+    fireEvent.press(getByText('Enviar redação'));
+
+    expect(await findByText('Não foi possível enviar sua redação.')).toBeTruthy();
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
 });

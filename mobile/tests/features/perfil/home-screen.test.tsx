@@ -48,8 +48,26 @@ describe('PerfilHome', () => {
   it('navigates to each menu destination', () => {
     const { getByLabelText } = render(<PerfilHome />, { wrapper: buildWrapper().Wrapper });
 
+    fireEvent.press(getByLabelText('Amigos'));
+    expect(mockPush).toHaveBeenCalledWith('/(tabs)/perfil/friends');
+
+    fireEvent.press(getByLabelText('Ranking e medalhas'));
+    expect(mockPush).toHaveBeenCalledWith('/(tabs)/perfil/ranking');
+
     fireEvent.press(getByLabelText('Editar perfil'));
     expect(mockPush).toHaveBeenCalledWith('/(tabs)/perfil/edit');
+
+    fireEvent.press(getByLabelText('Alterar e-mail'));
+    expect(mockPush).toHaveBeenCalledWith('/(tabs)/perfil/change-email');
+
+    fireEvent.press(getByLabelText('Alterar senha'));
+    expect(mockPush).toHaveBeenCalledWith('/(tabs)/perfil/change-password');
+
+    fireEvent.press(getByLabelText('Exportar meus dados'));
+    expect(mockPush).toHaveBeenCalledWith('/(tabs)/perfil/data-export');
+
+    fireEvent.press(getByLabelText('Excluir conta'));
+    expect(mockPush).toHaveBeenCalledWith('/(tabs)/perfil/delete-account');
   });
 
   it('logs out and clears the session on sign-out', async () => {
