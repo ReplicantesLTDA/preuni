@@ -25,16 +25,18 @@ module.exports = {
   ],
   // Constitution Principle II: coverage floor is 90%, reached incrementally
   // (Principle VI: small PRs). 77.0% -> 78.4% after adding tests for
-  // app/index.tsx and app/+not-found.tsx (root-level redirects). Floor set
-  // to 76 for headroom. app/_layout.tsx intentionally left untested --
-  // it's native-module bootstrap wiring (fonts, splash screen, gesture
-  // handler) with low unit-test ROI.
+  // app/index.tsx and app/+not-found.tsx (root-level redirects), then
+  // 80.9% after covering (tabs)/perfil/index.tsx (the profile hub screen,
+  // 0% before -- 128 lines) and (tabs)/perfil/edit.tsx's save/cancel flow.
+  // Floor set to 79 for headroom. app/_layout.tsx and the per-tab
+  // _layout.tsx Stack wrappers intentionally left untested -- native-module
+  // bootstrap wiring / trivial one-liners with low unit-test ROI.
   coverageThreshold: {
     global: {
-      lines: 76,
-      statements: 76,
-      functions: 72,
-      branches: 63,
+      lines: 79,
+      statements: 79,
+      functions: 75,
+      branches: 66,
     },
   },
 };

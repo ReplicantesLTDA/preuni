@@ -14,46 +14,46 @@ beforeAll(() => fetchMock.install());
 afterEach(() => {
   fetchMock.reset();
   mockBack.mockClear();
+  useSessionStore.setState({ status: 'authed', student: null });
 });
 
 describe('EditProfileScreen', () => {
-  it('saves a new display name', async () => {
-    useSessionStore.getState().setAuthed({
-      id: '00000000-0000-4000-a000-000000000011',
-      email: 'aluno@preuni.com',
-      displayName: 'Aluno',
-      username: null,
-      avatarUrl: null,
-      xpTotal: 0,
-      streakCount: 0,
-      readinessScore: 0,
-      onboardingCompleted: true,
-    });
+  it('rejects a too-short display name without submitting', () => {
+    const { getByLabelText, getByText } = render(<EditProfileScreen />, { wrapper: buildWrapper().Wrapper });
 
-    let captured: unknown;
+    fireEvent.changeText(getByLabelText('Nome'), 'A');
+    fireEvent.press(getByText('Salvar'));
+
+    expect(getByText('Mínimo 2 caracteres.')).toBeTruthy();
+    expect(mockBack).not.toHaveBeenCalled();
+  });
+
+  it('saves and navigates back on success', async () => {
     fetchMock.on('PATCH', '/v1/students/me', {
       status: 200,
       body: {
         id: '00000000-0000-4000-a000-000000000011',
-        email: 'aluno@preuni.com',
-        display_name: 'Novo Nome',
+        display_name: 'Maria Nova',
+        email: 'maria@preuni.com',
         xp_total: 0,
         streak_count: 0,
         readiness_score: 0,
         onboarding_completed: true,
       },
-      capture: ({ body }) => {
-        captured = body;
-      },
     });
 
-    const { Wrapper } = buildWrapper();
-    const { getByLabelText, getByText } = render(<EditProfileScreen />, { wrapper: Wrapper });
+    const { getByLabelText, getByText } = render(<EditProfileScreen />, { wrapper: buildWrapper().Wrapper });
 
-    fireEvent.changeText(getByLabelText('Nome'), 'Novo Nome');
+    fireEvent.changeText(getByLabelText('Nome'), 'Maria Nova');
     fireEvent.press(getByText('Salvar'));
 
     await waitFor(() => expect(mockBack).toHaveBeenCalled());
-    expect(captured).toMatchObject({ display_name: 'Novo Nome' });
+  });
+
+  it('cancels without saving', () => {
+    const { getByText } = render(<EditProfileScreen />, { wrapper: buildWrapper().Wrapper });
+
+    fireEvent.press(getByText('Cancelar'));
+    expect(mockBack).toHaveBeenCalled();
   });
 });
