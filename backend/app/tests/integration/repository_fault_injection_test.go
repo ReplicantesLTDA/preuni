@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http/httptest"
@@ -202,4 +203,91 @@ func TestIntegration_HandlerFaultInjection_CanceledContextReturnsErrorStatus(t *
 			}
 		})
 	}
+}
+
+// TestIntegration_EssaySubmit_CanceledContextReturnsInternalError covers
+// essay.Repository.Submit's apperrors.Internal(err) branch: Submit opens
+// its own tx via r.db.Begin(ctx), exactly like reconciler.go, so a
+// canceled context fails Begin itself -- genuine pgx behavior.
+func TestIntegration_EssaySubmit_CanceledContextReturnsInternalError(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, _ := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+
+	canceled, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	repo := essayrepo.NewRepository(pool, streakrepo.NewRepository(), nil)
+	_, err := repo.Submit(canceled, studentID, "Tema", "Contexto qualquer com mais de vinte caracteres.", "Texto de redação de teste para o fluxo de integração.")
+	if err == nil {
+		t.Fatal("expected an error from a canceled context")
+	}
+}
+
+// TestIntegration_MoreHandlerFaultInjection_CanceledContextReturnsErrorStatus
+// extends the canceled-context HTTP-layer technique to more handlers whose
+// error-response branch was previously untested: DeleteStudent, DataExport,
+// UpdateStudent (a PATCH with a real body, so the DB call -- not JSON
+// decoding -- is what fails), gamification's WeeklyLeaderboard, and MyMedals.
+func TestIntegration_MoreHandlerFaultInjection_CanceledContextReturnsErrorStatus(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, token := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+
+	canceled, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	t.Run("DeleteStudent", func(t *testing.T) {
+		req := httptest.NewRequest("DELETE", "/v1/students/me", nil).WithContext(canceled)
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		if w.Code == 200 || w.Code == 204 {
+			t.Fatalf("expected an error status for a canceled context, got %d body=%s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("DataExport", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/v1/students/me/data-export", nil).WithContext(canceled)
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		if w.Code == 200 {
+			t.Fatalf("expected an error status for a canceled context, got 200 body=%s", w.Body.String())
+		}
+	})
+
+	t.Run("UpdateStudent", func(t *testing.T) {
+		body, _ := json.Marshal(map[string]string{"display_name": "Won't Persist"})
+		req := httptest.NewRequest("PATCH", "/v1/students/me", bytes.NewReader(body)).WithContext(canceled)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		if w.Code == 200 {
+			t.Fatalf("expected an error status for a canceled context, got 200 body=%s", w.Body.String())
+		}
+	})
+
+	t.Run("WeeklyLeaderboard", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/v1/ranking/weekly?tier=bronze", nil).WithContext(canceled)
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		if w.Code == 200 {
+			t.Fatalf("expected an error status for a canceled context, got 200 body=%s", w.Body.String())
+		}
+	})
+
+	t.Run("MyMedals", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/v1/medals/me", nil).WithContext(canceled)
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		if w.Code == 200 {
+			t.Fatalf("expected an error status for a canceled context, got 200 body=%s", w.Body.String())
+		}
+	})
 }

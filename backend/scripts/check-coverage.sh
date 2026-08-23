@@ -94,14 +94,19 @@
 # OnboardingHandler/ListEssays/GetStreak/ListFriends. Also added
 # TestIntegration_Reconciler_MissingCorrectionsRowIsInternalError (a
 # completed job with no matching corrections row -- real inconsistent-
-# state edge case).
-# Floor set to 79 for headroom.
+# state edge case). 79.6% -> 80.2% after extending both techniques
+# further: essay.Repository.Submit opens its own tx (same shape as
+# reconciler.go), so canceled-context fault injection worked directly;
+# HTTP-layer canceled-context tests added for DeleteStudent, DataExport,
+# UpdateStudent (a real PATCH body, so the DB call fails, not JSON
+# decoding), gamification's WeeklyLeaderboard, and MyMedals.
+# Floor set to 80 for headroom.
 #
 # Usage: ./check-coverage.sh (run from backend/app/)
 
 set -euo pipefail
 
-COVERAGE_FLOOR="${COVERAGE_FLOOR:-79}"
+COVERAGE_FLOOR="${COVERAGE_FLOOR:-80}"
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../app"
 
