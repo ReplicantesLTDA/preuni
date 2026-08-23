@@ -111,14 +111,26 @@
 # before. Remaining gaps mostly need a *second* DB call to fail after a
 # first one succeeds (single-cancel-before-request can't target that),
 # or breaking crypto/rand/HMAC internals (not real fault injection) --
-# diminishing returns confirmed across two dedicated passes now.
-# Floor set to 80 for headroom.
+# diminishing returns confirmed across two dedicated passes... until
+# 80.8% -> 81.9% via a genuinely new deterministic technique: a pgx
+# QueryTracer (nthQueryFailTracer, tests/integration/nth_query_fail_*.go)
+# that returns an already-canceled context on exactly the Nth query,
+# confirmed by reading pgx v5.9.2's Conn.Query source and empirically
+# verified against real Postgres before use (each new test also run 3x
+# individually with zero flakiness). Reaches "first DB call succeeds,
+# second fails" branches plain canceled-context injection structurally
+# cannot: RefreshTokenHandler's FindByID/Store/Revoke-fails,
+# LogoutHandler's Revoke-fails, OnboardingHandler's FindByID-fails,
+# essay.getGrade's Internal(err) branch, VerifyEmailHandler's
+# MarkUsed/MarkEmailVerified-fails. This technique generalizes to any
+# other remaining "second-call" gap in the codebase.
+# Floor set to 81 for headroom.
 #
 # Usage: ./check-coverage.sh (run from backend/app/)
 
 set -euo pipefail
 
-COVERAGE_FLOOR="${COVERAGE_FLOOR:-80}"
+COVERAGE_FLOOR="${COVERAGE_FLOOR:-81}"
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../app"
 
