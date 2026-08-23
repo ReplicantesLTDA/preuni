@@ -41,6 +41,29 @@ func TestIntegration_Onboarding_MarksCompleted(t *testing.T) {
 	}
 }
 
+// TestIntegration_Onboarding_CanceledContextReturns500 covers
+// OnboardingHandler.ServeHTTP's error-response branches (63.6% before):
+// a request whose context is already canceled before it reaches the
+// handler makes SetOnboardingCompleted genuinely fail with a real pgx
+// error, exactly as a real client disconnect or request timeout would.
+func TestIntegration_Onboarding_CanceledContextReturns500(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, token := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+
+	canceled, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	req := httptest.NewRequest(http.MethodPatch, "/v1/students/me/onboarding", nil).WithContext(canceled)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code == http.StatusOK {
+		t.Fatalf("expected an error status for a canceled context, got 200 body=%s", w.Body.String())
+	}
+}
+
 // TestIntegration_DeleteStudent_Anonymizes covers DELETE /v1/students/me.
 func TestIntegration_DeleteStudent_Anonymizes(t *testing.T) {
 	r, pool := setup(t)

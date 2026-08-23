@@ -84,16 +84,24 @@
 # social.ListFriends, user.Update) and direct unit tests for
 # StudentRepository's unexported contains/join/itoa helpers' previously
 # unreachable branches (Update() always calls them with found/non-empty
-# input). Remaining gap: reconciler.go and streak.go take an already-open
-# pgx.Tx rather than the pool, so canceling ctx after Begin() doesn't
-# reliably fail them -- needs a proper broken-tx harness, not attempted.
-# Floor set to 78 for headroom.
+# input). 78.7% -> 79.6% after cracking the tx-based gap: reconciler.go
+# actually opens its own tx via r.db.Begin(ctx) (canceled-context works
+# directly); streak.go's GetForUpdate/RecordSubmission take a caller-
+# supplied pgx.Tx, solved by pool.Begin(ctx) + immediate Rollback(ctx)
+# then calling the function with that now-closed tx -- pgx genuinely
+# returns "tx is closed". Also proved canceled-context fault injection
+# works at the HTTP layer via req.WithContext(canceledCtx), used for
+# OnboardingHandler/ListEssays/GetStreak/ListFriends. Also added
+# TestIntegration_Reconciler_MissingCorrectionsRowIsInternalError (a
+# completed job with no matching corrections row -- real inconsistent-
+# state edge case).
+# Floor set to 79 for headroom.
 #
 # Usage: ./check-coverage.sh (run from backend/app/)
 
 set -euo pipefail
 
-COVERAGE_FLOOR="${COVERAGE_FLOOR:-78}"
+COVERAGE_FLOOR="${COVERAGE_FLOOR:-79}"
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../app"
 

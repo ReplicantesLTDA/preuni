@@ -2,6 +2,8 @@ package integration_test
 
 import (
 	"context"
+	"encoding/json"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -75,4 +77,129 @@ func TestIntegration_RepositoryFaultInjection_CanceledContextReturnsInternalErro
 			t.Fatal("expected an error from a canceled context")
 		}
 	})
+
+	t.Run("essay.ReconcileOnce", func(t *testing.T) {
+		repo := essayrepo.NewRepository(pool, streakrepo.NewRepository(), nil)
+		if _, err := repo.ReconcileOnce(canceled); err == nil {
+			t.Fatal("expected an error from a canceled context")
+		}
+	})
+}
+
+// TestIntegration_StreakRepository_ClosedTxReturnsInternalError reaches
+// streak.Repository.GetForUpdate/RecordSubmission's apperrors.Internal(err)
+// branches with a genuinely closed pgx.Tx (begun then immediately rolled
+// back by the test) -- every real call site opens a fresh tx and passes it
+// straight in, so these branches were previously unreachable.
+func TestIntegration_StreakRepository_ClosedTxReturnsInternalError(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, _ := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+
+	repo := streakrepo.NewRepository()
+
+	t.Run("GetForUpdate", func(t *testing.T) {
+		tx, err := pool.Begin(ctx)
+		if err != nil {
+			t.Fatalf("begin tx: %v", err)
+		}
+		if err := tx.Rollback(ctx); err != nil {
+			t.Fatalf("rollback tx: %v", err)
+		}
+		if _, err := repo.GetForUpdate(ctx, tx, studentID); err == nil {
+			t.Fatal("expected an error from a closed tx")
+		}
+	})
+
+	t.Run("RecordSubmission", func(t *testing.T) {
+		tx, err := pool.Begin(ctx)
+		if err != nil {
+			t.Fatalf("begin tx: %v", err)
+		}
+		if err := tx.Rollback(ctx); err != nil {
+			t.Fatalf("rollback tx: %v", err)
+		}
+		if _, err := repo.RecordSubmission(ctx, tx, studentID, time.Now().UTC()); err == nil {
+			t.Fatal("expected an error from a closed tx")
+		}
+	})
+}
+
+// TestIntegration_Reconciler_MissingCorrectionsRowIsInternalError covers
+// reconcileCompleted's row.Scan(err) branch: a correction_jobs row marked
+// 'completed' with no matching correction.corrections row (an inconsistent
+// state that shouldn't happen in practice, but the code has no special
+// handling for it -- it falls straight into apperrors.Internal(err) same
+// as any other DB error). Reached indirectly via ReconcileOnce since
+// reconcileCompleted itself is unexported.
+func TestIntegration_Reconciler_MissingCorrectionsRowIsInternalError(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, token := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+
+	w := submitEssay(t, r, token)
+	if w.Code != 202 {
+		t.Fatalf("submit: got %d body=%s", w.Code, w.Body.String())
+	}
+	var resp struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
+
+	var jobID string
+	if err := pool.QueryRow(ctx, `SELECT correction_job_id FROM essay.essay_submissions WHERE id = $1`, resp.ID).Scan(&jobID); err != nil {
+		t.Fatalf("read correction_job_id: %v", err)
+	}
+
+	// Mark the job completed WITHOUT ever inserting a matching
+	// correction.corrections row -- reconcileCompleted's QueryRow will
+	// genuinely find nothing.
+	if _, err := pool.Exec(ctx, `UPDATE correction.correction_jobs SET status = 'completed', completed_at = now() WHERE id = $1`, jobID); err != nil {
+		t.Fatalf("mark job completed: %v", err)
+	}
+
+	essayRepo := essayrepo.NewRepository(pool, streakrepo.NewRepository(), nil)
+	if _, err := essayRepo.ReconcileOnce(ctx); err == nil {
+		t.Fatal("expected ReconcileOnce to surface reconcileCompleted's missing-corrections-row error")
+	}
+}
+
+// TestIntegration_HandlerFaultInjection_CanceledContextReturnsErrorStatus
+// covers several GET-list handlers' error-response branches by giving the
+// *http.Request an already-canceled context before it reaches the router --
+// the same real pgx failure OnboardingHandler's canceled-context test
+// proved works at the HTTP layer, not just the repository layer directly.
+func TestIntegration_HandlerFaultInjection_CanceledContextReturnsErrorStatus(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, token := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+
+	canceled, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	cases := []struct {
+		name   string
+		method string
+		path   string
+	}{
+		{"ListEssays", "GET", "/v1/essays"},
+		{"GetStreak", "GET", "/v1/streaks/me"},
+		{"ListFriends", "GET", "/v1/friends"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(tc.method, tc.path, nil).WithContext(canceled)
+			req.Header.Set("Authorization", "Bearer "+token)
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, req)
+			if w.Code == 200 {
+				t.Fatalf("%s: expected an error status for a canceled context, got 200 body=%s", tc.name, w.Body.String())
+			}
+		})
+	}
 }
