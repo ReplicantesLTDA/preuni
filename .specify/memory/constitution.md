@@ -1,7 +1,11 @@
 <!--
 Sync Impact Report
 ==================
-Version change: 2.3.0 → 2.3.1 (PATCH — wording only: the correction
+Version change: 2.3.1 → 2.3.2 (PATCH — wording only: corrected the
+stale "Go 1.24" claim to describe the actual toolchain pin
+(go1.26.6, auto-fetched) accurately; no principle, gate, or rule changed)
+
+Prior: 2.3.0 → 2.3.1 (PATCH — wording only: the correction
 service's directory was renamed corretor-redacao/ → ai-corrector/
 throughout; no principle, gate, or rule changed)
 
@@ -51,9 +55,13 @@ Templates requiring updates:
 - .specify/templates/commands/*.md — ✅ no agent-specific references found
 
 Follow-up TODOs:
-- backend/app's go.mod declares `go 1.25.0` while this constitution and
-  CLAUDE.md say "Go 1.24" — a pre-existing discrepancy, not touched by
-  this amendment; worth reconciling separately.
+- backend/app's go.mod declares `go 1.25.0` while backend/pkg's declares
+  `go 1.24` — both pin `toolchain go1.26.6` (auto-fetched) for security
+  patches, so the actual build/CI toolchain is correct and consistent;
+  only the two modules' `go` directives themselves still differ. Docs
+  (CLAUDE.md, README.md) updated 2026-08-24 to describe this accurately
+  instead of the old blanket "Go 1.24" claim. Unifying the two `go`
+  directives is still open, low-priority cleanup.
 - mobile's `pnpm audit` gate blocks on critical only (34 high/moderate
   findings are transitive Expo/Metro build-tooling debt, tracked but not
   yet fixed) — revisit as Expo SDK releases catch up.
@@ -268,4 +276,4 @@ Every pull request must pass all of the following before merge:
   CI checks must be green, and at least one human reviewer must approve —
   no exceptions, including for AI-authored changes
 
-**Version**: 2.3.1 | **Ratified**: 2026-04-03 | **Last Amended**: 2026-08-24
+**Version**: 2.3.2 | **Ratified**: 2026-04-03 | **Last Amended**: 2026-08-24
