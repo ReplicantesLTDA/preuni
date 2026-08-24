@@ -40,7 +40,7 @@ preuni/
 │   │   ├── (onboarding)/           # authed + !onboardingCompleted — welcome, profile, interests
 │   │   └── (tabs)/                 # authed + onboardingCompleted — trilha, redacao, simulado, perfil (each with nested Stack)
 │   ├── src/
-│   │   ├── theme/                  # design tokens (sourced from wireframe.html)
+│   │   ├── theme/                  # design tokens (originally sourced from a design mockup; tokens.ts is now the source of truth)
 │   │   ├── components/             # shared UI primitives
 │   │   ├── features/<domain>/      # vertical slices: api.ts, hooks.ts, validation.ts
 │   │   ├── lib/api/                # typed fetch client + refresh interceptor + case converter + error mapping
