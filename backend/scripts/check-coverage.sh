@@ -128,13 +128,25 @@
 # ChangeEmailConfirmHandler, PasswordResetHandler (confirm),
 # OTPLoginVerifyHandler, and DeleteAccountHandler's second/third/fourth-
 # call failure branches (12 sub-cases, each verified 3x for flakiness).
-# Floor set to 83 for headroom.
+# 83.4% -> 85.8% after: AvatarHandler.ServeUpload/ServeConfirm (previously
+# 0% -- unwired-nowhere-tested handler; presigned-URL stub success,
+# missing-object_key validation, DB update, canceled-context failure);
+# Nth-query tracer extended to Login (invalid-JSON + refreshRepo.Store
+# fails), ChangeEmailRequest/ResendVerification's otpRepo.Create-fails
+# branches, and WeekClose's closeOneEntry rank-update/next-week-insert
+# Exec-fail branches (queries inside the per-tier loop, reached via a
+# directly-traced raw pool since WeekClose has no HTTP route);
+# PasswordResetRequest's unverified-email and unknown-email branches
+# (mirroring existing OTP-login coverage of the same shape); and
+# ListMedals' populated-result path (previously only empty-result and
+# canceled-context were tested, never the rows.Next()/Scan loop body).
+# Floor set to 85 for headroom.
 #
 # Usage: ./check-coverage.sh (run from backend/app/)
 
 set -euo pipefail
 
-COVERAGE_FLOOR="${COVERAGE_FLOOR:-83}"
+COVERAGE_FLOOR="${COVERAGE_FLOOR:-85}"
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../app"
 

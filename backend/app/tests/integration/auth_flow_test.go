@@ -16,9 +16,9 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/preuni/pkg/logger"
 	"github.com/preuni/app/internal/config"
 	"github.com/preuni/app/internal/router"
+	"github.com/preuni/pkg/logger"
 )
 
 func setup(t *testing.T) (http.Handler, *pgxpool.Pool) {
