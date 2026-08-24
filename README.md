@@ -51,7 +51,7 @@ preuni/
 
 ## Getting started
 
-Prerequisites: Docker, Go 1.24+, Node 20+ with `pnpm`, Python 3.12+ with `uv`.
+Prerequisites: Docker, Go 1.24+ (go.work pins toolchain 1.26.6, auto-fetched), Node 20+ with `pnpm`, Python 3.12+ with `uv`.
 
 ```bash
 # Local infra (Postgres + Redis)

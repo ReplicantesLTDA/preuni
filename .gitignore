@@ -49,6 +49,11 @@ mobile/.expo/
 mobile/coverage/
 *.tsbuildinfo
 
+# ─── E2E (Playwright) ────────────────────────────────────────────────────────
+e2e/test-results/
+e2e/playwright-report/
+e2e/.last-run.json
+
 # ─── Python (ai-corrector) ───────────────────────────────────────────────
 ai-corrector/.venv/
 ai-corrector/__pycache__/

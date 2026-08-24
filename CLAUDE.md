@@ -3,7 +3,7 @@
 Auto-generated from all feature plans. Last updated: 2026-08-24
 
 ## Active Technologies
-- Go 1.24 (monolith), Python 3.12 (correction service), TypeScript 5.9 / React Native 0.81 + Expo SDK 54 (mobile) + go-chi/chi v5, pgx/v5, golang-jwt/jwt v5, zap (Go); FastAPI, SQLAlchemy 2.x async, asyncpg, Alembic, structlog (Python); Expo Router 6, TanStack Query v5, Zustand v5 (mobile) (014-constitution-alignment-refactor)
+- Go 1.24/1.25 language target, toolchain pinned to 1.26.6 for security patches (monolith), Python 3.12 (correction service), TypeScript 5.9 / React Native 0.81 + Expo SDK 54 (mobile) + go-chi/chi v5, pgx/v5, golang-jwt/jwt v5, zap (Go); FastAPI, SQLAlchemy 2.x async, asyncpg, Alembic, structlog (Python); Expo Router 6, TanStack Query v5, Zustand v5 (mobile) (014-constitution-alignment-refactor)
 - 032-corrector-service-integration: infra-only — folds ai-corrector's standalone Postgres/Caddy deployment into the shared `infra/docker-compose.yml` stack (single Postgres instance, `correction` schema, no public ingress). No new language/framework.
 
 **Frontend (012-expo-rn-frontend — current)**
@@ -18,7 +18,7 @@ Auto-generated from all feature plans. Last updated: 2026-08-24
 
 **Backend (010-backend-monolith-cleanup)**
 
-- Single Go 1.24 binary at `backend/app/`. Module path `github.com/preuni/app`.
+- Single Go binary at `backend/app/` (go.mod's `go` directive is 1.25.0, `backend/pkg`'s is 1.24 — `go.work`/both modules pin `toolchain go1.26.6`, auto-fetched, for security patches). Module path `github.com/preuni/app`.
 - Domains under `app/internal/<domain>/`: `auth`, `user`, `mail` (live); `content`, `learning`, `simulation`, `dissertation`, `notification` (scaffolding, README-only).
 - go-chi/chi v5 (router), pgx/v5 (PostgreSQL), golang-jwt/jwt v5 (JWT), zap (logging), `net/smtp` (mail).
 - Shared infra in `backend/pkg/` (config, logger, errors, middleware).
