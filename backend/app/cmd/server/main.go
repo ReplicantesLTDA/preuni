@@ -1,6 +1,6 @@
 // Command server is the unified preuni backend monolith.
-// It serves the gateway-facing /v1/* HTTP surface from a single router,
-// while mail delivery and student provisioning are handled in-process.
+// It mounts the auth, user, and mail routers under a single chi.Router and
+// serves the gateway-facing /v1/* surface plus the internal endpoints.
 package main
 
 import (

@@ -31,6 +31,72 @@ describe('useUploadAvatar', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
   });
+
+  it('PUTs the image bytes for a real presigned URL, then confirms', async () => {
+    fetchMock.on('PUT', '/v1/students/me/avatar', {
+      status: 200,
+      body: { upload_url: 'https://s3.example.com/real-upload', object_key: 'avatars/def' },
+    });
+    fetchMock.on('POST', '/v1/students/me/avatar/confirm', { status: 200, body: STUDENT_BODY });
+
+    const originalFetch = globalThis.fetch;
+    const s3Put = jest.fn().mockResolvedValue(new Response('', { status: 200 }));
+    globalThis.fetch = jest.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : (input as URL).toString();
+      if (url === 'file:///fake.jpg') {
+        return Promise.resolve(new Response(new Blob(['fake-bytes'])));
+      }
+      if (url === 'https://s3.example.com/real-upload') {
+        return s3Put(input, init);
+      }
+      return originalFetch(input, init);
+    }) as typeof fetch;
+
+    try {
+      const { Wrapper } = buildWrapper();
+      const { result } = renderHook(() => useUploadAvatar(), { wrapper: Wrapper });
+
+      result.current.mutate({ uri: 'file:///fake.jpg', mimeType: 'image/jpeg' });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(s3Put).toHaveBeenCalledWith(
+        'https://s3.example.com/real-upload',
+        expect.objectContaining({ method: 'PUT' }),
+      );
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('throws when the S3 PUT fails', async () => {
+    fetchMock.on('PUT', '/v1/students/me/avatar', {
+      status: 200,
+      body: { upload_url: 'https://s3.example.com/real-upload', object_key: 'avatars/def' },
+    });
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = jest.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : (input as URL).toString();
+      if (url === 'file:///fake.jpg') {
+        return Promise.resolve(new Response(new Blob(['fake-bytes'])));
+      }
+      if (url === 'https://s3.example.com/real-upload') {
+        return Promise.resolve(new Response('', { status: 500 }));
+      }
+      return originalFetch(input, init);
+    }) as typeof fetch;
+
+    try {
+      const { Wrapper } = buildWrapper();
+      const { result } = renderHook(() => useUploadAvatar(), { wrapper: Wrapper });
+
+      result.current.mutate({ uri: 'file:///fake.jpg', mimeType: 'image/jpeg' });
+
+      await waitFor(() => expect(result.current.isError).toBe(true));
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 });
 
 describe('useDeleteMe', () => {

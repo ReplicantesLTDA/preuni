@@ -5,13 +5,19 @@ import (
 	"testing"
 )
 
+func TestNoopSender_Send_AlwaysSucceeds(t *testing.T) {
+	if err := (NoopSender{}).Send(Message{To: "someone@preuni.test"}); err != nil {
+		t.Fatalf("NoopSender.Send should never error, got: %v", err)
+	}
+}
+
 func TestSanitizeHeader_StripsCRLFAndNUL(t *testing.T) {
 	cases := map[string]string{
-		"plain":             "plain",
-		"with\r\nbcc":       "withbcc",
-		"with\rnewline":     "withnewline",
-		"with\nnewline":     "withnewline",
-		"with\x00nul":       "withnul",
+		"plain":            "plain",
+		"with\r\nbcc":      "withbcc",
+		"with\rnewline":    "withnewline",
+		"with\nnewline":    "withnewline",
+		"with\x00nul":      "withnul",
 		"Daniel\r\nBcc: a": "DanielBcc: a",
 	}
 	for in, want := range cases {

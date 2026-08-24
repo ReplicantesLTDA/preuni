@@ -49,17 +49,25 @@ module.exports = {
   // RefreshControl.onRefresh + computeGreeting's 3 time-of-day branches,
   // and server-side field-validation-error branches (422 with a `field`)
   // across the (auth) screens, plus resend-code and weak-password-on-
-  // confirm branches. Floor set to 89 for headroom. app/_layout.tsx and
+  // confirm branches, and now 90.41% -- constitution's 90% floor
+  // reached -- after useUploadAvatar's real-presigned-URL PUT path
+  // (success + S3-failure branches; only the dev-stub skip-PUT path was
+  // tested before), ApiProvider's development-mode request logger, and
+  // t.trilha.streak's singular/plural ternary (no i18n test file
+  // existed at all). Floor set to 90 for headroom. app/_layout.tsx and
   // the per-tab _layout.tsx Stack wrappers intentionally left untested --
   // native-module bootstrap wiring / trivial one-liners with low
-  // unit-test ROI. Remaining real gap: perfil/edit.tsx's avatar-picker
-  // flow (native ImagePicker, out of scope all session).
+  // unit-test ROI. Remaining real gaps: perfil/edit.tsx's and
+  // (onboarding)/profile.tsx's avatar-picker flows (native ImagePicker,
+  // out of scope all session), and Button/NextActivityCard's `pressed`-
+  // state style callbacks (RTL's fireEvent.press doesn't capture the
+  // active-touch frame).
   coverageThreshold: {
     global: {
-      lines: 89,
-      statements: 89,
-      functions: 87,
-      branches: 79,
+      lines: 90,
+      statements: 90,
+      functions: 91,
+      branches: 81,
     },
   },
 };
