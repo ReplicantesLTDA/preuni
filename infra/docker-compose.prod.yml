@@ -7,9 +7,10 @@ name: preuni-prod
 #      outbound tunnel to Cloudflare's edge, routed to `gateway` (see
 #      specs/035-self-hosted-prod-deploy/tasks.md T008). CGNAT on this NAS
 #      makes direct port-forwarding impossible anyway.
-#   2. `postgres`'s data directory is a bind mount to a real NAS dataset
-#      path (POSTGRES_DATA_PATH), not a Docker-managed volume, so a
-#      NAS-level snapshot/backup job can reach it directly (FR-008).
+#   2. `postgres`'s and `minio`'s data directories are bind mounts to real
+#      NAS dataset paths (POSTGRES_DATA_PATH, MINIO_DATA_PATH), not
+#      Docker-managed volumes, so a NAS-level snapshot/backup job can
+#      reach them directly (FR-008).
 #   3. `restart: unless-stopped` throughout, so the stack comes back on
 #      its own after a NAS reboot (SC-005) -- `on-failure` (dev's policy)
 #      does not guarantee that.
@@ -51,11 +52,50 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # ── Object storage (avatars) ─────────────────────────────────────────────────
+  # MinIO -- self-hosted, S3-compatible. Presigned upload URLs are generated
+  # against STORAGE_ENDPOINT (a *second* public hostname routed through the
+  # same Cloudflare Tunnel as the gateway -- see tasks.md T008a), since the
+  # uploading client PUTs directly to MinIO, not through the backend.
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${STORAGE_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${STORAGE_SECRET_KEY}
+    volumes:
+      - ${MINIO_DATA_PATH}:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:-preuni-avatars}
+    entrypoint: >
+      sh -c "
+      mc alias set local http://minio:9000 $$STORAGE_ACCESS_KEY $$STORAGE_SECRET_KEY &&
+      mc mb -p local/$$STORAGE_BUCKET || true;
+      mc anonymous set download local/$$STORAGE_BUCKET
+      "
+    restart: "no"
+
   # ── Ingress: Cloudflare Tunnel ────────────────────────────────────────────────
   # Outbound-only connection to Cloudflare's edge -- works through CGNAT with
   # no port forwarding. Tunnel + public-hostname routing (preuni.com.br ->
-  # gateway:8080) are configured in the Cloudflare dashboard (token-only
-  # mode, research.md R1); this container just needs the token.
+  # gateway:8080, storage.preuni.com.br -> minio:9000) are configured in
+  # Cloudflare (token-only mode, research.md R1); this container just needs
+  # the token.
 
   cloudflared:
     image: cloudflare/cloudflared:latest
@@ -90,8 +130,11 @@ services:
       JWT_SIGNING_KEY: ${JWT_SIGNING_KEY}
       JWT_ACCESS_EXPIRY_SECONDS: ${JWT_ACCESS_EXPIRY_SECONDS}
       JWT_REFRESH_EXPIRY_DAYS: ${JWT_REFRESH_EXPIRY_DAYS}
-      S3_BUCKET: ${S3_BUCKET:-preuni-avatars}
-      S3_REGION: ${S3_REGION:-us-east-1}
+      STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:-storage.preuni.com.br}
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
+      STORAGE_USE_SSL: "true"
+      STORAGE_BUCKET: ${STORAGE_BUCKET:-preuni-avatars}
       APP_VERIFICATION_BASE_URL: ${APP_VERIFICATION_BASE_URL:-https://preuni.com.br/verify-email}
       FROM_EMAIL: ${FROM_EMAIL}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME}
