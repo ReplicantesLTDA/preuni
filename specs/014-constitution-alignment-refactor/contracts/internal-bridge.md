@@ -35,7 +35,7 @@ that becomes `essay_grades` (data-model.md). On `failed`, Go reads
 response shape (see `public-api.md`), reusing the correction service's
 existing typed taxonomy (`provider_rate_limited`, `provider_timeout`,
 `schema_violation`, `internal_error`, etc. — see
-`corretor-redacao/specs/001-enem-correction-api/contracts/error_codes.md`,
+`ai-corrector/specs/001-enem-correction-api/contracts/error_codes.md`,
 which this feature keeps as-is on the Python side).
 
 ## Failure handling (spec Edge Cases)

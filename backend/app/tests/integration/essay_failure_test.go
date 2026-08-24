@@ -38,7 +38,7 @@ func TestIntegration_SubmitEssay_CorrectionFailureDoesNotLoseStreakCredit(t *tes
 	}
 
 	// Simulate the correction worker failing the job (e.g. provider_timeout),
-	// as corretor-redacao's correction_repo.mark_failed would.
+	// as ai-corrector's correction_repo.mark_failed would.
 	if _, err := pool.Exec(ctx, `UPDATE correction.correction_jobs SET status = 'failed', completed_at = now() WHERE id = $1`, jobID); err != nil {
 		t.Fatalf("mark job failed: %v", err)
 	}

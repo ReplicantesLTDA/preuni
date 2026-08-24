@@ -14,8 +14,8 @@ end-to-end smoke.
 ## 1. Bring up the dev environment
 
 ```bash
-git clone <repo> corretor-redacao
-cd corretor-redacao
+git clone <repo> ai-corrector
+cd ai-corrector
 cp .env.example .env       # fill in OLLAMA_BASE_URL, OLLAMA_API_KEY (if Cloud), SMTP_*
 docker compose up -d        # starts: api, worker, postgres, optionally local ollama
 docker compose logs -f api
@@ -161,8 +161,8 @@ band, or any INEP-secondary per-essay failure. Long-term targets are reported on
 
 ```bash
 # on the VPS
-git clone <repo> /opt/corretor-redacao
-cd /opt/corretor-redacao
+git clone <repo> /opt/ai-corrector
+cd /opt/ai-corrector
 cp .env.example .env.prod   # set OLLAMA_API_KEY, JWT_SECRET, SMTP_*, BACKUP_*
 docker compose -f deploy/docker-compose.prod.yml --env-file .env.prod up -d
 docker compose -f deploy/docker-compose.prod.yml exec api uv run alembic upgrade head

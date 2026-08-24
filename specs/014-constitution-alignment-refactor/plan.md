@@ -8,12 +8,12 @@
 ## Summary
 
 Pivot preuni's backend/mobile from an ENEM-prep platform to an essay-challenge
-gamification app, and wire the existing standalone `corretor-redacao` Python
+gamification app, and wire the existing standalone `ai-corrector` Python
 service in as preuni's AI correction engine — without duplicating identity,
 quota, or gamification data across the two systems. Concretely: (1) add four
 new Go domains (`essay`, `streak`, `social`, `ranking`/`gamification`) to the
 monolith as the system of record for submissions, streaks, friends, weekly
-ranking, and medals; (2) strip `corretor-redacao`'s own auth/users/quota
+ranking, and medals; (2) strip `ai-corrector`'s own auth/users/quota
 layers and repurpose its correction pipeline as an internal-only grading
 engine that the monolith drives via a durable outbox table + LISTEN/NOTIFY,
 reusing its existing 5-competency schema and typed-error taxonomy; (3) stand
@@ -80,7 +80,7 @@ backend/
 │   └── pkg/                      # existing shared infra — untouched
 └── tests/integration/            # existing — gains essay/streak/social/gamification suites
 
-corretor-redacao/                 # renamed internal service, still Python/FastAPI
+ai-corrector/                 # renamed internal service, still Python/FastAPI
 ├── src/
 │   ├── api/                      # trimmed: correction endpoints only, internal-network auth (shared secret / mTLS), auth+users+quota endpoints REMOVED
 │   ├── workers/                  # unchanged shape — LISTEN/NOTIFY + poll consumer, now reads from the shared `correction_jobs` outbox table
@@ -106,7 +106,7 @@ mobile/
 ```
 
 **Structure Decision**: Existing repo layout (Go monolith at `backend/app/`, mobile at
-`mobile/`) is preserved. `corretor-redacao/` moves in as a sibling top-level
+`mobile/`) is preserved. `ai-corrector/` moves in as a sibling top-level
 directory (already present at repo root from the WIP import) and is treated
 as an internal service, not a public one — it gains no new public surface
 area, it loses its end-user-facing auth/quota surface. A repo-root

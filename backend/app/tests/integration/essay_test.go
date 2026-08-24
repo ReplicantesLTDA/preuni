@@ -210,7 +210,7 @@ func TestIntegration_SubmitEssay_ReconciliationGradesTheSubmission(t *testing.T)
 	}
 
 	// Simulate the correction worker: claim + complete the job, exactly as
-	// corretor-redacao's correction_repo.claim_next/mark_completed would.
+	// ai-corrector's correction_repo.claim_next/mark_completed would.
 	competencies := `[
 		{"competency":1,"score":160,"justification_pt_br":"Bom domínio da norma culta.","excerpt":"trecho 1"},
 		{"competency":2,"score":160,"justification_pt_br":"Compreende bem o tema.","excerpt":"trecho 2"},

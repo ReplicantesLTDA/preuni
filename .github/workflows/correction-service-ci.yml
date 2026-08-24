@@ -4,11 +4,11 @@ on:
   push:
     branches: [main, dev, '014-constitution-alignment-refactor', '015-cicd-pipeline']
     paths:
-      - 'corretor-redacao/**'
+      - 'ai-corrector/**'
       - '.github/workflows/correction-service-ci.yml'
   pull_request:
     paths:
-      - 'corretor-redacao/**'
+      - 'ai-corrector/**'
       - '.github/workflows/correction-service-ci.yml'
 
 jobs:
@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: corretor-redacao
+        working-directory: ai-corrector
     services:
       postgres:
         image: postgres:16

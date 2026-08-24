@@ -49,17 +49,17 @@ mobile/.expo/
 mobile/coverage/
 *.tsbuildinfo
 
-# ─── Python (corretor-redacao) ───────────────────────────────────────────────
-corretor-redacao/.venv/
-corretor-redacao/__pycache__/
+# ─── Python (ai-corrector) ───────────────────────────────────────────────
+ai-corrector/.venv/
+ai-corrector/__pycache__/
 **/__pycache__/
 *.pyc
-corretor-redacao/.pytest_cache/
-corretor-redacao/.ruff_cache/
-corretor-redacao/.import_linter_cache/
-corretor-redacao/.mypy_cache/
-corretor-redacao/logs/
-corretor-redacao/htmlcov/
+ai-corrector/.pytest_cache/
+ai-corrector/.ruff_cache/
+ai-corrector/.import_linter_cache/
+ai-corrector/.mypy_cache/
+ai-corrector/logs/
+ai-corrector/htmlcov/
 .coverage
 
 # ─── Elixir / Phoenix ────────────────────────────────────────────────────────

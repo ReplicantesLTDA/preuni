@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: corretor-redacao
+        working-directory: ai-corrector
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3

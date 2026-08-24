@@ -16,10 +16,10 @@ Single Go binary serving the entire backend HTTP surface.
 ### Essay grading (the correction service bridge)
 
 The monolith is the only owner of identity, quota, streaks, friends, and
-ranking. Essay grading itself is delegated to `corretor-redacao/` — an
+ranking. Essay grading itself is delegated to `ai-corrector/` — an
 internal-only Python service with no public API of its own — over a
 DB-mediated bridge, not HTTP: `essay.Repository.Submit` inserts a row into
-`correction.correction_jobs` (schema owned by `corretor-redacao`'s Alembic
+`correction.correction_jobs` (schema owned by `ai-corrector`'s Alembic
 migrations) in the same transaction as the submission; the correction
 worker claims and grades it; `essay.Repository.ReconcileOnce` (a 5s ticker
 in `cmd/server/main.go`) polls for the result and writes `essay_grades`.

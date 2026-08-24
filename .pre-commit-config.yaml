@@ -57,33 +57,33 @@ repos:
         pass_filenames: false
 
       - id: ruff-check
-        name: ruff check (corretor-redacao)
-        entry: bash -c 'cd corretor-redacao && ruff check src tests'
+        name: ruff check (ai-corrector)
+        entry: bash -c 'cd ai-corrector && ruff check src tests'
         language: system
-        files: ^corretor-redacao/.*\.py$
+        files: ^ai-corrector/.*\.py$
         pass_filenames: false
 
       - id: ruff-format-check
-        name: ruff format --check (corretor-redacao)
-        entry: bash -c 'cd corretor-redacao && ruff format --check src tests'
+        name: ruff format --check (ai-corrector)
+        entry: bash -c 'cd ai-corrector && ruff format --check src tests'
         language: system
-        files: ^corretor-redacao/.*\.py$
+        files: ^ai-corrector/.*\.py$
         pass_filenames: false
 
       # Runs repo-wide (mypy's cache makes this cheap on repeat runs) --
       # src/ only, matching pyproject.toml's [tool.mypy] exclude = ["tests/"].
       - id: mypy
-        name: mypy (corretor-redacao)
-        entry: bash -c 'cd corretor-redacao && mypy src'
+        name: mypy (ai-corrector)
+        entry: bash -c 'cd ai-corrector && mypy src'
         language: system
-        files: ^corretor-redacao/src/.*\.py$
+        files: ^ai-corrector/src/.*\.py$
         pass_filenames: false
 
       - id: pytest-unit
-        name: pytest tests/unit (corretor-redacao, fast subset)
-        entry: bash -c 'cd corretor-redacao && pytest tests/unit -q'
+        name: pytest tests/unit (ai-corrector, fast subset)
+        entry: bash -c 'cd ai-corrector && pytest tests/unit -q'
         language: system
-        files: ^corretor-redacao/.*\.py$
+        files: ^ai-corrector/.*\.py$
         pass_filenames: false
 
       - id: mobile-typecheck

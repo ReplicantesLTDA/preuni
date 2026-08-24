@@ -12,7 +12,7 @@ that required judgment.
 `correction`); the Go monolith is granted narrow `INSERT`/`SELECT` privileges
 on that one table via a thin repository, and does not otherwise read the
 `correction` schema. The correction service's existing worker (LISTEN/NOTIFY
-+ 5s poll fallback, already built in `corretor-redacao/src/workers/`) is
++ 5s poll fallback, already built in `ai-corrector/src/workers/`) is
 reused unchanged — it just claims rows from `correction_jobs` instead of
 `corrections` directly, then writes results into its own `corrections`-style
 result table, and the Go monolith polls/reads *that* result table (also
@@ -45,7 +45,7 @@ constitution's Architecture section.
 
 ## 2. Identity and quota ownership (removing duplication)
 
-**Decision**: `corretor-redacao` loses its `users`, `refresh_tokens`,
+**Decision**: `ai-corrector` loses its `users`, `refresh_tokens`,
 `consent_records`, and `email_verification_tokens` tables and every endpoint
 built on them (`/auth/*`, parts of `/me`). Its `corrections` table keeps a
 `user_id` column but it becomes an **opaque UUID reference** with no local
@@ -57,7 +57,7 @@ quota *before* writing a `correction_jobs` row.
 **Rationale**: Directly required by the constitution's Architecture section
 ("must not duplicate identity ... data owned by the monolith") and Principle
 V ("quota enforcement at the boundary ... enforced by the Go monolith ...
-not inside the correction pipeline"). `corretor-redacao` was built as a
+not inside the correction pipeline"). `ai-corrector` was built as a
 standalone B2C product with its own auth; that auth becomes dead weight once
 it's an internal service behind the Go monolith.
 
@@ -111,7 +111,7 @@ forward from `/speckit.constitution`, not re-opened here.
 **Decision**: A single repo-root `pre-commit` config (the `pre-commit`
 framework, language-agnostic) runs per-codebase fast hooks: `gofmt`
 `golangci-lint` for Go, `ruff` + `mypy` for Python (both already used by
-`corretor-redacao`, per its existing `Makefile`), and `eslint`/`tsc` for
+`ai-corrector`, per its existing `Makefile`), and `eslint`/`tsc` for
 mobile (already used, per its `pnpm lint`/`pnpm typecheck` scripts). Full
 CI runs as three parallel GitHub Actions jobs (`backend-ci.yml`,
 `correction-service-ci.yml`, extending existing `mobile-ci.yml`), each

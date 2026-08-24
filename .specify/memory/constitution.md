@@ -1,7 +1,11 @@
 <!--
 Sync Impact Report
 ==================
-Version change: 2.2.0 → 2.3.0 (MINOR — new Principle VII: Security &
+Version change: 2.3.0 → 2.3.1 (PATCH — wording only: the correction
+service's directory was renamed corretor-redacao/ → ai-corrector/
+throughout; no principle, gate, or rule changed)
+
+Prior: 2.2.0 → 2.3.0 (MINOR — new Principle VII: Security &
 Secrets added; Principle II strengthened with mandatory, blocking
 per-language type-checking; Principle VI's migration-reversibility bullet
 strengthened from "ship a downgrade" to "prove the downgrade works";
@@ -82,7 +86,7 @@ The preuni backend is split across two systems with a clear ownership boundary:
   Pro submission limits). Domains are organized as internal subpackages under
   `backend/app/internal/<domain>/`. Shared infrastructure (logger, errors,
   middleware, config) lives in `backend/pkg/`.
-- **Correction service** (`corretor-redacao/`, Python/FastAPI) owns AI-driven
+- **Correction service** (`ai-corrector/`, Python/FastAPI) owns AI-driven
   essay grading only: accepting an essay + prompt theme, running the LLM
   correction pipeline, and returning the structured per-competency result.
   Python is kept deliberately — the correction pipeline is LLM-integration-heavy
@@ -97,7 +101,7 @@ The preuni backend is split across two systems with a clear ownership boundary:
 References to "the auth service" or "the mail service" elsewhere in this
 document or in older specs refer to domain packages within the Go monolith,
 not to separate processes. "The correction service" refers specifically to
-`corretor-redacao`.
+`ai-corrector`.
 
 ## Core Principles
 
@@ -121,7 +125,7 @@ Every piece of code merged to `main` must meet these standards:
 - **Test names must describe behavior**: `it("returns 404 when user does not exist")` not `it("works")`
 - **Coverage floor**: Maintain ≥ 90% line coverage across backend (Go), correction service (Python), and mobile (TypeScript); new code must not lower the project average; CI fails the build below the floor
 - **Real dependencies over mocks** at integration boundaries: mock only what you own or what is external and unreliable
-- **Type-checking is mandatory and blocking, per language**: Go's compiler enforces this by construction; the correction service runs `mypy` in `strict` mode (`corretor-redacao/pyproject.toml`'s `[tool.mypy]`) and mobile runs `tsc --noEmit` — both block CI and pre-commit, no `continue-on-error` exceptions. No `Any` (Python) or an untyped/`any`-shaped payload crosses an API boundary (HTTP request/response bodies, the Go↔correction-service bridge table, the mobile↔backend wire format) without a concrete type or schema on both sides
+- **Type-checking is mandatory and blocking, per language**: Go's compiler enforces this by construction; the correction service runs `mypy` in `strict` mode (`ai-corrector/pyproject.toml`'s `[tool.mypy]`) and mobile runs `tsc --noEmit` — both block CI and pre-commit, no `continue-on-error` exceptions. No `Any` (Python) or an untyped/`any`-shaped payload crosses an API boundary (HTTP request/response bodies, the Go↔correction-service bridge table, the mobile↔backend wire format) without a concrete type or schema on both sides
 
 ### III. Gamification & UX Consistency
 
@@ -264,4 +268,4 @@ Every pull request must pass all of the following before merge:
   CI checks must be green, and at least one human reviewer must approve —
   no exceptions, including for AI-authored changes
 
-**Version**: 2.3.0 | **Ratified**: 2026-04-03 | **Last Amended**: 2026-08-23
+**Version**: 2.3.1 | **Ratified**: 2026-04-03 | **Last Amended**: 2026-08-24

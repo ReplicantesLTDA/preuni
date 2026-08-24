@@ -51,7 +51,7 @@ its submission (research.md §1). One row per graded `essay_submissions`.
 |---|---|---|
 | `submission_id` | UUID PK/FK → `essay_submissions.id` | |
 | `overall_score` | SMALLINT, 0–1000 | |
-| `competencies` | JSONB | array of 5: `{competency, score, justification_pt_br, excerpt}` — reuses `corretor-redacao`'s existing structured shape |
+| `competencies` | JSONB | array of 5: `{competency, score, justification_pt_br, excerpt}` — reuses `ai-corrector`'s existing structured shape |
 | `graded_at` | TIMESTAMPTZ | |
 
 ### `friendships` (new — `social` domain)
@@ -120,7 +120,7 @@ that claims and completes a row.
 Kept as-is structurally (5-competency JSONB, score-scale CHECK constraints,
 typed `error_code`/`error_message_pt_br`, `prompt_version` /
 `model_identifier` / `output_schema_version` provenance — all reused
-unchanged from `corretor-redacao`'s existing schema) but:
+unchanged from `ai-corrector`'s existing schema) but:
 - `user_id` FK to the local `users` table is **dropped** (table itself is
   dropped per research.md §2); column becomes an opaque UUID matching
   `correction_jobs.user_id`.
