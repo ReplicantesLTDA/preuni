@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "corretor-redacao"
+name = "ai-corrector"
 version = "0.1.0"
 description = "Automated ENEM Essay Correction API (MVP)"
 readme = "README.md"

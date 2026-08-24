@@ -92,7 +92,7 @@ jobs:
         run: bash backend/scripts/migrate-round-trip.sh
 
       # The essay domain writes to correction.correction_jobs (contracts/
-      # internal-bridge.md) -- that schema is owned by corretor-redacao's
+      # internal-bridge.md) -- that schema is owned by ai-corrector's
       # own Alembic migrations, not infra/migrations/. research.md #1's
       # design is a single shared Postgres instance, so backend-ci's DB
       # needs both migration sets applied for essay-domain tests to exercise
@@ -102,7 +102,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: apply correction-service schema (for the essay<->correction bridge table)
-        working-directory: corretor-redacao
+        working-directory: ai-corrector
         env:
           DATABASE_URL: postgresql+asyncpg://preuni:preuni@localhost:5432/preuni
         run: |

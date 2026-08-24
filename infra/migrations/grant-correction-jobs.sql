@@ -1,6 +1,6 @@
 -- Grants the Go monolith's DB role narrow access to the correction
 -- service's outbox/bridge table and read-only access to its graded
--- results. Run after corretor-redacao's 002_correction_jobs_schema
+-- results. Run after ai-corrector's 002_correction_jobs_schema
 -- migration has created the `correction` schema and its tables.
 --
 -- See specs/014-constitution-alignment-refactor/contracts/internal-bridge.md

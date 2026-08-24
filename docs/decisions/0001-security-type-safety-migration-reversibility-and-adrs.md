@@ -76,7 +76,7 @@ normal resolution — no override needed).
 
 ## Consequences
 
-- New PRs touching `corretor-redacao/src/` must pass mypy — a real,
+- New PRs touching `ai-corrector/src/` must pass mypy — a real,
   if occasionally annoying, constraint that already caught genuinely
   wrong type annotations (e.g. `httpx.BaseTransport` where
   `AsyncBaseTransport` was actually required).

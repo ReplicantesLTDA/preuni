@@ -15,13 +15,13 @@ for schema in auth user content learning simulation dissertation essay social ga
     [ -e "$f" ] && psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
   done
 done
-(cd corretor-redacao && alembic upgrade head)   # creates the `correction` schema + correction_jobs bridge table
+(cd ai-corrector && alembic upgrade head)   # creates the `correction` schema + correction_jobs bridge table
 
 # 3. Go monolith (auth, user, essay, streak, social, gamification)
 cd backend/app && go run ./cmd/server
 
 # 4. Correction service (grading engine only — no public auth surface after this refactor)
-cd corretor-redacao && make up   # api + worker
+cd ai-corrector && make up   # api + worker
 
 # 5. Mobile app
 cd mobile && pnpm install && pnpm start
@@ -69,8 +69,8 @@ curl http://localhost:8080/v1/medals/me -H "Authorization: Bearer $TOKEN"
 # Go — same check CI runs (backend-ci.yml), floor tracked in backend/scripts/check-coverage.sh
 bash backend/scripts/check-coverage.sh
 
-# Python correction service — floor tracked in corretor-redacao/pyproject.toml [tool.coverage.report]
-cd corretor-redacao && pytest tests/unit tests/integration --cov=src --cov-report=term-missing
+# Python correction service — floor tracked in ai-corrector/pyproject.toml [tool.coverage.report]
+cd ai-corrector && pytest tests/unit tests/integration --cov=src --cov-report=term-missing
 
 # Mobile — floor tracked in mobile/jest.config.js coverageThreshold
 cd mobile && pnpm test -- --coverage --runInBand
