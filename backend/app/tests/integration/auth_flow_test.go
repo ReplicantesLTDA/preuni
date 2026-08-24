@@ -45,7 +45,8 @@ func setup(t *testing.T) (http.Handler, *pgxpool.Pool) {
 		S3Bucket:             "test-bucket",
 		S3Region:             "us-east-1",
 	}
-	return router.New(cfg, pool, logger.New("error")), pool
+	r, _ := router.New(cfg, pool, logger.New("error"))
+	return r, pool
 }
 
 func TestIntegration_FullAuthFlow(t *testing.T) {

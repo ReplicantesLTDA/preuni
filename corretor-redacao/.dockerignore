@@ -1,0 +1,48 @@
+# VCS
+.git/
+.gitignore
+.gitattributes
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+htmlcov/
+.coverage
+.coverage.*
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Docker / OS
+Dockerfile*
+.dockerignore
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.tmp
+
+# Project artifacts not needed at runtime
+docs/
+specs/
+tests/golden/essay_br/test/
+tests/golden/essay_br/valid/
+tests/golden/inep_exemplary/
+.specify/
+*.md
+!README.md
+!NOTICE

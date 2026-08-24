@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AI Developer Guide — Lessons from the ENEM Essay Correction MVP</title>
+<style>
+  :root {
+    --bg: #1a1b26;
+    --bg-2: #24253a;
+    --bg-3: #2f314a;
+    --fg: #c0caf5;
+    --fg-dim: #9aa5ce;
+    --accent: #7aa2f7;
+    --accent-2: #bb9af7;
+    --warn: #f7768e;
+    --ok: #9ece6a;
+    --code: #e0af68;
+    --border: #414868;
+    --mono: ui-monospace, "SF Mono", "Fira Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  nav.toc {
+    background: var(--bg-2);
+    border-right: 1px solid var(--border);
+    padding: 24px 18px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    font-size: 14px;
+  }
+  nav.toc h2 {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent-2);
+    margin: 0 0 12px;
+  }
+  nav.toc ol { margin: 0; padding-left: 20px; }
+  nav.toc li { margin: 4px 0; }
+  nav.toc a {
+    color: var(--fg-dim);
+    text-decoration: none;
+  }
+  nav.toc a:hover { color: var(--accent); }
+  main {
+    padding: 36px 48px 80px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 32px;
+    line-height: 1.2;
+    margin: 0 0 8px;
+    color: var(--accent);
+  }
+  .sub {
+    color: var(--fg-dim);
+    margin: 0 0 36px;
+    font-style: italic;
+  }
+  h2 {
+    font-size: 22px;
+    margin: 48px 0 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    color: var(--accent);
+  }
+  h3 { font-size: 18px; margin: 28px 0 8px; color: var(--accent-2); }
+  h4 { font-size: 16px; margin: 18px 0 6px; color: var(--fg); text-transform: uppercase; letter-spacing: 0.05em; font-size: 13px; }
+  p { margin: 8px 0 12px; }
+  code {
+    font-family: var(--mono);
+    background: var(--bg-3);
+    color: var(--code);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
+  pre {
+    background: var(--bg-3);
+    padding: 16px 18px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  pre code {
+    background: transparent;
+    padding: 0;
+    color: var(--fg);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-size: 14px;
+  }
+  th, td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  th { color: var(--accent-2); background: var(--bg-2); }
+  tr:hover { background: var(--bg-2); }
+  blockquote {
+    margin: 14px 0;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    background: var(--bg-2);
+    color: var(--fg-dim);
+  }
+  .callout {
+    margin: 16px 0;
+    padding: 14px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg-2);
+  }
+  .callout.warn { border-left: 4px solid var(--warn); }
+  .callout.ok { border-left: 4px solid var(--ok); }
+  .callout.info { border-left: 4px solid var(--accent); }
+  .callout strong { color: var(--accent-2); }
+  ul, ol { margin: 8px 0 14px; padding-left: 28px; }
+  li { margin: 4px 0; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 36px 0; }
+  .lesson {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--ok);
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin: 16px 0;
+  }
+  .lesson em { color: var(--ok); font-style: normal; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.06em; }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: relative; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+    main { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="toc">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#intro">Intro</a></li>
+      <li><a href="#mental">Mental model</a></li>
+      <li><a href="#layers">Layered architecture</a></li>
+      <li><a href="#provider">Provider abstraction</a></li>
+      <li><a href="#determinism">Determinism</a></li>
+      <li><a href="#structured">Structured output</a></li>
+      <li><a href="#retries">Retries & error taxonomy</a></li>
+      <li><a href="#prompts">Prompts as code</a></li>
+      <li><a href="#reasoning">Reasoning vs not</a></li>
+      <li><a href="#tokens">Token budgets</a></li>
+      <li><a href="#verify">Verifying output</a></li>
+      <li><a href="#strategies">Aggregation strategies</a></li>
+      <li><a href="#golden">Golden dataset</a></li>
+      <li><a href="#calibration">Calibration eng</a></li>
+      <li><a href="#governance">Constitution-driven dev</a></li>
+      <li><a href="#observability">Observability + PII</a></li>
+      <li><a href="#async">Async correction flow</a></li>
+      <li><a href="#cost">Cost economics</a></li>
+      <li><a href="#pitfalls">Pitfalls we hit</a></li>
+      <li><a href="#reading">Reading list</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <h1>AI Developer Guide</h1>
+    <p class="sub">What I learned building the ENEM essay correction MVP — patterns, traps, and the why behind every decision.</p>
+
+    <section id="intro">
+      <h2>1. Intro</h2>
+      <p>This guide is the concentrated lessons from building an LLM-backed essay correction API across 15 calibration iterations. It is written for a developer who can already write Python and HTTP services but wants to understand <em>what makes AI-backed apps different</em> from regular SaaS.</p>
+      <p>The product corrects Brazilian ENEM essays on 5 official competencies. It is a small system but it hits almost every interesting LLM-engineering problem: structured output, determinism, provider neutrality, calibration, evaluation, and cost.</p>
+      <p>Every section ties back to actual files in this repository so you can read code alongside concepts.</p>
+    </section>
+
+    <section id="mental">
+      <h2>2. Mental model — LLM as a fallible component</h2>
+      <p>The single biggest shift when going from SaaS to AI-backed services is: <strong>your most important component is non-deterministic, occasionally wrong, and you cannot fully test it.</strong></p>
+      <p>Treat the LLM the way you treat a flaky external API that happens to be the most expensive part of your bill:</p>
+      <ul>
+        <li><strong>Bound it.</strong> Timeouts, max tokens, retries, schemas.</li>
+        <li><strong>Distrust its output.</strong> Validate structure. Verify citations. Recompute totals.</li>
+        <li><strong>Observe it.</strong> Hash inputs, log outputs, track cost/latency per call.</li>
+        <li><strong>Make it swappable.</strong> One vendor's outage shouldn't kill your product.</li>
+      </ul>
+      <div class="callout info">
+        <strong>Constitution mapping.</strong> Articles II, III, IV, VI, VII of our project constitution exist exactly to enforce this mindset. The constitution is in <code>.specify/memory/constitution.md</code>.
+      </div>
+    </section>
+
+    <section id="layers">
+      <h2>3. Layered architecture — the only useful kind</h2>
+      <p>The single layer rule that separates serious AI apps from prototypes:</p>
+      <blockquote>The LLM only sees one layer. That layer only sees the LLM. Nothing else touches the LLM.</blockquote>
+      <p>Our five layers, top to bottom:</p>
+      <table>
+        <thead><tr><th>Layer</th><th>Responsibility</th><th>Touches LLM?</th></tr></thead>
+        <tbody>
+          <tr><td><code>api/</code></td><td>HTTP surface, auth, request/response shapes</td><td>No</td></tr>
+          <tr><td><code>workers/</code></td><td>queue claim, run pipeline, persist result</td><td>No (invokes corrector)</td></tr>
+          <tr><td><code>corrector/</code></td><td>pure business logic: pre-validation, prompts, pipeline</td><td>Only via <code>llm/</code> Protocol</td></tr>
+          <tr><td><code>db/</code></td><td>SQLAlchemy models, repositories</td><td>Never</td></tr>
+          <tr><td><code>observability/</code></td><td>structured logs, metrics, traces, PII scrub</td><td>Wraps everything</td></tr>
+        </tbody>
+      </table>
+      <p><code>corrector/</code> never imports <code>db/</code> or <code>api/</code>. Enforced by <code>import-linter</code> in CI. This makes the system testable (swap fake LLM, swap fake DB), provider-swappable, and auditable.</p>
+      <div class="lesson"><em>Lesson 1</em> Layer separation is what makes the rest of the rules possible. If LLM code can reach into the database, none of the other guarantees survive contact with reality.</div>
+    </section>
+
+    <section id="provider">
+      <h2>4. Provider abstraction — the Protocol pattern</h2>
+      <p>Every LLM call goes through a single, narrow interface:</p>
+      <pre><code>class LLMProvider(Protocol):
+    name: str
+    model_id: str
+
+    async def complete_structured(
+        self,
+        *,
+        system: str,
+        user: str,
+        output_schema: dict,
+        temperature: float,
+        seed: int | None,
+        max_tokens: int,
+        timeout_s: float,
+    ) -> LLMResult: ...</code></pre>
+      <p>That's it. Anthropic, OpenAI, Ollama, Google all implement the same Protocol. The correction pipeline does not know which vendor is behind it. Switching from <code>qwen3-next:80b</code> to <code>gpt-oss:120b</code> to <code>kimi-k2:1t</code> during Phase 3 needed zero changes outside <code>corrector/llm/ollama.py</code> and a config swap.</p>
+      <h3>Why a Protocol, not an ABC?</h3>
+      <p>Python's <code>typing.Protocol</code> is structural — a class doesn't need to <em>inherit</em> from it, just <em>look like</em> it. This keeps the abstraction truly orthogonal: a new adapter is a plain class that happens to expose the right methods.</p>
+      <h3>What every adapter must do</h3>
+      <ol>
+        <li>Translate the universal call to the vendor's API.</li>
+        <li>Map vendor errors to <strong>our</strong> error taxonomy (see §7).</li>
+        <li>Validate the structured output against the supplied JSON Schema.</li>
+        <li>Compute latency, prompt tokens, completion tokens, cost.</li>
+      </ol>
+      <div class="callout warn">
+        <strong>Anti-pattern.</strong> Hardcoding <code>anthropic.Client()</code> in business logic. The moment a vendor changes pricing or has an outage, every business test breaks.
+      </div>
+    </section>
+
+    <section id="determinism">
+      <h2>5. Determinism — making "the same input" mean something</h2>
+      <p>Two graders disagreeing on the same essay is a product problem. Two <em>runs</em> of your <em>own system</em> disagreeing on the same essay is an <em>engineering</em> problem, and a worse one — because users will eventually compare results.</p>
+      <p>How we minimize that:</p>
+      <ol>
+        <li><strong>Low temperature</strong>: 0.1 (Constitution caps at 0.2). Higher temperatures produce variance you don't want unless you're explicitly running multiple graders.</li>
+        <li><strong>Fixed seed</strong>: <code>seed = int.from_bytes(sha256(correction_id.bytes)[:8], "big")</code>. Deterministic, auditable, unique per correction.</li>
+        <li><strong>Record everything</strong>: <code>prompt_version</code>, <code>model_id</code>, <code>seed</code>, <code>temperature</code>, <code>max_tokens</code> all stored alongside the output. Disputes become a Git blame.</li>
+      </ol>
+      <pre><code>def derive_seed(correction_id: uuid.UUID, pass_index: int = 0) -> int:
+    if pass_index == 0:
+        digest = hashlib.sha256(correction_id.bytes).digest()
+    else:
+        digest = hashlib.sha256(
+            correction_id.bytes + pass_index.to_bytes(4, "big")
+        ).digest()
+    return int.from_bytes(digest[:8], "big")</code></pre>
+      <p>The <code>pass_index</code> argument is for multi-pass aggregation (§12): each pass gets a distinct-but-deterministic seed.</p>
+      <div class="callout info">
+        <strong>Why <code>seed</code> and not <code>temperature=0</code> alone?</strong> Temperature 0 still uses the model's default sampling state. With explicit <code>seed</code>, you get bit-identical outputs across runs (when the provider honors seed — Ollama Cloud does for most models).
+      </div>
+    </section>
+
+    <section id="structured">
+      <h2>6. Structured output — JSON Schema as the hard contract</h2>
+      <p>If your LLM is supposed to return data, <em>never accept free-form text</em>. Demand JSON. Validate it. Reject and retry on mismatch.</p>
+      <h3>Three increasingly strict tools</h3>
+      <table>
+        <thead><tr><th>Tool</th><th>Guarantee</th><th>Used here?</th></tr></thead>
+        <tbody>
+          <tr><td>Prompt instruction ("respond only with JSON")</td><td>Hope</td><td>Yes, but not alone</td></tr>
+          <tr><td><code>format: "json"</code> param</td><td>Output is parseable JSON</td><td>Initially yes, replaced</td></tr>
+          <tr><td><code>format: &lt;json-schema-dict&gt;</code> (constrained generation)</td><td>Output conforms to schema at the decoder level</td><td>Current</td></tr>
+        </tbody>
+      </table>
+      <p>Schema-constrained generation eliminated <code>JSONDecodeError</code> failures in our gate runs. The model literally cannot emit a string that doesn't satisfy the schema.</p>
+      <h3>Application-side validation is still needed</h3>
+      <p>Constrained generation doesn't check business rules. Our pipeline still validates:</p>
+      <ul>
+        <li>Each <code>excerpt</code> is a real substring of the submitted essay (Constitution V: verbatim citation).</li>
+        <li>Sum of competency scores equals <code>final_score</code> (Constitution I: matrix fidelity).</li>
+        <li><code>improvement_path_pt_br</code> present iff score &lt; 200.</li>
+      </ul>
+      <h3>Schema versioning</h3>
+      <p>Our schema lives at <code>src/schemas/v1/correction_output.schema.json</code>. The directory name <code>v1</code> is the schema version. When we break the contract, we ship <code>v2/</code> and migrate. Every stored correction has <code>output_schema_version</code> so old corrections can be retrieved with the schema they were produced under.</p>
+      <div class="lesson"><em>Lesson 2</em> Treat the JSON Schema as a wire protocol. Version it. Migrate carefully. Never silently relax.</div>
+    </section>
+
+    <section id="retries">
+      <h2>7. Retries & typed error taxonomy</h2>
+      <p>Constitution Article IV says: validate the output, retry once with a corrective prompt, then fail with a typed error. Two attempts maximum. Never fall back to free-form text.</p>
+      <pre><code>for attempt in range(1, MAX_LLM_ATTEMPTS + 1):
+    try:
+        result = await provider.complete_structured(...)
+        return parse(result.parsed_output, ...)
+    except (SchemaViolationError, CompetencyParseError) as exc:
+        last_error = exc
+        # On the 2nd attempt, prepend the validator message to the user prompt:
+        # "ATENÇÃO: a tentativa anterior falhou com: ..."
+
+raise SchemaViolationError("schema validation failed after 2 attempts", ...)</code></pre>
+      <p>Why exactly 2 attempts?</p>
+      <ul>
+        <li><strong>1 attempt</strong>: no recovery. Schema fail = whole correction fails. Wasteful.</li>
+        <li><strong>2 attempts</strong>: original + one informed retry. Catches transient parsing/structure errors without burning budget.</li>
+        <li><strong>3+ attempts</strong>: the LLM is not going to converge if it failed twice with the schema in front of it. You're just paying for more failures.</li>
+      </ul>
+      <h3>Error taxonomy</h3>
+      <table>
+        <thead><tr><th>Error class</th><th>Means</th><th>HTTP code surfaces</th><th>Consumes quota?</th></tr></thead>
+        <tbody>
+          <tr><td><code>RateLimitError</code></td><td>Provider 429</td><td><code>provider_rate_limited</code></td><td>No</td></tr>
+          <tr><td><code>TimeoutError</code></td><td>Provider timed out</td><td><code>provider_timeout</code></td><td>No</td></tr>
+          <tr><td><code>TransientError</code></td><td>Provider 5xx, network blip</td><td><code>provider_unavailable</code></td><td>No</td></tr>
+          <tr><td><code>SchemaViolationError</code></td><td>Output failed schema or parsing after retries</td><td><code>schema_violation</code></td><td>No</td></tr>
+          <tr><td><code>FatalError</code></td><td>Auth failure, unsupported model</td><td><code>internal_error</code></td><td>No</td></tr>
+          <tr><td>(user-input errors)</td><td>Length, language, theme</td><td><code>length_too_short</code> etc.</td><td>Yes, when post-claim</td></tr>
+        </tbody>
+      </table>
+      <p>The <strong>quota_consumed</strong> column is critical: provider/internal failures must not bill the user. User-input failures discovered post-claim (e.g., language detection fails inside the LLM-side check after pre-validation passed) do consume quota.</p>
+      <div class="callout warn">
+        <strong>Anti-pattern.</strong> Returning HTTP 500 for any LLM failure. You lose the ability to distinguish "we screwed up" from "the LLM provider is degraded" from "the user submitted garbage" — and every distinct cause needs different client behavior.
+      </div>
+    </section>
+
+    <section id="prompts">
+      <h2>8. Prompts as code</h2>
+      <p>If the prompt determines the model's behavior, the prompt is code. Therefore:</p>
+      <ol>
+        <li>Live in versioned files in the repo (<code>src/corrector/prompts/v1.0.7/</code>).</li>
+        <li>SemVer the prompts (we went v1.0.0 → v1.0.8 during Phase 3).</li>
+        <li>Every prompt change requires a golden-dataset run with metric delta attached to the PR.</li>
+        <li>Never inline prompt strings in business code.</li>
+      </ol>
+      <h3>The PromptLoader</h3>
+      <pre><code>loader = PromptLoader()              # picks env PROMPT_VERSION or newest on disk
+system_msg = loader.render(
+    "system",
+    prompt_theme_title=...,
+    prompt_theme_context=...,
+    essay_text=...,
+)</code></pre>
+      <p>Our loader uses <code>{identifier}</code> placeholders (strict — unknown placeholder = error). It also tolerates non-identifier braces in markdown, so <code>{0, 40, 80}</code> in the matrix doesn't crash.</p>
+      <h3>Calibration anchors — the technique that mattered most</h3>
+      <p>In our v1.0.7 prompt, the system message includes 4 worked examples:</p>
+      <ul>
+        <li>Anchor A: a nota-1000 essay with all 5 competencies at 200.</li>
+        <li>Anchor A2: a nota-880 essay (lapses in C1 and C3).</li>
+        <li>Anchor B: a nota-560 essay with explicit per-competency breakdown.</li>
+        <li>Anchor C: a nota-400 essay with desvios visíveis.</li>
+        <li>Anchor D: a nota-240 essay (motivational tone, no thesis).</li>
+      </ul>
+      <p>Each anchor includes the human reference scores and a "why this is the right level" explanation. The model uses these as worked examples — empirically, calibration improves more with 4 anchors than with 40 paragraphs of descriptors.</p>
+      <div class="lesson"><em>Lesson 3</em> Show, don't tell. Worked examples beat descriptor text. A model reads 40 lines of "use the full scale" and still defaults to 120. It reads one example of "this got 200 because…" and starts giving 200.</div>
+    </section>
+
+    <section id="reasoning">
+      <h2>9. Reasoning vs non-reasoning models</h2>
+      <p>This was our worst Phase 3 surprise. Reasoning models (GPT-o1, Qwen3-Next, some DeepSeek variants) emit tokens in two streams:</p>
+      <ul>
+        <li><code>thinking</code> — the model's chain of reasoning</li>
+        <li><code>content</code> — the actual final answer</li>
+      </ul>
+      <p>When we tried <code>qwen3-next:80b</code>, every call returned <code>content: ""</code>. The Ollama stream showed all tokens going to <code>thinking</code>, and the model would exhaust <code>num_predict</code> before producing any <code>content</code>:</p>
+      <pre><code>LINE: {"message":{"content":"","thinking":"Okay"}, "done":false}
+LINE: {"message":{"content":"","thinking":","}, "done":false}
+LINE: {"message":{"content":"","thinking":" the user"}, "done":false}
+... 8000 lines later ...
+LINE: {"message":{"content":""}, "done":true, "done_reason":"stop", "eval_count": 8192}</code></pre>
+      <p>The <code>think:false</code> flag was ignored by Ollama Cloud for this model. Solution: use a non-reasoning model. <code>kimi-k2:1t</code> emits <code>thinking</code> with zero length and <code>content</code> with the JSON. <code>gpt-oss:120b</code> too.</p>
+      <h3>How to tell if a model is reasoning-mode</h3>
+      <ol>
+        <li>Read the model card on the provider catalog.</li>
+        <li>If unclear, stream a one-line prompt and inspect the token stream.</li>
+        <li>If <code>content</code> stays empty while <code>thinking</code> grows, it's reasoning-mode and your <code>format=json</code> path is fragile.</li>
+      </ol>
+      <div class="callout warn">
+        <strong>Lesson 4 (sharp edge)</strong>. Schema-constrained JSON on a reasoning model is currently undefined behavior on Ollama Cloud. The model "thinks" forever, never produces JSON content, you get <code>content=""</code>. Test before you commit to a model in production.
+      </div>
+    </section>
+
+    <section id="tokens">
+      <h2>10. Token budgets — the silent killer</h2>
+      <p><code>num_predict</code> (or <code>max_tokens</code>) is a hard ceiling. If the model's output is at <code>num_predict</code> when the budget runs out, <em>the partial JSON is invalid</em>, and depending on the provider you get either truncated JSON or empty content.</p>
+      <p>Our pattern:</p>
+      <ul>
+        <li>Estimate output: 5 competencies × (score + ~30-char excerpt + ~150-char justification + ~100-char improvement) ≈ 1500 tokens.</li>
+        <li>Add 50% headroom for the model's verbose moments: 2250 tokens.</li>
+        <li>Round up generously: <strong>8192</strong>. We never hit it post-bump.</li>
+      </ul>
+      <p>The price of being generous: a few extra cents per call. The price of being stingy: silent truncation, every run.</p>
+      <div class="callout info">
+        <strong>Detection trick.</strong> Log <code>eval_count</code> per call. If <code>eval_count == num_predict</code> regularly, you're truncating. Bump and re-test.
+      </div>
+    </section>
+
+    <section id="verify">
+      <h2>11. Verifying LLM output beyond the schema</h2>
+      <p>JSON Schema enforces shape. It doesn't catch lies.</p>
+      <h3>Verbatim excerpt check</h3>
+      <p>Constitution Article V demands every score quote a verbatim excerpt from the essay. Naive substring check is too strict (the model adds a quote, drops a comma) and too loose (the model paraphrases). Our compromise:</p>
+      <ol>
+        <li>Normalize both essay and excerpt: case-fold, strip most punctuation, NFC, collapse whitespace.</li>
+        <li>If exact normalized substring: pass.</li>
+        <li>Otherwise, look for sub-chunks split by ellipsis: <code>"...."</code> or <code>"(...)"</code>. If any 20+ char chunk matches, pass.</li>
+        <li>Otherwise, check token overlap: if 90% of needle tokens appear in haystack in the same order, pass.</li>
+        <li>Otherwise, raise <code>CompetencyParseError</code>, which counts as a schema failure and triggers the corrective retry.</li>
+      </ol>
+      <p>This preserves the Constitution-V intent ("no rewording") while tolerating model tics that change nothing semantically.</p>
+      <h3>Sum reconciliation</h3>
+      <p>Models routinely miscalculate <code>final_score = c1 + c2 + c3 + c4 + c5</code>. We accept the model's competency scores as truth and <strong>recompute the sum locally</strong> instead of failing on arithmetic. The Constitution says <code>final_score = sum of 5 competencies</code> — recomputing locally is the most honest enforcement of that rule.</p>
+      <div class="lesson"><em>Lesson 5</em> The schema is the wire shape. Your pipeline is the semantic enforcer. Both layers are necessary.</div>
+    </section>
+
+    <section id="strategies">
+      <h2>12. Aggregation strategies — and which ones don't work</h2>
+      <p>We tried three orchestrations. Empirical results from Phase 3 below.</p>
+      <h3>A. Single grader (the baseline)</h3>
+      <p>One LLM call, sees all 5 competencies, returns one JSON object.</p>
+      <table>
+        <thead><tr><th>Strength</th><th>Weakness</th></tr></thead>
+        <tbody>
+          <tr><td>Halo effect: model coheres an "excellent" essay → 200s across all 5</td><td>Variance reduction: 5 competencies move together; outlier scores are smoothed away</td></tr>
+          <tr><td>1× cost, 1× latency</td><td>—</td></tr>
+        </tbody>
+      </table>
+      <h3>B. Per-competency multi-call</h3>
+      <p>5 concurrent LLM calls, each one focused on a single competency, aggregated by code.</p>
+      <p><strong>Hypothesis we tested</strong>: removing internal-coherence pressure would let competencies diverge naturally, increasing variance and giving more accurate per-competency scores.</p>
+      <p><strong>Result</strong>: <em>opposite of expected</em>. MAE 234 (vs 163 baseline), hit-rate 29% (vs 50%), band 701-1000 hit dropped to 0%. Per-competency independence destroyed the positive halo on high-band essays — each call without the holistic view became more conservative.</p>
+      <h3>C. Multi-pass averaging</h3>
+      <p>2 sequential single-grader passes with distinct seeds. ENEM rule: average the 2 closest passes; if divergence &gt; 100 total or &gt; 80 per-comp, run a 3rd pass.</p>
+      <p><strong>Result</strong>: MAE 166 (≈ baseline), hit-rate 50% (≈ baseline). The 3rd-pass divergence trigger never fired. Two passes at the same prompt are too correlated; averaging gives nothing. 2× cost, 0× gain.</p>
+      <div class="callout warn">
+        <strong>When multi-pass actually helps.</strong> When passes are deliberately diverse — different prompts, different models, or different "personas". The ENEM rule was designed for two human graders with independent backgrounds. Two calls to the same prompt are not independent.
+      </div>
+    </section>
+
+    <section id="golden">
+      <h2>13. The golden dataset — your only honest mirror</h2>
+      <p>You cannot test an AI app with unit tests alone. You need a corpus of expected behavior.</p>
+      <p>Our golden dataset:</p>
+      <ul>
+        <li><code>tests/golden/essay_br/test/</code>: 12 reference essays from the Essay-BR corpus (Marinho et al., 2022; MIT) with human-graded scores per competency.</li>
+        <li><code>tests/golden/inep_exemplary/</code>: 3 nota-1000 stand-ins (full curated INEP set is T113 future work).</li>
+      </ul>
+      <h3>Metrics that matter</h3>
+      <table>
+        <thead><tr><th>Metric</th><th>What it asks</th></tr></thead>
+        <tbody>
+          <tr><td>Total-score MAE</td><td>How far off is the final total on average?</td></tr>
+          <tr><td>Per-competency MAE</td><td>Is the error distributed or concentrated in one competency?</td></tr>
+          <tr><td>Hit rate within ±N</td><td>Of all essays, what fraction lands in a "close enough" window?</td></tr>
+          <tr><td>Per-band metrics (0–400, 401–700, 701–1000)</td><td>Does the model misbehave in a specific score range?</td></tr>
+          <tr><td>INEP per-essay tolerance</td><td>Does the model fail catastrophically on known-good essays?</td></tr>
+        </tbody>
+      </table>
+      <p>The per-band breakdown was the most useful diagnostic. Without it, an "average MAE 163" hides "great on mid-band, awful on high-band".</p>
+      <h3>The three-tier gate</h3>
+      <p>Constitution v2.1.0 defines:</p>
+      <table>
+        <thead><tr><th>Tier</th><th>Total MAE</th><th>Per-comp MAE</th><th>Hit ±120</th><th>Blocks merge?</th></tr></thead>
+        <tbody>
+          <tr><td>MVP-ship</td><td>≤ 180</td><td>≤ 60</td><td>≥ 50%</td><td>Yes</td></tr>
+          <tr><td>Stretch</td><td>≤ 120</td><td>≤ 50</td><td>≥ 70%</td><td>No (tracked)</td></tr>
+          <tr><td>Long-term</td><td>≤ 80</td><td>≤ 40</td><td>≥ 80% (±80)</td><td>No (north star)</td></tr>
+        </tbody>
+      </table>
+      <p>The MVP-ship tier was calibrated to empirical reality after 15 iterations. Going back to v2.0.0's "MAE ≤ 120 / hit ≥ 70%" gate would block shipping forever with current Cloud Ollama tooling.</p>
+      <div class="lesson"><em>Lesson 6</em> Your gate must be achievable today AND inspirational. Three tiers (block, track, dream) lets you ship without abandoning ambition.</div>
+    </section>
+
+    <section id="calibration">
+      <h2>14. Calibration engineering</h2>
+      <p>"Calibration" is the work of making your model's score distribution match the human-graded distribution. It's the bulk of Phase 3 effort.</p>
+      <h3>Observable biases we fought</h3>
+      <table>
+        <thead><tr><th>Bias</th><th>Symptom</th><th>Counter-prompt</th></tr></thead>
+        <tbody>
+          <tr><td>Conservative rounding</td><td>Always 120, never 80 or 160</td><td>"AVALIADOR CONSERVADOR É AVALIADOR ERRADO. Não arredonde por segurança."</td></tr>
+          <tr><td>Ceiling block</td><td>Never gives 200 even to a nota-1000 essay</td><td>Anchor A worked example; "notas 1000 são reais"; "não desconte por preciosismo"</td></tr>
+          <tr><td>Floor over-score</td><td>Cannot give 40 or 80 to a weak essay</td><td>Anchor C worked example with explicit "por que NÃO é 120"</td></tr>
+          <tr><td>False eliminatory</td><td>Flags <code>insufficient_text</code> on a 7-line essay</td><td>Explicit "NÃO aplique se ..." clauses per criterion</td></tr>
+          <tr><td>Politically-charged downscoring</td><td>Penalizes essays with strong critique</td><td>"Posição política do aluno NÃO afeta nota. Avaliar mérito argumentativo, não concordância."</td></tr>
+        </tbody>
+      </table>
+      <h3>The halo effect (unexpected ally)</h3>
+      <p>When a model sees all 5 competencies in one call and the essay is great, it tends to give 200 across the board. This is a coherence bias — usually we'd consider it noise — but for ENEM essays it happens to align with reality (top essays really are uniformly great). The per-competency multi-call experiment proved this by removing it and watching high-band performance collapse.</p>
+      <div class="callout info">
+        <strong>Calibration is empirical, not theoretical.</strong> You cannot reason your way to the right prompt. Run the gate. Read the per-essay deltas. Adjust one thing. Re-run. Repeat. Our 15 runs are documented in <code>specs/.../reports/phase3-summary.md</code>.
+      </div>
+    </section>
+
+    <section id="governance">
+      <h2>15. Constitution-driven development</h2>
+      <p>For AI apps especially, you need a <em>document</em> that pins down the non-negotiables, because the temptation to silently relax constraints under pressure is constant.</p>
+      <p>Our constitution lives at <code>.specify/memory/constitution.md</code>. It SemVers itself:</p>
+      <ul>
+        <li><strong>MAJOR</strong>: backward-incompatible removal of a NON-NEGOTIABLE article, or scope shifts (B2C → B2B).</li>
+        <li><strong>MINOR</strong>: new principle, new section, materially expanded guidance.</li>
+        <li><strong>PATCH</strong>: wording, typos, no semantic change.</li>
+      </ul>
+      <p>We went 1.0.0 → 2.0.0 (refactor + provider neutrality) → 2.1.0 (3-tier golden-dataset gate after empirical evidence). The amendment table at the bottom of the file is searchable history of "why did we relax X?".</p>
+      <h3>Gates at three phases</h3>
+      <table>
+        <thead><tr><th>Phase</th><th>Gate</th></tr></thead>
+        <tbody>
+          <tr><td>Plan</td><td>Constitution Check: every plan verifies each NON-NEGOTIABLE article applies.</td></tr>
+          <tr><td>Prompt PR</td><td>Golden-dataset metric delta attached; CI blocks on MVP-ship regression.</td></tr>
+          <tr><td>Schema PR</td><td>Schema version bumped; contract tests cover both old and new shape.</td></tr>
+        </tbody>
+      </table>
+      <p>This is the discipline that prevents an exhausted engineer from disabling the golden harness at 2am because "the model is just bad today" — which is exactly when the harness is most valuable.</p>
+    </section>
+
+    <section id="observability">
+      <h2>16. Observability with PII privacy</h2>
+      <p>Two requirements pull in opposite directions:</p>
+      <ul>
+        <li>Audit every LLM call (Constitution III, Constitution VII).</li>
+        <li>Never put student PII in logs (Constitution VII, Constitution X).</li>
+      </ul>
+      <p>How we square that:</p>
+      <ol>
+        <li>Hash the essay input: SHA-256 of canonicalized input. Audit logs key on this hash.</li>
+        <li>Logs only reference the opaque <code>correction_id</code> and the opaque <code>user_id</code>. Never email, name, school.</li>
+        <li>A centralized <code>AuditLogWriter</code> with an allowlist of keys per event type. Forbidden keys (<code>essay_text</code>, <code>email</code>, <code>name</code>, <code>student_id</code>, <code>password</code>) raise at write time.</li>
+        <li>Every <code>jsonb</code> payload column has a schema for what's allowed.</li>
+      </ol>
+      <p>Observed in production: latency histogram, LLM cost per correction, quota rejections per tier, per-error-code counts, p95 dashboards.</p>
+    </section>
+
+    <section id="async">
+      <h2>17. Async correction flow — why polling beats sync</h2>
+      <p>The submission endpoint returns <code>202 Accepted</code> with a <code>correction_id</code> and <code>status: "pending"</code>. The client polls <code>GET /corrections/{id}</code> until status reaches <code>completed</code> or <code>failed</code>.</p>
+      <p>Why not synchronous (block the HTTP request until the LLM returns)?</p>
+      <table>
+        <thead><tr><th>Concern</th><th>Sync</th><th>Async (ours)</th></tr></thead>
+        <tbody>
+          <tr><td>p95 latency budget</td><td>HTTP timeout (30-60s for most clients) is the LLM budget</td><td>HTTP responds in 500ms; LLM has 90s</td></tr>
+          <tr><td>Worker downtime</td><td>API surface breaks too</td><td>Queue absorbs; API stays up</td></tr>
+          <tr><td>Retry on transient LLM failure</td><td>Caller's problem</td><td>Worker re-queues internally</td></tr>
+          <tr><td>Rate-limit handling</td><td>Caller gets 429 immediately</td><td>Worker backs off transparently</td></tr>
+          <tr><td>Mobile flakiness</td><td>Lost connection = lost submission</td><td>Submission persists; resume polling</td></tr>
+        </tbody>
+      </table>
+      <h3>The status state machine</h3>
+      <pre><code>pending → processing → completed
+                    ↘ failed (with typed error_code + quota_consumed flag)
+pending → failed (rare: worker crash pre-claim)</code></pre>
+      <p>Terminal states (<code>completed</code>, <code>failed</code>) are immutable. Repeated GETs return byte-identical payloads.</p>
+      <h3>Postgres-as-queue</h3>
+      <p>We use Postgres' <code>SELECT ... FOR UPDATE SKIP LOCKED</code> as the queue. No Redis, no RabbitMQ, no Celery. Worker uses <code>LISTEN/NOTIFY</code> for sub-100ms wake-up plus a 5-second poll backstop in case a NOTIFY drops.</p>
+      <p>For an MVP at 50 corrections/day, this is dramatically simpler than a separate broker. When traffic grows past ~1k/day, revisit.</p>
+    </section>
+
+    <section id="cost">
+      <h2>18. Cost economics</h2>
+      <p>Rough numbers from Phase 3 (Ollama Cloud pricing as of 2026-05; check current rates):</p>
+      <table>
+        <thead><tr><th>Model</th><th>Params</th><th>Cost per correction (~10k in, 2k out)</th><th>Where it fits</th></tr></thead>
+        <tbody>
+          <tr><td><code>gpt-oss:20b</code></td><td>20B</td><td>~$0.01</td><td>Bulk classifications; not for nuanced evaluation</td></tr>
+          <tr><td><code>gpt-oss:120b</code></td><td>120B</td><td>~$0.03</td><td>Cheap but ceiling at ~800 on high-band essays</td></tr>
+          <tr><td><code>kimi-k2:1t</code> (our choice)</td><td>1T</td><td>~$0.06</td><td>Best calibration in Cloud catalog; viable for MVP</td></tr>
+          <tr><td><code>deepseek-v3.1:671b</code></td><td>671B</td><td>~$0.04</td><td>Could swap; not yet evaluated</td></tr>
+          <tr><td>Claude Sonnet / GPT-4-class</td><td>—</td><td>~$0.50-1.50</td><td>Better quality, blows MVP budget; revisit post-launch</td></tr>
+        </tbody>
+      </table>
+      <p>Free tier (3/month): ~$0.18 cost per user. Premium tier (30/month): ~$1.80 cost per user. Both leave room for a viable margin.</p>
+      <p>The multi-pass experiment was promising in theory but doubles cost. The per-competency experiment <em>quintuples</em> cost. Both were rejected on quality grounds; even if they had matched single-grader quality, cost would have killed them.</p>
+    </section>
+
+    <section id="pitfalls">
+      <h2>19. Pitfalls we hit (all of them)</h2>
+      <ol>
+        <li><strong>Reasoning model emits empty content.</strong> qwen3-next:80b returned <code>content=""</code> for every call. Lost half a day.</li>
+        <li><strong>JSON mode silently truncates.</strong> When Ollama Cloud's JSON-mode model hits <code>num_predict</code> mid-output, it returns empty content instead of the partial JSON. Bumping <code>num_predict</code> 2048 → 8192 fixed it.</li>
+        <li><strong>Markdown fences around JSON.</strong> Even with "respond only JSON" in the prompt, model wrapped in <code>```json</code>. Added an extractor in <code>OllamaProvider</code>.</li>
+        <li><strong>Excerpt paraphrasing.</strong> Strict verbatim fails too often. Fuzzy normalization (case, punctuation, NFC, 90% token overlap) salvaged most.</li>
+        <li><strong>final_score arithmetic errors.</strong> Model writes 5×160 = 540 (should be 800). Auto-recompute from competency scores fixed it without failing the correction.</li>
+        <li><strong>Gate logic accepted n=0 as PASS.</strong> When all 15 essays failed, all bands were "underpowered" and the gate trivially passed. Fixed: zero successes = hard fail.</li>
+        <li><strong>Concurrent calls to Ollama Cloud → HTTP 500.</strong> 2 parallel requests from MultiPassGrader hit a server-side issue. Forced sequential. Latency 2× but stable.</li>
+        <li><strong>Schema's <code>additionalProperties: false</code> too strict.</strong> Models add <code>annulment_reason_pt_br: null</code> or invent field names. Relaxed to <code>true</code> for the LLM-side schema; pipeline still strict-validates business fields.</li>
+        <li><strong>Per-competency multi-call regressed.</strong> Removing internal-coherence pressure made the model more conservative, not more accurate. Halo effect was an unrecognized ally.</li>
+        <li><strong>Multi-pass averaging added zero info.</strong> Two passes at the same prompt are too correlated; ENEM rule never triggered the 3rd pass; cost doubled for no gain.</li>
+      </ol>
+      <p>Pattern across all 10: the LLM is surprising, and the discovery happens against your production-shaped pipeline, not in unit tests. <strong>The golden dataset is your only honest mirror.</strong></p>
+    </section>
+
+    <section id="reading">
+      <h2>20. What to read next</h2>
+      <ul>
+        <li>OpenAI's <em>Reasoning best practices</em> guide — for understanding reasoning-vs-instructable models.</li>
+        <li>Anthropic's <em>Tool use & structured outputs</em> documentation — the most rigorous treatment of JSON Schema-constrained generation.</li>
+        <li>OWASP <em>LLM Top 10</em> — prompt injection, sensitive info disclosure, supply-chain risks.</li>
+        <li><em>Patterns for Building LLM-based Systems & Products</em> by Eugene Yan — high-level architecture patterns.</li>
+        <li>Marinho, Anchiêta &amp; Moura, <em>Essay-BR</em> (2022) — the corpus we ingest. Read the paper to understand the limitations of platform-graded vs INEP-graded essays.</li>
+        <li>Our own <code>specs/001-enem-correction-api/reports/phase3-summary.md</code> — the 15-run iteration ledger, raw evidence behind every choice in this guide.</li>
+      </ul>
+    </section>
+
+    <hr>
+    <p style="color: var(--fg-dim); font-size: 13px;">
+      Generated as part of the ENEM essay correction MVP, Phase 3 close (2026-05-29).<br>
+      Source code references throughout: <code>src/corrector/</code>, <code>tests/golden/</code>, <code>.specify/memory/constitution.md</code>.
+    </p>
+  </main>
+</div>
+</body>
+</html>

@@ -11,12 +11,13 @@ import (
 type Code string
 
 const (
-	CodeNotFound     Code = "NOT_FOUND"
-	CodeConflict     Code = "CONFLICT"
-	CodeUnauthorized Code = "UNAUTHORIZED"
-	CodeForbidden    Code = "FORBIDDEN"
-	CodeValidation   Code = "VALIDATION_ERROR"
-	CodeInternal     Code = "INTERNAL_ERROR"
+	CodeNotFound      Code = "NOT_FOUND"
+	CodeConflict      Code = "CONFLICT"
+	CodeUnauthorized  Code = "UNAUTHORIZED"
+	CodeForbidden     Code = "FORBIDDEN"
+	CodeValidation    Code = "VALIDATION_ERROR"
+	CodeInternal      Code = "INTERNAL_ERROR"
+	CodeQuotaExceeded Code = "QUOTA_EXCEEDED"
 )
 
 // AppError is the standard error type for all service boundaries.
@@ -51,6 +52,8 @@ func (e *AppError) HTTPStatus() int {
 		return http.StatusForbidden
 	case CodeValidation:
 		return http.StatusUnprocessableEntity
+	case CodeQuotaExceeded:
+		return http.StatusTooManyRequests
 	default:
 		return http.StatusInternalServerError
 	}
@@ -80,6 +83,10 @@ func Validation(field, message string) *AppError {
 
 func Internal(cause error) *AppError {
 	return &AppError{Code: CodeInternal, Message: "an internal error occurred", Cause: cause}
+}
+
+func QuotaExceeded(message string) *AppError {
+	return &AppError{Code: CodeQuotaExceeded, Message: message}
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

@@ -91,6 +91,8 @@ export default function PerfilHome() {
       <View style={{ height: space[5] }} />
 
       <Card>
+        <MenuLink label={t.social.title} onPress={() => router.push('/(tabs)/perfil/friends')} />
+        <Divider />
         <MenuLink label="Editar perfil" onPress={() => router.push('/(tabs)/perfil/edit')} />
         <Divider />
         <MenuLink label={t.perfil.changeEmail} onPress={() => router.push('/(tabs)/perfil/change-email')} />

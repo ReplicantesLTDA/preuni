@@ -10,18 +10,24 @@ import (
 	chi "github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/preuni/pkg/logger"
-	pkgmw "github.com/preuni/pkg/middleware"
-	authrouter "github.com/preuni/app/internal/auth/router"
 	"github.com/preuni/app/internal/adapters"
+	authrouter "github.com/preuni/app/internal/auth/router"
 	"github.com/preuni/app/internal/config"
+	essayrepo "github.com/preuni/app/internal/essay/repository"
+	essayrouter "github.com/preuni/app/internal/essay/router"
 	"github.com/preuni/app/internal/mail"
+	socialrouter "github.com/preuni/app/internal/social/router"
+	streakrouter "github.com/preuni/app/internal/streak/router"
 	userrepo "github.com/preuni/app/internal/user/repository"
 	userrouter "github.com/preuni/app/internal/user/router"
+	"github.com/preuni/pkg/logger"
+	pkgmw "github.com/preuni/pkg/middleware"
 )
 
-// New constructs the monolith's top-level chi.Router with all routes mounted.
-func New(cfg config.Config, pool *pgxpool.Pool, log *logger.Logger) chi.Router {
+// New constructs the monolith's top-level chi.Router with all routes
+// mounted, plus the essay Repository so the caller can drive the
+// correction-service reconciler loop from it.
+func New(cfg config.Config, pool *pgxpool.Pool, log *logger.Logger) (chi.Router, *essayrepo.Repository) {
 	r := chi.NewRouter()
 	r.Use(pkgmw.RequestID)
 	r.Use(chimw.RealIP)
@@ -55,7 +61,22 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *logger.Logger) chi.Router {
 		S3Region:      cfg.S3Region,
 	})
 
-	return r
+	streakrouter.Mount(r, streakrouter.Deps{
+		Pool:          pool,
+		JWTSigningKey: cfg.JWTSigningKey,
+	})
+
+	essayRepo := essayrouter.Mount(r, essayrouter.Deps{
+		Pool:          pool,
+		JWTSigningKey: cfg.JWTSigningKey,
+	})
+
+	socialrouter.Mount(r, socialrouter.Deps{
+		Pool:          pool,
+		JWTSigningKey: cfg.JWTSigningKey,
+	})
+
+	return r, essayRepo
 }
 
 func buildSender(cfg config.Config, log *logger.Logger) mail.Sender {

@@ -1,0 +1,27 @@
+Revolução Universal
+---
+Com a criação do bitcoin, em 2009, surgiu um novo tipo de moeda - a criptomoeda, que se propõe a substituir o dinheiro convencional e a agilizar as transações eletrônicas, isto é, compras e vendas on line, transferências de valores, pagamentos, etc. Como a internet, por meio da qual são veiculadas, as criptomoedas também são descentralizadas, controladas pela rede de usuários, o que impede de se submeterem a uma instituição política ou financeira. Os governos de todo o mundo ainda não sabem como regulamentar as criptomoedas, que também tornariam os bancos obsoletos. Nesse sentido, essa moeda virtual pode representar uma verdadeira revolução reduzindo o poder dos governos na economia e, simplesmente, abolindo as instituições bancárias. Você acha que uma revolução como essa seria possível? Como governos e banqueiros reagiriam a isso? Seria possível conter ou controlar o avanço da tecnologia, impedindo uma radical transformação econômica, política e social jamais imaginada anteriormente?
+
+Não existe um entendimento único sobre a definição de criptomoeda. Por exemplo, a Autoridade Bancária Europeia (EBA) a define "como uma representação digital de valor que não é emitida por um banco central ou autoridade pública, nem necessariamente ligada a uma moeda convencional, mas é aceita por pessoas físicas ou jurídicas como meio de troca e pode ser transferido, acumulado ou comercializado eletronicamente".
+
+Para o Banco Central Europeu (ECB), a criptomoeda é um "tipo de dinheiro digital não regulamentado, que é emitido e controlado por seus desenvolvedores, utilizado e aceito entre os membros de uma comunidade virtual específica". Já a organização intergovernamental Força Tarefa de Ação Financeira (FATF) apresenta a seguinte descrição: "criptomoeda é a representação digital de um valor, que pode ser comercializado eletronicamente e funciona como 1) um meio de troca e/ou 2) uma unidade de conta ou 3) uma reserva de valor [como o ouro, por exemplo], mas não tem valor legal em qualquer jurisdição".
+
+Europarlamento (traduzido e adaptado)
+
+O controle descentralizado da criptomoeda coloca à prova as moedas fiduciárias ou convencionais, que são mantidas sob forte controle estatal. Enquanto de um lado existem governos controlando as moedas convencionais, o bitcoin não é controlado por um pequeno grupo de pessoas ou de poder.
+
+O que a sociedade entende por dinheiro é, na realidade, o controle exercido pelo governo através de um sistema financeiro. Com essa política protecionista, países controlam a emissão e o volume de dinheiro em circulação. A emissão de moedas convencionais garante a qualquer país o total controle financeiro. Nenhum banco poderia emitir notas de moedas quando simplesmente quisesse, por exemplo. Toda a emissão é controlada por um órgão, como a Casa da Moeda no Brasil. Toda a economia de um país pode ser medida através de sua moeda convencional.
+
+O sistema financeiro mundial é suportado por uma rede bancária. Cada vez mais soluções financeiras utilizam a internet como forma de modernizar sistemas que são utilizados em todo o mundo. Aos poucos, bancos passam a utilizar a tecnologia blockchain para o envio de remessas.
+
+Por outro lado, o bitcoin e as demais criptomoedas dispensam um sistema bancário para realizar operações. Sendo assim, as criptomoedas são completamente independentes ao sistema financeiro mundial vigente. Governos e bancos centrais dão lugar a computadores e blocos de dados.
+
+Livecoins.com.br (editado e adaptado)
+
+A blockchain é uma espécie de grande "livro contábil" que registra vários tipos de transações e possui seus registros espalhados por vários computadores. No caso das moedas criptografadas, como o bitcoin, esse livro registra o envio e recebimento de valores. Para facilitar, pode-se fazer a seguinte analogia: as "páginas" desse "livro contábil" estão armazenadas em várias "bibliotecas" espalhadas pelo mundo; por isso, apagar o conhecimento presente nele é uma árdua tarefa.
+
+Este sistema é formado por uma "cadeia de blocos". Um conjunto de transações é colocado dentro de cada um desses blocos, que são trancados por uma forte camada de criptografia. Por outro lado, a blockchain é pública, ou seja, qualquer pessoa pode verificar e auditar as movimentações registradas nela.
+
+Qualquer transação feita pela blockchain só pode ser validada quando todo um "bloco" é preenchido com transações. Ou seja, só assim é possível fazer uma moeda digital sair das mãos de uma pessoa e ir para outra. Como esses blocos são selados por códigos criptográficos, é praticamente impossível arrombar o segredo desses recipientes. Isso garante, por exemplo, que: 1) cada moeda chegue ao destino certo; 2) uma moeda não seja usada mais de uma vez; 3) transações anteriores não sejam alteradas sem comprometer toda a cadeia.
+
+G1 - Economia (Editado e adaptado)

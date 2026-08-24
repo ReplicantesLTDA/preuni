@@ -39,7 +39,8 @@ func newTestRouter(t *testing.T) http.Handler {
 		S3Bucket:             "test-bucket",
 		S3Region:             "us-east-1",
 	}
-	return router.New(cfg, pool, logger.New("error"))
+	r, _ := router.New(cfg, pool, logger.New("error"))
+	return r
 }
 
 func TestContract_MissingJWT_Returns401Envelope(t *testing.T) {

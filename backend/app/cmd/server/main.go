@@ -12,10 +12,40 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/preuni/pkg/logger"
 	"github.com/preuni/app/internal/config"
+	essayrepo "github.com/preuni/app/internal/essay/repository"
 	"github.com/preuni/app/internal/router"
+	"github.com/preuni/pkg/logger"
 )
+
+// reconcileInterval is how often the monolith polls correction_jobs for
+// results (contracts/internal-bridge.md). The correction worker also wakes
+// the monolith isn't notified directly — this poll is the reconciliation
+// side of the async bridge, independent of the worker's own LISTEN/NOTIFY.
+const reconcileInterval = 5 * time.Second
+
+// runEssayReconciler periodically pulls completed/failed correction_jobs
+// results back onto their originating essay submissions until ctx is
+// cancelled.
+func runEssayReconciler(ctx context.Context, repo *essayrepo.Repository, log *logger.Logger) {
+	ticker := time.NewTicker(reconcileInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			n, err := repo.ReconcileOnce(ctx)
+			if err != nil {
+				log.Error("essay reconciler tick failed", logger.Err(err))
+				continue
+			}
+			if n > 0 {
+				log.Info("essay reconciler processed submissions", logger.Int("count", n))
+			}
+		}
+	}
+}
 
 func main() {
 	cfg := config.Load()
@@ -29,7 +59,11 @@ func main() {
 	}
 	defer pool.Close()
 
-	r := router.New(cfg, pool, log)
+	r, essayRepo := router.New(cfg, pool, log)
+
+	reconcileCtx, stopReconciler := context.WithCancel(context.Background())
+	defer stopReconciler()
+	go runEssayReconciler(reconcileCtx, essayRepo, log)
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,

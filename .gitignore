@@ -42,6 +42,26 @@ backend/vendor/
 backend/bin/
 backend/dist/
 
+# ─── Node / TypeScript (mobile) ──────────────────────────────────────────────
+node_modules/
+mobile/dist/
+mobile/.expo/
+mobile/coverage/
+*.tsbuildinfo
+
+# ─── Python (corretor-redacao) ───────────────────────────────────────────────
+corretor-redacao/.venv/
+corretor-redacao/__pycache__/
+**/__pycache__/
+*.pyc
+corretor-redacao/.pytest_cache/
+corretor-redacao/.ruff_cache/
+corretor-redacao/.import_linter_cache/
+corretor-redacao/.mypy_cache/
+corretor-redacao/logs/
+corretor-redacao/htmlcov/
+.coverage
+
 # ─── Elixir / Phoenix ────────────────────────────────────────────────────────
 backend/svc/mail/_build/
 backend/svc/mail/deps/

@@ -1,0 +1,98 @@
+name: backend-ci
+
+on:
+  push:
+    branches: [main, dev, '014-constitution-alignment-refactor', '015-cicd-pipeline']
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: preuni
+          POSTGRES_PASSWORD: preuni
+          POSTGRES_DB: preuni
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      TEST_DB_URL: postgres://preuni:preuni@localhost:5432/preuni?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: backend/go.work.sum
+
+      # Non-blocking for now: the existing codebase has repo-wide gofmt/import
+      # drift predating this pipeline (toolchain-version import-sort
+      # differences), unrelated to any single PR's diff. Blocking on it here
+      # would fail every PR for pre-existing reasons outside its scope.
+      # Tracked as follow-up debt; flip to blocking once that's cleaned up.
+      - name: golangci-lint (non-blocking — pre-existing formatting debt)
+        continue-on-error: true
+        uses: golangci/golangci-lint-action@v6
+        with:
+          working-directory: backend/app
+          args: --timeout=5m
+
+      - name: gofmt check (non-blocking — pre-existing formatting debt)
+        continue-on-error: true
+        working-directory: backend
+        run: |
+          UNFORMATTED=$(gofmt -l .)
+          if [ -n "$UNFORMATTED" ]; then
+            echo "The following files are not gofmt-formatted:"
+            echo "$UNFORMATTED"
+            exit 1
+          fi
+
+      - name: run Go-owned migrations
+        # infra/migrations/<schema>/*.sql are plain numbered SQL files (not
+        # golang-migrate's up/down pair format, despite infra/scripts/migrate.sh's
+        # docstring — a pre-existing repo inconsistency, out of scope here).
+        # Applying them in order with psql is what actually matches the files.
+        env:
+          PGPASSWORD: preuni
+        run: |
+          for schema in auth user content learning simulation dissertation essay social gamification; do
+            for f in infra/migrations/"$schema"/*.sql; do
+              [ -e "$f" ] || continue
+              echo "-> $f"
+              psql -h localhost -U preuni -d preuni -v ON_ERROR_STOP=1 -f "$f"
+            done
+          done
+
+      # The essay domain writes to correction.correction_jobs (contracts/
+      # internal-bridge.md) -- that schema is owned by corretor-redacao's
+      # own Alembic migrations, not infra/migrations/. research.md #1's
+      # design is a single shared Postgres instance, so backend-ci's DB
+      # needs both migration sets applied for essay-domain tests to exercise
+      # the real bridge write path.
+      - uses: astral-sh/setup-uv@v3
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: apply correction-service schema (for the essay<->correction bridge table)
+        working-directory: corretor-redacao
+        env:
+          DATABASE_URL: postgresql+asyncpg://preuni:preuni@localhost:5432/preuni
+        run: |
+          uv pip install --system -e ".[dev]"
+          alembic upgrade head
+
+      - name: test + coverage gate
+        run: bash backend/scripts/check-coverage.sh
