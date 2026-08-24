@@ -80,15 +80,25 @@ stop-backend:
 		monolith gateway
 
 ## migrate
-##   Run all SQL migrations against the local postgres instance.
+##   Run all SQL migrations against the local postgres instance, then the
+##   correction service's own Alembic chain (independent schema, no
+##   ordering dependency between the two -- see
+##   specs/032-corrector-service-integration/research.md #R2).
 ##   Requires 'make run-infra' to be running first.
+##   grant-correction-jobs.sql is intentionally excluded from the glob: it's
+##   an optional least-privilege script for a `preuni_monolith` role this
+##   project's dev/CI setup does not provision (research.md #R3) -- run it
+##   by hand only if you've actually created that role.
 migrate:
-	@find infra/migrations -name "*.sql" | sort | while read f; do \
+	@find infra/migrations -name "*.sql" -not -name "grant-*.sql" | sort | while read f; do \
 		echo "→ $$f"; \
 		docker compose -f infra/docker-compose.yml exec -T postgres \
 			psql -U preuni -d preuni < "$$f" || exit 1; \
 	done
 	@echo "Migrations complete."
+	@echo "→ ai-corrector: alembic upgrade head"
+	docker compose -f infra/docker-compose.yml run --rm corrector-api alembic upgrade head
+	@echo "Correction service migrations complete."
 
 ## run-web
 ##   Start the Kotlin/Wasm web app in the browser (requires JDK 17+ and Node.js 20+).
@@ -189,7 +199,7 @@ dev:
 	@echo "Waiting for postgres to be healthy..."
 	@until docker compose -f infra/docker-compose.yml exec -T postgres pg_isready -U preuni -d preuni >/dev/null 2>&1; do sleep 1; done
 	@$(MAKE) migrate
-	docker compose -f infra/docker-compose.yml up --build -d monolith gateway
+	docker compose -f infra/docker-compose.yml up --build -d monolith gateway corrector-api corrector-worker
 
 ## doctor
 ##   Verify local dev prerequisites (Docker, Go 1.24, Postgres).

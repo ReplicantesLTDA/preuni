@@ -60,7 +60,7 @@ docker compose -f infra/docker-compose.yml up -d postgres redis
 # Backend monolith
 cd backend/app && go run ./cmd/server
 # or: make run-monolith
-make dev                # full stack: postgres + redis + monolith + gateway
+make dev                # full stack: postgres + redis + monolith + gateway + corrector-api + corrector-worker
 
 # Mobile app
 cd mobile && pnpm install

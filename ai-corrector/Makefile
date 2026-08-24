@@ -37,24 +37,22 @@ install:
 	uv pip install -e ".[dev]"
 	@echo "✓ Dependencies installed"
 
-# Start development environment
+# This service no longer has a standalone docker-compose stack of its own
+# (specs/032-corrector-service-integration/ — it runs as part of the shared
+# preuni stack now). `up`/`down`/`logs` point at that shared stack instead
+# of a deleted deploy/docker-compose.yml.
 up:
-	@echo "Starting development environment..."
-	docker-compose -f deploy/docker-compose.yml up -d
-	@echo "✓ Environment started"
-	@echo "  API: http://localhost:8000"
-	@echo "  Docs: http://localhost:8000/docs"
-	@echo "  Postgres: localhost:5432"
+	@echo "This service runs as part of the shared preuni stack now."
+	@echo "Run from the repo root instead: make dev"
+	@exit 1
 
-# Stop development environment
 down:
-	@echo "Stopping development environment..."
-	docker-compose -f deploy/docker-compose.yml down
-	@echo "✓ Environment stopped"
+	@echo "Run from the repo root instead: docker compose -f ../infra/docker-compose.yml down"
+	@exit 1
 
 # View logs
 logs:
-	docker-compose -f deploy/docker-compose.yml logs -f
+	docker compose -f ../infra/docker-compose.yml logs -f corrector-api corrector-worker
 
 # Format code
 fmt:

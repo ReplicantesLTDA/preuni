@@ -22,12 +22,25 @@ Its own `/auth`, `/me`, and `POST /corrections` endpoints were removed in that r
 
 ## Quick start
 
+This service has no standalone deployment of its own anymore — it runs
+as part of the shared preuni stack. From the repo root:
+
 ```bash
-cp .env.example .env          # edit DATABASE_URL, JWT_SECRET_KEY, OLLAMA_CLOUD_API_KEY
-make up                       # postgres + api + worker via docker-compose
-make db-migrate               # alembic upgrade head
-curl http://localhost:8000/healthz
+cp infra/.env.example infra/.env   # edit POSTGRES_*, JWT_SIGNING_KEY, etc.
+make dev                           # postgres + redis + monolith + gateway +
+                                    # corrector-api + corrector-worker, one command
+curl http://localhost:8080/health  # gateway; corrector-api/-worker have no
+                                    # public port — they're internal-only
 ```
+
+See `specs/032-corrector-service-integration/quickstart.md` (repo root)
+for the full local verification flow, including an end-to-end essay
+grading smoke test.
+
+For correction-pipeline-only development in isolation (no monolith, your
+own local Postgres), `make db-migrate` (below) still works against
+whatever `DATABASE_URL` you point it at — but there is no longer a
+standalone `docker-compose` stack for this service on its own.
 
 ## Development
 
@@ -61,6 +74,17 @@ The `auth/` package (JWT, argon2id, quota enforcement, email verification)
 was removed — the Go monolith owns all of that now.
 
 Import-linter enforces: `corrector/` must not import `db/`, `api/`, or `workers/`.
+
+## Deployment
+
+This service has no deployment of its own — it is built and run as two
+services (`corrector-api`, `corrector-worker`) inside `../infra/docker-compose.yml`,
+sharing the monolith's own Postgres instance (schema `correction`) and its
+Docker network. There is no reverse proxy, TLS termination, or public port
+for this service (`014` already removed its only public endpoints beyond
+health/metrics; `032` removed the standalone Postgres container/network
+and Caddy reverse proxy this service used to carry alongside them). See
+`../specs/032-corrector-service-integration/`.
 
 ## License
 

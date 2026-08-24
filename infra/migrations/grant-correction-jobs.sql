@@ -9,6 +9,15 @@
 --
 -- Usage: psql "$DATABASE_URL" -f infra/migrations/grant-correction-jobs.sql
 --        -v monolith_role=preuni_monolith
+--
+-- OPTIONAL, currently unexecuted: this project's dev/CI setup does not
+-- provision a separate `preuni_monolith` role — both the monolith and the
+-- correction service connect as the same shared Postgres user today
+-- (constitution's Security & Secrets principle explicitly rejects
+-- RBAC-style access control for this project's current scale). This
+-- script is least-privilege hardening for a deployment that has actually
+-- created that role; run it by hand only in that case. See
+-- specs/032-corrector-service-integration/research.md #R3.
 
 \set monolith_role 'preuni_monolith'
 
