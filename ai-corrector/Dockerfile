@@ -11,12 +11,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip install uv
 
 # Copy project files
-COPY pyproject.toml uv.lock* ./
+COPY pyproject.toml uv.lock* README.md alembic.ini ./
 COPY src ./src
 COPY tests ./tests
 
 # Install dependencies
-RUN uv pip install -e ".[dev]"
+RUN uv pip install --system -e ".[dev]"
 
 # Create logs directory
 RUN mkdir -p /app/logs
