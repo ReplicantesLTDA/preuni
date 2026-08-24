@@ -81,3 +81,30 @@ func setupWithNthQueryFailure(t *testing.T, n int64) (http.Handler, *pgxpool.Poo
 	r, _, _ := router.New(cfg, pool, logger.New("error"))
 	return r, pool
 }
+
+// nthQueryFailPool builds a standalone pool (no router) whose Nth query
+// fails, for exercising repository methods directly rather than through
+// HTTP handlers -- e.g. essay.Repository.ReconcileOnce, which is called
+// from a background loop, not a request.
+func nthQueryFailPool(t *testing.T, n int64) *pgxpool.Pool {
+	t.Helper()
+	dbURL := os.Getenv("TEST_DB_URL")
+	if dbURL == "" {
+		dbURL = "postgres://preuni:preuni@localhost:5432/preuni?sslmode=disable"
+	}
+	pgCfg, err := pgxpool.ParseConfig(dbURL)
+	if err != nil {
+		t.Fatalf("parse db url: %v", err)
+	}
+	pgCfg.ConnConfig.Tracer = &nthQueryFailTracer{n: n}
+
+	pool, err := pgxpool.NewWithConfig(context.Background(), pgCfg)
+	if err != nil {
+		t.Skipf("postgres unreachable: %v", err)
+	}
+	if err := pool.Ping(context.Background()); err != nil {
+		t.Skipf("postgres ping failed: %v", err)
+	}
+	t.Cleanup(pool.Close)
+	return pool
+}

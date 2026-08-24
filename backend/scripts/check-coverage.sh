@@ -140,13 +140,21 @@
 # (mirroring existing OTP-login coverage of the same shape); and
 # ListMedals' populated-result path (previously only empty-result and
 # canceled-context were tested, never the rows.Next()/Scan loop body).
-# Floor set to 85 for headroom.
+# 85.8% -> 86.4% after: OTPLoginRequestHandler/PasswordResetRequestHandler's
+# background-goroutine otpRepo.Create-fails branches (DB-state assertion --
+# no OTP row persists, vs. one does on the success path); ReconcileOnce's
+# markTimedOut UPDATE-fails branch and reconcileCompleted's tx.Begin/
+# essay_grades-INSERT/submission-status-UPDATE-fails branches (previously
+# 0%, reached via a directly-traced repository, no HTTP route);
+# RegisterHandler's otpRepo.Create-fails branch (non-fatal, logged --
+# registration still succeeds but no verification OTP is created).
+# Floor set to 86 for headroom.
 #
 # Usage: ./check-coverage.sh (run from backend/app/)
 
 set -euo pipefail
 
-COVERAGE_FLOOR="${COVERAGE_FLOOR:-85}"
+COVERAGE_FLOOR="${COVERAGE_FLOOR:-86}"
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../app"
 
