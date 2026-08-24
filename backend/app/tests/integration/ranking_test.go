@@ -130,6 +130,40 @@ func TestIntegration_Medals_EmptyForFreshUser(t *testing.T) {
 	}
 }
 
+// TestIntegration_Medals_ReturnsSeededMedal covers ListMedals' populated
+// result branch (rows.Next()/Scan actually iterating a row), which
+// TestIntegration_Medals_EmptyForFreshUser never reaches.
+func TestIntegration_Medals_ReturnsSeededMedal(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, token := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO gamification.medals (id, user_id, type, earned_at)
+		VALUES (gen_random_uuid(), $1, 'streak_7_day', now())
+	`, studentID); err != nil {
+		t.Fatalf("seed medal: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/medals/me", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("medals/me: got %d body=%s", w.Code, w.Body.String())
+	}
+	var medals []struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &medals); err != nil {
+		t.Fatal(err)
+	}
+	if len(medals) != 1 || medals[0].Type != "streak_7_day" {
+		t.Fatalf("expected one streak_7 medal, got %+v", medals)
+	}
+}
+
 // TestIntegration_Ranking_Me_404sForAUserWithNoCurrentWeekEntry covers
 // MyRanking's not-found branch, which TestIntegration_Ranking_MeAndWeeklyEndpoints
 // never reaches (that test always calls EnsureCurrentWeekEntry first).

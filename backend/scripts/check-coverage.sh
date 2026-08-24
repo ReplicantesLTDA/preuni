@@ -105,14 +105,112 @@
 # canceled-context tests for ChangePasswordHandler, SubmitEssayHandler,
 # the auth-domain DeleteAccountHandler, and RegisterHandler (a brand-new
 # email, so this hits credRepo.Create's generic-failure branch, not the
-# already-covered duplicate-email 409).
-# Floor set to 80 for headroom.
+# already-covered duplicate-email 409). 80.6% -> 80.8% after covering
+# router.buildSender's two branches (Noop fallback vs. real
+# *mail.SMTPSender) -- a pure config-branching function, zero coverage
+# before. Remaining gaps mostly need a *second* DB call to fail after a
+# first one succeeds (single-cancel-before-request can't target that),
+# or breaking crypto/rand/HMAC internals (not real fault injection) --
+# diminishing returns confirmed across two dedicated passes... until
+# 80.8% -> 81.9% via a genuinely new deterministic technique: a pgx
+# QueryTracer (nthQueryFailTracer, tests/integration/nth_query_fail_*.go)
+# that returns an already-canceled context on exactly the Nth query,
+# confirmed by reading pgx v5.9.2's Conn.Query source and empirically
+# verified against real Postgres before use (each new test also run 3x
+# individually with zero flakiness). Reaches "first DB call succeeds,
+# second fails" branches plain canceled-context injection structurally
+# cannot: RefreshTokenHandler's FindByID/Store/Revoke-fails,
+# LogoutHandler's Revoke-fails, OnboardingHandler's FindByID-fails,
+# essay.getGrade's Internal(err) branch, VerifyEmailHandler's
+# MarkUsed/MarkEmailVerified-fails. This technique generalizes to any
+# other remaining "second-call" gap in the codebase. 81.9% -> 83.4%
+# after applying the same technique to ChangePasswordHandler,
+# ChangeEmailConfirmHandler, PasswordResetHandler (confirm),
+# OTPLoginVerifyHandler, and DeleteAccountHandler's second/third/fourth-
+# call failure branches (12 sub-cases, each verified 3x for flakiness).
+# 83.4% -> 85.8% after: AvatarHandler.ServeUpload/ServeConfirm (previously
+# 0% -- unwired-nowhere-tested handler; presigned-URL stub success,
+# missing-object_key validation, DB update, canceled-context failure);
+# Nth-query tracer extended to Login (invalid-JSON + refreshRepo.Store
+# fails), ChangeEmailRequest/ResendVerification's otpRepo.Create-fails
+# branches, and WeekClose's closeOneEntry rank-update/next-week-insert
+# Exec-fail branches (queries inside the per-tier loop, reached via a
+# directly-traced raw pool since WeekClose has no HTTP route);
+# PasswordResetRequest's unverified-email and unknown-email branches
+# (mirroring existing OTP-login coverage of the same shape); and
+# ListMedals' populated-result path (previously only empty-result and
+# canceled-context were tested, never the rows.Next()/Scan loop body).
+# 85.8% -> 86.4% after: OTPLoginRequestHandler/PasswordResetRequestHandler's
+# background-goroutine otpRepo.Create-fails branches (DB-state assertion --
+# no OTP row persists, vs. one does on the success path); ReconcileOnce's
+# markTimedOut UPDATE-fails branch and reconcileCompleted's tx.Begin/
+# essay_grades-INSERT/submission-status-UPDATE-fails branches (previously
+# 0%, reached via a directly-traced repository, no HTTP route);
+# RegisterHandler's otpRepo.Create-fails branch (non-fatal, logged --
+# registration still succeeds but no verification OTP is created).
+# 86.4% -> 87.5% after: essay.Repository.Submit's remaining Nth-query
+# failure branches (alreadySubmitted check, essay_submissions INSERT,
+# RecordSubmission UPDATE, correction_jobs INSERT, tx.Commit -- Submit
+# itself went 84.4% -> 96.9%), and SMTPSender.Send (previously 0%, never
+# tested at all) via real TCP sockets -- a closed-port listener for
+# genuine dial-refused errors (implicit-TLS and STARTTLS paths, plus the
+# From-empty-fallback branch) and an accept-then-close listener for a
+# genuine TLS handshake failure. No mocking of the Sender interface, real
+# network errors. Send: 0% -> 36.7%. Floor set to 87 for headroom.
+# 87.5% -> 88.5% after: NoopSender.Send (trivial, previously untested);
+# RegisterHandler's studentProvisioner-fails non-fatal branch (query #2,
+# asserts no users.students row while registration still succeeds); and a
+# batch of real previously-unwritten request shapes needing no fault
+# injection -- LoginHandler missing-fields, OTPLoginVerifyHandler and
+# VerifyEmailHandler's wrong-OTP-code branch specifically (a real OTP row
+# exists but the submitted code doesn't match -- distinct from the
+# already-covered "no OTP at all"/"unknown email" branches),
+# VerifyEmailHandler invalid-JSON/missing-fields, ResendVerificationHandler
+# invalid-JSON. Investigated and confirmed genuinely out of scope this
+# round: SMTPSender.Send's success path (its STARTTLS/plain branch is a
+# single passthrough to net/smtp.SendMail, already covered by the existing
+# dial-fail test regardless of inner outcome; the implicit-TLS Auth/Mail/
+# Rcpt/Data path needs an injectable RootCAs/InsecureSkipVerify knob on
+# SMTPConfig -- a prod code change, out of scope for test-only work);
+# fireAndForgetEmail's log-only branches (zaptest/observer needs a
+# constructor accepting a custom zap core, logger.Logger's field is
+# private -- prod code change, out of scope). Floor set to 88 for
+# headroom. 88.5% -> 89.4% after two small, scoped, backward-compatible
+# production changes explicitly approved by the user to unlock the
+# remaining gaps: (1) SMTPConfig gained an optional RootCAs *x509.CertPool
+# field (nil default = system trust store, zero behavior change for prod),
+# wired into the implicit-TLS tls.Dial config -- lets tests trust a
+# self-signed cert from a real fake SMTP server; (2) backend/pkg/logger
+# gained Wrap(z *zap.Logger) *Logger alongside the existing New(level
+# string) constructor, letting tests inject an observed zap core without
+# touching stdout/stderr or New's behavior. Built a real fake SMTP server
+# (real tls.Listen, real self-signed cert, real SMTP protocol bytes) to
+# test Send's full success round-trip and a genuine 550 RCPT rejection
+# (SMTPSender.Send: 36.7% -> 80%); and used logger.Wrap + zaptest/observer
+# to assert fireAndForgetEmail's log.Error line actually fires on a real
+# dial-refused SMTP failure (fireAndForgetEmail: 50% -> 100%). Floor set
+# to 89 for headroom. 89.4% -> 90.0% (GOAL REACHED) after covering
+# SMTPSender.Send's remaining branches via genuine protocol-level failures
+# / connection drops on the fake SMTP server (bad greeting, AUTH/MAIL/DATA
+# rejected, write-fails-on-drop, close-fails-on-drop, quit-fails-on-drop --
+# Send: 80% -> 96.7%), and UpdateStudentHandler/SubmitEssayHandler's
+# invalid-JSON branches (previously untested). Floor set to 90 -- the
+# constitution goal.
+#
+# Remaining gaps are genuinely out of scope, not padding candidates:
+# crypto/rand internals (GenerateOTP, JWT issuance), test-helper
+# scaffolding (not app code), mail/templates.go's Execute-error branches
+# (re-confirmed unreachable across three separate rounds -- static
+# templates + simple string data never fail to render), and
+# cmd/server/main.go's process entrypoint. Don't force these; if coverage
+# needs to grow further, it'll come from new features, not more digging
+# here.
 #
 # Usage: ./check-coverage.sh (run from backend/app/)
 
 set -euo pipefail
 
-COVERAGE_FLOOR="${COVERAGE_FLOOR:-80}"
+COVERAGE_FLOOR="${COVERAGE_FLOOR:-90}"
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../app"
 

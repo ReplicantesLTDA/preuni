@@ -514,6 +514,58 @@ func TestIntegration_OTPLoginRequest_NoOTPForUnverifiedEmail(t *testing.T) {
 	}
 }
 
+// TestIntegration_PasswordResetRequest_NoOTPForUnverifiedEmail covers
+// PasswordResetRequestHandler's background-goroutine early-return branch
+// (creds.EmailVerified == false), the mirror of
+// TestIntegration_OTPLoginRequest_NoOTPForUnverifiedEmail for the
+// password-reset request side, previously untested.
+func TestIntegration_PasswordResetRequest_NoOTPForUnverifiedEmail(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, _ := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+	email := studentEmail(t, ctx, pool, studentID)
+
+	body, _ := json.Marshal(map[string]string{"email": email})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/password/reset/request", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusAccepted {
+		t.Fatalf("password reset request: got %d body=%s", w.Code, w.Body.String())
+	}
+
+	time.Sleep(50 * time.Millisecond)
+	var count int
+	if err := pool.QueryRow(ctx,
+		`SELECT count(*) FROM auth.otp_codes WHERE credential_id = $1 AND purpose = 'PASSWORD_RESET'`,
+		studentID,
+	).Scan(&count); err != nil {
+		t.Fatalf("query otp count: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("expected no OTP for an unverified email, got %d", count)
+	}
+}
+
+// TestIntegration_PasswordResetRequest_UnknownEmailStill202s covers
+// PasswordResetRequestHandler's background-goroutine credRepo.FindByEmail
+// error branch (no matching credential), which must still 202 (prevents
+// email enumeration) and must not panic or hang the goroutine.
+func TestIntegration_PasswordResetRequest_UnknownEmailStill202s(t *testing.T) {
+	r, _ := setup(t)
+
+	body, _ := json.Marshal(map[string]string{"email": "nobody-here@preuni.test"})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/password/reset/request", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusAccepted {
+		t.Fatalf("password reset request for an unknown email: got %d body=%s", w.Code, w.Body.String())
+	}
+	time.Sleep(50 * time.Millisecond)
+}
+
 func markVerified(t *testing.T, ctx context.Context, pool *pgxpool.Pool, credentialID string) {
 	t.Helper()
 	if _, err := pool.Exec(ctx, `UPDATE auth.credentials SET email_verified = true WHERE id = $1`, credentialID); err != nil {

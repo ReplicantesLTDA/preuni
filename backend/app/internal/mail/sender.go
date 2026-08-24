@@ -2,6 +2,7 @@ package mail
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"net/smtp"
 	"strings"
@@ -19,6 +20,13 @@ type SMTPConfig struct {
 	Username string
 	Password string
 	UseTLS   bool // true → implicit TLS (port 465); false → STARTTLS (587)
+
+	// RootCAs overrides the trust store used for the implicit-TLS dial.
+	// Nil (the default, and the only value ever set in production) means
+	// "use the system trust store" -- identical to prior behavior. Tests
+	// use this to trust a self-signed cert from a real fake SMTP server
+	// without disabling verification.
+	RootCAs *x509.CertPool
 }
 
 // SMTPSender is a production Sender backed by net/smtp.
@@ -40,7 +48,7 @@ func (s *SMTPSender) Send(msg Message) error {
 	}
 
 	if s.cfg.UseTLS {
-		conn, err := tls.Dial("tcp", addr, &tls.Config{ServerName: s.cfg.Host, MinVersion: tls.VersionTLS12})
+		conn, err := tls.Dial("tcp", addr, &tls.Config{ServerName: s.cfg.Host, MinVersion: tls.VersionTLS12, RootCAs: s.cfg.RootCAs})
 		if err != nil {
 			return fmt.Errorf("smtp tls dial: %w", err)
 		}
