@@ -157,12 +157,33 @@
 # From-empty-fallback branch) and an accept-then-close listener for a
 # genuine TLS handshake failure. No mocking of the Sender interface, real
 # network errors. Send: 0% -> 36.7%. Floor set to 87 for headroom.
+# 87.5% -> 88.5% after: NoopSender.Send (trivial, previously untested);
+# RegisterHandler's studentProvisioner-fails non-fatal branch (query #2,
+# asserts no users.students row while registration still succeeds); and a
+# batch of real previously-unwritten request shapes needing no fault
+# injection -- LoginHandler missing-fields, OTPLoginVerifyHandler and
+# VerifyEmailHandler's wrong-OTP-code branch specifically (a real OTP row
+# exists but the submitted code doesn't match -- distinct from the
+# already-covered "no OTP at all"/"unknown email" branches),
+# VerifyEmailHandler invalid-JSON/missing-fields, ResendVerificationHandler
+# invalid-JSON. Investigated and confirmed genuinely out of scope this
+# round: SMTPSender.Send's success path (its STARTTLS/plain branch is a
+# single passthrough to net/smtp.SendMail, already covered by the existing
+# dial-fail test regardless of inner outcome; the implicit-TLS Auth/Mail/
+# Rcpt/Data path needs an injectable RootCAs/InsecureSkipVerify knob on
+# SMTPConfig -- a prod code change, out of scope for test-only work);
+# fireAndForgetEmail's log-only branches (zaptest/observer needs a
+# constructor accepting a custom zap core, logger.Logger's field is
+# private -- prod code change, out of scope). Floor set to 88 for
+# headroom. Genuinely deep in diminishing-returns territory now: what's
+# left is crypto/rand internals, small scoped prod-code changes to make
+# testable, or process-entrypoint bootstrapping (cmd/server/main.go).
 #
 # Usage: ./check-coverage.sh (run from backend/app/)
 
 set -euo pipefail
 
-COVERAGE_FLOOR="${COVERAGE_FLOOR:-87}"
+COVERAGE_FLOOR="${COVERAGE_FLOOR:-88}"
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../app"
 
