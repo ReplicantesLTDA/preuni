@@ -189,15 +189,28 @@
 # (SMTPSender.Send: 36.7% -> 80%); and used logger.Wrap + zaptest/observer
 # to assert fireAndForgetEmail's log.Error line actually fires on a real
 # dial-refused SMTP failure (fireAndForgetEmail: 50% -> 100%). Floor set
-# to 89 for headroom. Remaining gaps: crypto/rand internals, a few more
-# implicit-TLS Auth/mid-DATA-drop branches (diminishing returns), and
-# process-entrypoint bootstrapping (cmd/server/main.go).
+# to 89 for headroom. 89.4% -> 90.0% (GOAL REACHED) after covering
+# SMTPSender.Send's remaining branches via genuine protocol-level failures
+# / connection drops on the fake SMTP server (bad greeting, AUTH/MAIL/DATA
+# rejected, write-fails-on-drop, close-fails-on-drop, quit-fails-on-drop --
+# Send: 80% -> 96.7%), and UpdateStudentHandler/SubmitEssayHandler's
+# invalid-JSON branches (previously untested). Floor set to 90 -- the
+# constitution goal.
+#
+# Remaining gaps are genuinely out of scope, not padding candidates:
+# crypto/rand internals (GenerateOTP, JWT issuance), test-helper
+# scaffolding (not app code), mail/templates.go's Execute-error branches
+# (re-confirmed unreachable across three separate rounds -- static
+# templates + simple string data never fail to render), and
+# cmd/server/main.go's process entrypoint. Don't force these; if coverage
+# needs to grow further, it'll come from new features, not more digging
+# here.
 #
 # Usage: ./check-coverage.sh (run from backend/app/)
 
 set -euo pipefail
 
-COVERAGE_FLOOR="${COVERAGE_FLOOR:-89}"
+COVERAGE_FLOOR="${COVERAGE_FLOOR:-90}"
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../app"
 
