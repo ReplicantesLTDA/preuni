@@ -78,13 +78,21 @@ Import-linter enforces: `corrector/` must not import `db/`, `api/`, or `workers/
 ## Deployment
 
 This service has no deployment of its own — it is built and run as two
-services (`corrector-api`, `corrector-worker`) inside `../infra/docker-compose.yml`,
-sharing the monolith's own Postgres instance (schema `correction`) and its
-Docker network. There is no reverse proxy, TLS termination, or public port
-for this service (`014` already removed its only public endpoints beyond
-health/metrics; `032` removed the standalone Postgres container/network
-and Caddy reverse proxy this service used to carry alongside them). See
-`../specs/032-corrector-service-integration/`.
+services (`corrector-api`, `corrector-worker`) sharing the monolith's own
+Postgres instance (schema `correction`) and its Docker network. There is
+no reverse proxy, TLS termination, or public port for this service
+(`014` already removed its only public endpoints beyond health/metrics;
+`032` removed the standalone Postgres container/network and Caddy
+reverse proxy this service used to carry alongside them).
+
+- **Local dev**: `../infra/docker-compose.yml` (see
+  `../specs/032-corrector-service-integration/`).
+- **Production**: `../infra/docker-compose.prod.yml`, deployed to a
+  self-hosted NAS behind Cloudflare Tunnel (see
+  `../specs/035-self-hosted-prod-deploy/`) — this replaced the old,
+  standalone-product-shaped `deploy/docker-compose.prod.yml` that used to
+  live in this directory (own Postgres, own JWT auth), which had never
+  actually been deployed anywhere.
 
 ## License
 

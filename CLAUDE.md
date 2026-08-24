@@ -5,6 +5,7 @@ Auto-generated from all feature plans. Last updated: 2026-08-24
 ## Active Technologies
 - Go 1.24/1.25 language target, toolchain pinned to 1.26.6 for security patches (monolith), Python 3.12 (correction service), TypeScript 5.9 / React Native 0.81 + Expo SDK 54 (mobile) + go-chi/chi v5, pgx/v5, golang-jwt/jwt v5, zap (Go); FastAPI, SQLAlchemy 2.x async, asyncpg, Alembic, structlog (Python); Expo Router 6, TanStack Query v5, Zustand v5 (mobile) (014-constitution-alignment-refactor)
 - 032-corrector-service-integration: infra-only — folds ai-corrector's standalone Postgres/Caddy deployment into the shared `infra/docker-compose.yml` stack (single Postgres instance, `correction` schema, no public ingress). No new language/framework.
+- 035-self-hosted-prod-deploy: infra/ops only — first real production target (self-hosted TrueNAS SCALE NAS, behind CGNAT), Cloudflare Tunnel ingress at `preuni.com.br`, self-hosted GitHub Actions runner for CD (deploy on push to `main`, revived as the release branch). Same compose shape as dev, now with NAS-backed persistent Postgres. Closes #68 and #69.
 
 **Frontend (012-expo-rn-frontend — current)**
 
@@ -95,10 +96,10 @@ cd mobile && pnpm build:web                      # static export → mobile/dist
 - **SQL**: lowercase keywords, snake_case identifiers; new queries need EXPLAIN plan reviewed.
 
 ## Recent Changes
+- 035-self-hosted-prod-deploy: First production deploy target — self-hosted TrueNAS SCALE NAS behind CGNAT, Cloudflare Tunnel ingress, self-hosted GitHub Actions runner CD triggered on push to `main` (revived as release branch, `dev` unchanged as integration branch). Closes #68 (no deploy target) and #69 (ai-corrector's stale standalone prod compose).
 - 032-corrector-service-integration: Folded ai-corrector's standalone deployment (own Postgres container/network, own Caddy TLS reverse proxy) into the shared `infra/docker-compose.yml` stack — single Postgres instance (schema `correction`, matching the reconciler's existing cross-schema `JOIN`), `make dev`/`make migrate` now bring up and migrate the correction service too, no public ingress of its own. Infra-only; no change to the correction pipeline or grading logic.
 - 014-constitution-alignment-refactor: Pivoted preuni to an essay-challenge gamification app (constitution v1.1.0 → v2.1.1). Backend gained four new Go domains — `essay` (quota-gated submission, async grading via a DB-mediated bridge table), `streak` (UTC-day-boundary streak state machine), `social` (friends, visibility-gated), `gamification` (weekly ranking + league tiers + medals). Imported `ai-corrector/` (previously its own repo) as an internal-only Python grading service — no public API, identity/quota fully removed, talks to the monolith only via `correction.correction_jobs`, never HTTP (see `specs/014-constitution-alignment-refactor/contracts/internal-bridge.md`). Added `backend-ci.yml` + `correction-service-ci.yml` (mobile-ci.yml already existed) and a repo-root `.pre-commit-config.yaml`; all three codebases now have CI-enforced (provisional, not yet 90%) coverage floors. Shipped as 6 stacked PRs (#50–#55), each CI-green before the next was opened. Added Go 1.24 (monolith), Python 3.12 (correction service), TypeScript 5.9 / React Native 0.81 + Expo SDK 54 (mobile) + go-chi/chi v5, pgx/v5, golang-jwt/jwt v5, zap (Go); FastAPI, SQLAlchemy 2.x async, asyncpg, Alembic, structlog (Python); Expo Router 6, TanStack Query v5, Zustand v5 (mobile)
 
-- **012-expo-rn-frontend**: Retired the Kotlin Multiplatform frontend. Replaced with React Native + Expo SDK 54 + TypeScript at `mobile/`. Single codebase ships to iOS / Android (via Expo Go) and Web (via `expo export --platform web`). Backend untouched.
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
