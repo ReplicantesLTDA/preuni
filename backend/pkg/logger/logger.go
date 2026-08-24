@@ -25,6 +25,13 @@ var (
 	Stringer = zap.Stringer
 )
 
+// Wrap builds a Logger backed by a caller-supplied *zap.Logger, bypassing
+// New's production config. Intended for tests that need to observe log
+// output (e.g. via zaptest/observer) without touching stdout/stderr.
+func Wrap(z *zap.Logger) *Logger {
+	return &Logger{z: z}
+}
+
 // New builds a production-ready Logger with the given level string
 // (debug, info, warn, error). Defaults to info on invalid input.
 func New(level string) *Logger {

@@ -175,15 +175,29 @@
 # fireAndForgetEmail's log-only branches (zaptest/observer needs a
 # constructor accepting a custom zap core, logger.Logger's field is
 # private -- prod code change, out of scope). Floor set to 88 for
-# headroom. Genuinely deep in diminishing-returns territory now: what's
-# left is crypto/rand internals, small scoped prod-code changes to make
-# testable, or process-entrypoint bootstrapping (cmd/server/main.go).
+# headroom. 88.5% -> 89.4% after two small, scoped, backward-compatible
+# production changes explicitly approved by the user to unlock the
+# remaining gaps: (1) SMTPConfig gained an optional RootCAs *x509.CertPool
+# field (nil default = system trust store, zero behavior change for prod),
+# wired into the implicit-TLS tls.Dial config -- lets tests trust a
+# self-signed cert from a real fake SMTP server; (2) backend/pkg/logger
+# gained Wrap(z *zap.Logger) *Logger alongside the existing New(level
+# string) constructor, letting tests inject an observed zap core without
+# touching stdout/stderr or New's behavior. Built a real fake SMTP server
+# (real tls.Listen, real self-signed cert, real SMTP protocol bytes) to
+# test Send's full success round-trip and a genuine 550 RCPT rejection
+# (SMTPSender.Send: 36.7% -> 80%); and used logger.Wrap + zaptest/observer
+# to assert fireAndForgetEmail's log.Error line actually fires on a real
+# dial-refused SMTP failure (fireAndForgetEmail: 50% -> 100%). Floor set
+# to 89 for headroom. Remaining gaps: crypto/rand internals, a few more
+# implicit-TLS Auth/mid-DATA-drop branches (diminishing returns), and
+# process-entrypoint bootstrapping (cmd/server/main.go).
 #
 # Usage: ./check-coverage.sh (run from backend/app/)
 
 set -euo pipefail
 
-COVERAGE_FLOOR="${COVERAGE_FLOOR:-88}"
+COVERAGE_FLOOR="${COVERAGE_FLOOR:-89}"
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../app"
 
