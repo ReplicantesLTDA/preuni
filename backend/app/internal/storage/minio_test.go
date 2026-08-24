@@ -62,6 +62,19 @@ func TestPresignedPutURL_ReturnsSignedURLWithoutNetworkAccess(t *testing.T) {
 	}
 }
 
+func TestPresignedPutURL_ErrorsOnEmptyObjectKey(t *testing.T) {
+	// Validated locally by minio-go before any network call -- no live
+	// MinIO server needed here either.
+	c, err := New(testConfig())
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	if _, err := c.PresignedPutURL(context.Background(), ""); err == nil {
+		t.Fatal("PresignedPutURL() error = nil, want an error for an empty object key")
+	}
+}
+
 func TestPublicURL_ConstructsExpectedFormat(t *testing.T) {
 	cfg := testConfig()
 	cfg.UseSSL = false
