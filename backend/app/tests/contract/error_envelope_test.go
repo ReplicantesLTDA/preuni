@@ -12,9 +12,9 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/preuni/pkg/logger"
 	"github.com/preuni/app/internal/config"
 	"github.com/preuni/app/internal/router"
+	"github.com/preuni/pkg/logger"
 )
 
 func newTestRouter(t *testing.T) http.Handler {
@@ -36,8 +36,10 @@ func newTestRouter(t *testing.T) http.Handler {
 		JWTRefreshExpiryDays: 30,
 		MailFromAddr:         "noreply@test",
 		MailFromName:         "Test",
-		S3Bucket:             "test-bucket",
-		S3Region:             "us-east-1",
+		StorageEndpoint:      "localhost:9000",
+		StorageAccessKey:     "test",
+		StorageSecretKey:     "test",
+		StorageBucket:        "test-bucket",
 	}
 	r, _, _ := router.New(cfg, pool, logger.New("error"))
 	return r

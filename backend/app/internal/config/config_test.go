@@ -11,7 +11,7 @@ func TestLoad_UsesDefaultsWhenOptionalVarsAreUnset(t *testing.T) {
 	for _, k := range []string{
 		"MONOLITH_PORT", "PORT", "LOG_LEVEL", "REDIS_URL",
 		"JWT_ACCESS_EXPIRY_SECONDS", "JWT_REFRESH_EXPIRY_DAYS",
-		"S3_BUCKET", "S3_REGION", "SMTP_HOST", "SMTP_PORT",
+		"STORAGE_ENDPOINT", "STORAGE_ACCESS_KEY", "STORAGE_SECRET_KEY", "STORAGE_USE_SSL", "STORAGE_BUCKET", "SMTP_HOST", "SMTP_PORT",
 		"SMTP_USER", "SMTP_PASS", "FROM_EMAIL", "MAIL_FROM_NAME",
 	} {
 		t.Setenv(k, "")
@@ -37,8 +37,8 @@ func TestLoad_UsesDefaultsWhenOptionalVarsAreUnset(t *testing.T) {
 	if cfg.JWTRefreshExpiryDays != 30 {
 		t.Errorf("JWTRefreshExpiryDays = %d, want 30", cfg.JWTRefreshExpiryDays)
 	}
-	if cfg.S3Bucket != "preuni-avatars" {
-		t.Errorf("S3Bucket = %q", cfg.S3Bucket)
+	if cfg.StorageBucket != "preuni-avatars" {
+		t.Errorf("StorageBucket = %q", cfg.StorageBucket)
 	}
 	if cfg.SMTPPort != 587 {
 		t.Errorf("SMTPPort = %d, want 587", cfg.SMTPPort)
@@ -63,8 +63,11 @@ func TestLoad_UsesProvidedVarsWhenSet(t *testing.T) {
 	t.Setenv("REDIS_URL", "redis://localhost:6379")
 	t.Setenv("JWT_ACCESS_EXPIRY_SECONDS", "120")
 	t.Setenv("JWT_REFRESH_EXPIRY_DAYS", "7")
-	t.Setenv("S3_BUCKET", "custom-bucket")
-	t.Setenv("S3_REGION", "eu-west-1")
+	t.Setenv("STORAGE_ENDPOINT", "storage.example.com")
+	t.Setenv("STORAGE_ACCESS_KEY", "access-key")
+	t.Setenv("STORAGE_SECRET_KEY", "secret-key")
+	t.Setenv("STORAGE_USE_SSL", "true")
+	t.Setenv("STORAGE_BUCKET", "custom-bucket")
 	t.Setenv("SMTP_HOST", "smtp.example.com")
 	t.Setenv("SMTP_PORT", "465")
 	t.Setenv("SMTP_USER", "user")
@@ -89,8 +92,14 @@ func TestLoad_UsesProvidedVarsWhenSet(t *testing.T) {
 	if cfg.JWTRefreshExpiryDays != 7 {
 		t.Errorf("JWTRefreshExpiryDays = %d, want 7", cfg.JWTRefreshExpiryDays)
 	}
-	if cfg.S3Bucket != "custom-bucket" {
-		t.Errorf("S3Bucket = %q", cfg.S3Bucket)
+	if cfg.StorageBucket != "custom-bucket" {
+		t.Errorf("StorageBucket = %q", cfg.StorageBucket)
+	}
+	if cfg.StorageEndpoint != "storage.example.com" {
+		t.Errorf("StorageEndpoint = %q", cfg.StorageEndpoint)
+	}
+	if !cfg.StorageUseSSL {
+		t.Error("StorageUseSSL should be true")
 	}
 	if cfg.SMTPPort != 465 {
 		t.Errorf("SMTPPort = %d, want 465", cfg.SMTPPort)

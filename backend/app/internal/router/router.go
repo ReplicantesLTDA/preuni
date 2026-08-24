@@ -19,6 +19,7 @@ import (
 	gamificationrouter "github.com/preuni/app/internal/gamification/router"
 	"github.com/preuni/app/internal/mail"
 	socialrouter "github.com/preuni/app/internal/social/router"
+	"github.com/preuni/app/internal/storage"
 	streakrouter "github.com/preuni/app/internal/streak/router"
 	userrepo "github.com/preuni/app/internal/user/repository"
 	userrouter "github.com/preuni/app/internal/user/router"
@@ -56,11 +57,21 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *logger.Logger) (chi.Router,
 		Log:                  log,
 	})
 
+	storageClient, err := storage.New(storage.Config{
+		Endpoint:  cfg.StorageEndpoint,
+		AccessKey: cfg.StorageAccessKey,
+		SecretKey: cfg.StorageSecretKey,
+		UseSSL:    cfg.StorageUseSSL,
+		Bucket:    cfg.StorageBucket,
+	})
+	if err != nil {
+		panic(fmt.Sprintf("router: constructing storage client: %v", err))
+	}
+
 	userrouter.Mount(r, userrouter.Deps{
 		Pool:          pool,
 		JWTSigningKey: cfg.JWTSigningKey,
-		S3Bucket:      cfg.S3Bucket,
-		S3Region:      cfg.S3Region,
+		Storage:       storageClient,
 	})
 
 	streakrouter.Mount(r, streakrouter.Deps{

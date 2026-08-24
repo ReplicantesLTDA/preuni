@@ -4,17 +4,17 @@ package router
 import (
 	chi "github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	pkgmw "github.com/preuni/pkg/middleware"
+	"github.com/preuni/app/internal/storage"
 	"github.com/preuni/app/internal/user/handler"
 	"github.com/preuni/app/internal/user/repository"
+	pkgmw "github.com/preuni/pkg/middleware"
 )
 
 // Deps captures everything the user router needs.
 type Deps struct {
 	Pool          *pgxpool.Pool
 	JWTSigningKey string
-	S3Bucket      string
-	S3Region      string
+	Storage       *storage.Client
 }
 
 // Mount registers /v1/students/* onto r.
@@ -23,7 +23,7 @@ func Mount(r chi.Router, d Deps) {
 
 	getStudentH := handler.NewGetStudentHandler(studentRepo)
 	updateStudentH := handler.NewUpdateStudentHandler(studentRepo)
-	avatarH := handler.NewAvatarHandler(studentRepo, d.S3Bucket, d.S3Region)
+	avatarH := handler.NewAvatarHandler(studentRepo, d.Storage)
 	onboardingH := handler.NewOnboardingHandler(studentRepo)
 	dataExportH := handler.NewDataExportHandler(studentRepo)
 	deleteStudentH := handler.NewDeleteStudentHandler(studentRepo)

@@ -26,14 +26,18 @@ doesn't lose the deploy).
 ## Steps (contract, not final implementation)
 
 1. Checkout `main` at the pushed commit.
-2. Build (or rebuild changed) images via
+2. Write `infra/.env` fresh from GitHub Actions repository secrets
+   (research.md R7) — the NAS's `.env` is never hand-edited; this step
+   is its only source. `chmod 600` afterward.
+3. Build (or rebuild changed) images via
    `docker compose -f infra/docker-compose.prod.yml build`.
-3. Bring up the stack:
+4. Bring up the stack:
    `docker compose -f infra/docker-compose.prod.yml up -d`.
-4. Health-check the `gateway`/`monolith` health endpoint from inside the
-   runner (same NAS, so this works regardless of the tunnel) before
-   declaring success.
-5. On health-check failure: leave the previous containers' images
+5. Health-check the `gateway`/`monolith` health endpoint from inside the
+   compose network (`docker compose exec gateway wget ...` — `gateway`
+   publishes no host port, so this can't be a plain `curl` against the
+   runner's own `localhost`) before declaring success.
+6. On health-check failure: leave the previous containers' images
    available (do not prune) so a manual `docker compose up -d` against
    the last-known-good build can recover without a rebuild — satisfies
    FR-006 (a bad deploy doesn't take down a working one). Automatic
@@ -43,9 +47,10 @@ doesn't lose the deploy).
 
 ## Inputs the workflow depends on existing already (not created by it)
 
-- The NAS-local `.env` file consumed by
-  `infra/docker-compose.prod.yml` (data-model.md's secrets table) —
-  provisioned once, out of band, not by this workflow.
+- Every `PROD_*` GitHub Actions repository secret listed in
+  `data-model.md`'s secrets table — the workflow's step 2 is what turns
+  these into the NAS's real `infra/.env`; nothing on the NAS itself
+  needs provisioning by hand (research.md R7).
 - The registered, online self-hosted runner (research.md R2).
 - The Cloudflare Tunnel already routing `preuni.com.br` to the
   `gateway` service (research.md R1) — this workflow doesn't touch

@@ -165,3 +165,95 @@ enforcing an existing, already-documented requirement.
 
 **Alternatives considered**: None — this is a compliance gap closure,
 not a design choice with tradeoffs.
+
+## R7: Production secret source of truth
+
+**Decision**: GitHub Actions repository secrets are the source of truth
+for every production credential (`POSTGRES_PASSWORD`, `JWT_SIGNING_KEY`,
+`CORRECTOR_OLLAMA_CLOUD_API_KEY`, `CLOUDFLARE_TUNNEL_TOKEN`,
+`BACKUP_S3_*`), not a hand-maintained file on the NAS. `deploy-prod.yml`
+writes `infra/.env` on the NAS fresh on every deploy, sourced from those
+secrets, before bringing the stack up — rotating a credential is a
+GitHub Settings change, not an SSH session.
+
+**Rationale**: Directly requested by the user in preference to the
+original plan (T009: SSH into the NAS once and hand-edit `infra/.env`
+permanently). GitHub Actions Secrets are encrypted at rest,
+access-controlled by repo permissions, auto-masked in workflow logs
+(including on self-hosted runners — masking is applied by the runner
+process itself, not GitHub-hosted infrastructure specifically), and
+cost nothing — proportionate to this project's scale per the
+constitution's Security & Secrets principle (a real secret-vault
+product like HashiCorp Vault or Azure Key Vault is explicitly rejected
+there as unnecessary; GitHub's built-in secret store is the lightweight
+equivalent already available for free, not the class of tooling that
+principle warns against).
+
+**Consequence, stated plainly**: this does not eliminate the secret
+existing as a plaintext file on the NAS's disk — `docker compose` has
+no way to read a value directly out of GitHub's vault, only the
+workflow step that runs on the NAS can, and it has to materialize the
+value into a file the containers read. What changes is where the
+*source of truth* lives (GitHub, one auditable place) versus where the
+value is merely *materialized* at runtime (the NAS, same as before).
+
+**Alternatives considered**:
+- **Hand-maintained `infra/.env` on the NAS, edited over SSH**
+  (original plan) — rejected per the user's explicit preference; no
+  rotation audit trail, requires NAS access for every credential
+  change.
+- **A real secret-vault product** (HashiCorp Vault, Doppler,
+  Infisical) — rejected as disproportionate to a single-NAS,
+  single-operator deployment; same reasoning already applied to
+  rejecting a `preuni_monolith` DB role in `032`'s research.md R3.
+
+## R8: Avatar object storage — MinIO, self-hosted
+
+**Decision**: Add a self-hosted MinIO (S3-API-compatible) service to
+both `infra/docker-compose.yml` and `infra/docker-compose.prod.yml`,
+and implement real presigned-URL avatar upload against it (the Go SDK
+`github.com/minio/minio-go/v7`, a new `backend/app/internal/storage`
+package). In production, MinIO gets a *second* public hostname
+(`storage.preuni.com.br`) routed through the same Cloudflare Tunnel as
+`gateway`, since the uploading client PUTs directly to the presigned
+URL — the backend never proxies the bytes, so that URL must be reachable
+by the client, not just internally.
+
+**Rationale**: Raised by the user mid-implementation, in preference to
+AWS S3, for the same self-hosting/cost-minimizing reason as the NAS
+itself. Investigating `avatar.go` first revealed it was never a real S3
+integration at all — a hardcoded stub URL (`X-Amz-Credential=PRESIGNED`
+as a literal string, no AWS SDK dependency anywhere in the codebase),
+so this isn't "swap providers," it's implementing avatar upload for the
+first time. `minio-go` is S3-API-compatible enough that a future move
+to real AWS S3 (if self-hosting is ever outgrown) is an endpoint/config
+change, not a rewrite.
+
+**A real finding while implementing**: `minio-go`'s
+`PresignedPutObject` is not purely local signing by default — without
+an explicit `Region`, it calls `GetBucketLocation` over the network on
+first use per bucket, which would have made the whole feature secretly
+depend on live MinIO connectivity at request time (and broken unit
+tests running with no MinIO available). Fixed by hardcoding
+`Region: "us-east-1"` in the client (MinIO's own default region
+regardless of where it's actually hosted — no real geographic meaning,
+purely there to skip the network call).
+
+**Backup storage note**: the same self-hosted MinIO instance could also
+host the `backup` sidecar's `pg_dump` output (a second bucket), removing
+the need for any external S3-compatible provider at all. Not done here
+— `ai-corrector/deploy/backup/pg_dump_cron.sh`'s `s3cmd` invocation uses
+virtual-hosted-style addressing (`%(bucket)s.${endpoint}`), which works
+against real AWS S3 but not against MinIO without a real fix (path-style
+addressing, `--no-ssl` for the internal in-cluster connection) that this
+session had no way to verify end-to-end. `PROD_BACKUP_S3_*` remains an
+open, unset secret rather than shipping an unverified change.
+
+**Alternatives considered**:
+- **AWS S3** — what the stub code assumed; rejected per the user's
+  explicit self-hosting preference.
+- **Proxying avatar bytes through the monolith instead of presigned
+  direct-upload** — avoids needing a second public hostname/tunnel
+  route, but adds backend load and complexity for no benefit; presigned
+  direct-upload is the standard pattern the stub code was already
+  designed around.

@@ -69,8 +69,10 @@ func TestIntegration_Register_WelcomeEmailSendFailureIsLogged(t *testing.T) {
 		JWTRefreshExpiryDays: 30,
 		MailFromAddr:         "noreply@test",
 		MailFromName:         "Test",
-		S3Bucket:             "test-bucket",
-		S3Region:             "us-east-1",
+		StorageEndpoint:      "localhost:9000",
+		StorageAccessKey:     "test",
+		StorageSecretKey:     "test",
+		StorageBucket:        "test-bucket",
 		SMTPHost:             host,
 		SMTPPort:             port,
 	}

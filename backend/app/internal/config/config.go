@@ -20,9 +20,14 @@ type Config struct {
 	JWTAccessExpirySec   int
 	JWTRefreshExpiryDays int
 
-	// User
-	S3Bucket string
-	S3Region string
+	// User (avatar storage -- MinIO or any S3-compatible endpoint the
+	// uploading client can reach directly; presigned URLs are generated
+	// against this, the backend never proxies upload bytes)
+	StorageEndpoint  string
+	StorageAccessKey string
+	StorageSecretKey string
+	StorageUseSSL    bool
+	StorageBucket    string
 
 	// Mail
 	SMTPHost     string
@@ -46,8 +51,11 @@ func Load() Config {
 		JWTAccessExpirySec:   envInt("JWT_ACCESS_EXPIRY_SECONDS", 3600),
 		JWTRefreshExpiryDays: envInt("JWT_REFRESH_EXPIRY_DAYS", 30),
 
-		S3Bucket: getEnv("S3_BUCKET", "preuni-avatars"),
-		S3Region: getEnv("S3_REGION", "us-east-1"),
+		StorageEndpoint:  getEnv("STORAGE_ENDPOINT", "localhost:9000"),
+		StorageAccessKey: getEnv("STORAGE_ACCESS_KEY", ""),
+		StorageSecretKey: getEnv("STORAGE_SECRET_KEY", ""),
+		StorageUseSSL:    getEnv("STORAGE_USE_SSL", "false") == "true",
+		StorageBucket:    getEnv("STORAGE_BUCKET", "preuni-avatars"),
 
 		SMTPHost:     getEnv("SMTP_HOST", ""),
 		SMTPPort:     envInt("SMTP_PORT", 587),
