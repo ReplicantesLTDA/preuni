@@ -47,17 +47,6 @@ func SetupTestDB(t *testing.T) *pgxpool.Pool {
 	return pool
 }
 
-// MustEnv returns the value of the environment variable key, or fails the test
-// immediately if the variable is not set.
-func MustEnv(t *testing.T, key string) string {
-	t.Helper()
-	v := os.Getenv(key)
-	if v == "" {
-		t.Fatalf("testhelper: required env var %q is not set", key)
-	}
-	return v
-}
-
 // runMigrations executes all *.sql files in infra/migrations/auth/ sorted by
 // filename. Tests run from backend/app/internal/auth/handler/ so the relative
 // path walks five directories up to the repository root.

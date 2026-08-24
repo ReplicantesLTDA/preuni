@@ -6,7 +6,9 @@ import json
 import pytest
 from pathlib import Path
 
-from src.scripts.correct_essay import run_cli
+from src.corrector.llm.errors import RateLimitError
+from src.corrector.llm.ollama import OllamaProvider
+from src.scripts.correct_essay import _make_provider, _typed_error, run_cli
 
 ESSAY_BODY = (
     "A inclusão digital de pessoas idosas exige ação coordenada do Estado brasileiro.\n"
@@ -118,3 +120,62 @@ async def test_theme_missing_context_emits_typed_error(
     assert code != 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["error_code"] == "theme_missing_context"
+
+
+@pytest.mark.asyncio
+async def test_motivational_texts_file_is_read_and_passed_through(tmp_path: Path) -> None:
+    essay_path = _write_essay(tmp_path)
+    motivational_path = tmp_path / "motivational.txt"
+    motivational_path.write_text("Texto motivador de apoio.", encoding="utf-8")
+    code = await run_cli(
+        [
+            "--essay",
+            str(essay_path),
+            "--theme-title",
+            "Inclusão digital de idosos",
+            "--theme-context",
+            "A democratização digital exclui idosos. Discutir caminhos para reverter o quadro.",
+            "--motivational",
+            str(motivational_path),
+            "--provider",
+            "fake-perfect",
+        ],
+        env={},
+    )
+    assert code == 0
+
+
+def test_make_provider_builds_an_ollama_provider_from_env() -> None:
+    provider = _make_provider(
+        "ollama",
+        {
+            "OLLAMA_CLOUD_BASE_URL": "https://ollama.cloud.test",
+            "OLLAMA_CLOUD_API_KEY": "secret",
+            "LLM_MODEL_ID": "custom-model",
+        },
+        "essay text",
+    )
+    assert isinstance(provider, OllamaProvider)
+    assert provider.base_url == "https://ollama.cloud.test"
+    assert provider.api_key == "secret"
+    assert provider.model_id == "custom-model"
+
+
+def test_make_provider_falls_back_to_defaults_with_empty_env() -> None:
+    provider = _make_provider("ollama", {}, "essay text")
+    assert isinstance(provider, OllamaProvider)
+    assert provider.base_url == "https://ollama.com"
+    assert provider.api_key is None
+    assert provider.model_id == "kimi-k2:1t"
+
+
+def test_typed_error_maps_a_generic_llm_error_by_class_name() -> None:
+    code, msg = _typed_error(RateLimitError("too many requests"))
+    assert code == "ratelimit_error"
+    assert msg == "too many requests"
+
+
+def test_typed_error_falls_back_to_internal_error() -> None:
+    code, msg = _typed_error(ValueError("something else"))
+    assert code == "internal_error"
+    assert msg == "something else"

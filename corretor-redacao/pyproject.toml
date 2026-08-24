@@ -29,10 +29,12 @@ dependencies = [
     "fastapi>=0.100.0",
     "uvicorn[standard]>=0.30.0",
     "pydantic>=2.0.0",
-    "pydantic-settings>=2.0.0",
-    
+
     # HTTP client
     "httpx>=0.24.0",
+    # Transitive-dependency CVE floors (security-ci.yml's pip-audit gate):
+    "starlette>=0.48.0",  # GHSA fixed in fastapi's starlette dep, PYSEC-2026-248/249
+    "h2>=4.4.1",  # PYSEC-2026-3628
     
     # Data validation
     "jsonschema>=4.20.0",
@@ -64,6 +66,7 @@ dev = [
     "pytest-cov>=4.1.0",
     "ruff>=0.1.0",
     "mypy>=1.7.0",
+    "types-jsonschema>=4.0",
     "import-linter>=2.0",
     "httpx[http2]>=0.24.0",
 ]
@@ -95,11 +98,57 @@ omit = ["*/tests/*"]
 
 [tool.coverage.report]
 # Constitution Principle II: coverage floor is 90%, reached incrementally
-# (Principle VI: small PRs). 45 is today's *provisional* baseline (unit
-# suite alone measures ~51%; the full unit+integration+golden run in CI has
-# more surface to cover) — specs/014-constitution-alignment-refactor/tasks.md
-# T060 (Polish) raises this to 90 once US1-US3 land their test suites.
-fail_under = 45
+# (Principle VI: small PRs). 70 is today's *provisional* baseline, measured
+# against a live Postgres (2026-08-22): 74.06%, up from 69.3% after adding
+# tests/integration/workers/test_process_one.py, which exercises
+# process_one() end to end (grader_pass persistence, audit writes,
+# competency dict building) — previously only reached indirectly via
+# correction_repo functions, never the worker orchestration itself. That
+# test also caught a real bug: derive_seed() read its hash digest as an
+# *unsigned* int64, overflowing grader_passes.seed (a signed Postgres
+# BIGINT) for ~half of all correction ids -- fixed in single_grader.py.
+# 74.13% -> 77.71% after deleting src/config/settings.py, which was fully
+# dead code: a pydantic-settings tree left over from the pre-014 FastAPI
+# service, never imported anywhere once the Go monolith took over identity/
+# config (confirmed via grep -- zero importers). 77.71% -> 78.74% after
+# testing entrypoint._build_provider(), which also caught a real bug: it
+# called OllamaProvider(..., model=model, ...) but the constructor's
+# keyword is model_id -- every worker process start would have crashed
+# with a TypeError before processing a single job. Fixed.
+# 78.74% -> 82.18% after (a) noticing local Postgres had silently exited
+# mid-session -- DB-backed integration tests were skipping instead of
+# running, quietly understating every number below; restarting it
+# recovered ~4pp on its own -- and (b) adding unit tests for
+# _llm_error_to_code/_llm_error_message_pt_br (0% before) and
+# MultiPassGrader (40% before, entirely untested despite being a real
+# selectable GRADER=multi_pass mode).
+# 82.18% -> 85.63% after adding the same contract-test treatment to
+# PerCompetencyGrader (41% before -- same shape of gap MultiPassGrader had).
+# 85.63% -> 86.29% after covering observability.tracing's configure_tracing
+# (33% before -- only ever exercised implicitly via api.main's disabled-
+# tracing startup path).
+# 86.29% -> 87.98% after covering observability.logging's context-var
+# helpers/ContextVarsFilter/configure_logging (62% before, both 100% now)
+# and db.session.get_session's rollback-on-exception branch (100% now).
+# 87.98% -> 88.56% after covering the remaining edge branches in
+# audit_log_repo, correction_repo._mark_job, schemas.load_schema, and
+# observability.metrics.initialize_app_info -- all 100% now.
+# 88.56% -> 89.22% after covering scripts/correct_essay.py's motivational-
+# texts file read, _make_provider's ollama branch, and _typed_error's
+# generic-LLMError fallback (92% now), then 89.66% after covering
+# entrypoint._main by mocking CorrectionWorker.run (entrypoint.py 100% now).
+# 89.66% -> 92.89% (constitution's 90% floor reached) after actually
+# testing CorrectionWorker.run()'s LISTEN/NOTIFY loop: starts a real
+# worker against the test DB, seeds a pending correction_jobs row, lets
+# the poll backstop claim+grade it via FakeProvider, then stops the
+# worker and asserts the correction reached 'completed' with the right
+# score (correction_worker.py 60% -> 94%). Also covered tracing.py's
+# OTLP-exporter-failure branch by mocking OTLPSpanExporter to raise
+# (tracing.py 100% now).
+# Remaining gap: correction_worker.py lines 237-252,306,326 -- the
+# _listen_task's own exception handler when asyncpg.connect itself fails;
+# would need to break the real DB connection mid-test, low value.
+fail_under = 92
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
@@ -135,6 +184,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "opentelemetry.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "asyncpg"
 ignore_missing_imports = true
 
 [tool.ruff]

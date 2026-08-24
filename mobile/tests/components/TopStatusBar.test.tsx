@@ -16,4 +16,17 @@ describe('TopStatusBar', () => {
     fireEvent.press(getByLabelText('Abrir perfil'));
     expect(onPress).toHaveBeenCalled();
   });
+
+  it('renders in placeholder mode without crashing', () => {
+    const { getByLabelText } = render(<TopStatusBar streak={3} xp={100} placeholder />);
+    expect(getByLabelText('3 dias de ofensiva')).toBeTruthy();
+  });
+
+  it('renders an avatar image when avatarUrl is provided', () => {
+    const { queryByText } = render(
+      <TopStatusBar streak={1} xp={0} avatarUrl="https://example.com/avatar.png" />,
+    );
+    // The fallback emoji only renders when there's no avatarUrl.
+    expect(queryByText('👤')).toBeNull();
+  });
 });

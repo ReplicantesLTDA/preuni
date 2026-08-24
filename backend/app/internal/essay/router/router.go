@@ -15,12 +15,13 @@ import (
 type Deps struct {
 	Pool          *pgxpool.Pool
 	JWTSigningKey string
+	Gamification  repository.GamificationHooks
 }
 
 // Mount registers /v1/essays/* onto r and returns the Repository so
 // cmd/server can drive the background reconciler loop from it.
 func Mount(r chi.Router, d Deps) *repository.Repository {
-	repo := repository.NewRepository(d.Pool, streakrepo.NewRepository())
+	repo := repository.NewRepository(d.Pool, streakrepo.NewRepository(), d.Gamification)
 
 	submitH := handler.NewSubmitEssayHandler(repo)
 	getH := handler.NewGetEssayHandler(repo)

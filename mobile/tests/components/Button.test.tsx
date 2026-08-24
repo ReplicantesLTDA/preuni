@@ -1,4 +1,5 @@
 import { render, fireEvent } from '@testing-library/react-native';
+import { Text } from 'react-native';
 import { Button } from '@/components/Button';
 
 describe('Button', () => {
@@ -37,5 +38,17 @@ describe('Button', () => {
       <Button label="x" accessibilityLabel="continuar" onPress={() => undefined} />,
     );
     expect(getByLabelText('continuar')).toBeTruthy();
+  });
+
+  it('renders a leftIcon when provided', () => {
+    const { getByText } = render(
+      <Button label="x" onPress={() => undefined} leftIcon={<Text>icon</Text>} />,
+    );
+    expect(getByText('icon')).toBeTruthy();
+  });
+
+  it('renders fullWidth without crashing', () => {
+    const { getByText } = render(<Button label="x" onPress={() => undefined} fullWidth />);
+    expect(getByText('x')).toBeTruthy();
   });
 });

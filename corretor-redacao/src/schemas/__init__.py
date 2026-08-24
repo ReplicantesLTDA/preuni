@@ -22,7 +22,8 @@ def load_schema(version: str = ACTIVE_VERSION, name: str = "correction_output") 
     if not path.is_file():
         raise FileNotFoundError(f"Schema not found: {path}")
     with path.open("r", encoding="utf-8") as fh:
-        return json.load(fh)
+        loaded: dict[str, Any] = json.load(fh)
+        return loaded
 
 
 def active_correction_output_schema() -> dict[str, Any]:

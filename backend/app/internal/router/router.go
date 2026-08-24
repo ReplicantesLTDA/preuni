@@ -15,6 +15,8 @@ import (
 	"github.com/preuni/app/internal/config"
 	essayrepo "github.com/preuni/app/internal/essay/repository"
 	essayrouter "github.com/preuni/app/internal/essay/router"
+	gamificationrepo "github.com/preuni/app/internal/gamification/repository"
+	gamificationrouter "github.com/preuni/app/internal/gamification/router"
 	"github.com/preuni/app/internal/mail"
 	socialrouter "github.com/preuni/app/internal/social/router"
 	streakrouter "github.com/preuni/app/internal/streak/router"
@@ -27,7 +29,7 @@ import (
 // New constructs the monolith's top-level chi.Router with all routes
 // mounted, plus the essay Repository so the caller can drive the
 // correction-service reconciler loop from it.
-func New(cfg config.Config, pool *pgxpool.Pool, log *logger.Logger) (chi.Router, *essayrepo.Repository) {
+func New(cfg config.Config, pool *pgxpool.Pool, log *logger.Logger) (chi.Router, *essayrepo.Repository, *gamificationrepo.Repository) {
 	r := chi.NewRouter()
 	r.Use(pkgmw.RequestID)
 	r.Use(chimw.RealIP)
@@ -66,9 +68,15 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *logger.Logger) (chi.Router,
 		JWTSigningKey: cfg.JWTSigningKey,
 	})
 
+	gamificationRepo := gamificationrouter.Mount(r, gamificationrouter.Deps{
+		Pool:          pool,
+		JWTSigningKey: cfg.JWTSigningKey,
+	})
+
 	essayRepo := essayrouter.Mount(r, essayrouter.Deps{
 		Pool:          pool,
 		JWTSigningKey: cfg.JWTSigningKey,
+		Gamification:  gamificationRepo,
 	})
 
 	socialrouter.Mount(r, socialrouter.Deps{
@@ -76,7 +84,7 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *logger.Logger) (chi.Router,
 		JWTSigningKey: cfg.JWTSigningKey,
 	})
 
-	return r, essayRepo
+	return r, essayRepo, gamificationRepo
 }
 
 func buildSender(cfg config.Config, log *logger.Logger) mail.Sender {

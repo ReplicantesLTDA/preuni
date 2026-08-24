@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 import os
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
@@ -48,7 +48,7 @@ def create_app() -> FastAPI:
     )
 
     @app.middleware("http")
-    async def _structured_log_mw(request: Request, call_next):
+    async def _structured_log_mw(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
         from time import perf_counter
 
         t0 = perf_counter()
@@ -73,7 +73,7 @@ def create_app() -> FastAPI:
         )
 
     @app.exception_handler(HTTPException)
-    async def _typed_http_exc(_: Request, exc: HTTPException):
+    async def _typed_http_exc(_: Request, exc: HTTPException) -> JSONResponse:
         # If detail is already a typed-error dict, pass it through; otherwise wrap.
         if isinstance(exc.detail, dict) and "error_code" in exc.detail:
             return JSONResponse(status_code=exc.status_code, content=exc.detail)
@@ -88,7 +88,7 @@ def create_app() -> FastAPI:
         )
 
     @app.exception_handler(RequestValidationError)
-    async def _validation_exc(_: Request, exc: RequestValidationError):
+    async def _validation_exc(_: Request, exc: RequestValidationError) -> JSONResponse:
         return JSONResponse(
             status_code=422,
             content={

@@ -1,0 +1,27 @@
+# Migrations that predate the Constitution VI reversibility rule
+# ("every migration is reversible, starting now", v2.2.0) and the
+# NNN_name.down.sql pairing convention (v2.3.0). These forward-only
+# migrations are NOT retroactively blocked.
+#
+# Rule: any file NOT listed here MUST have a matching NNN_name.down.sql
+# sibling, checked by backend/scripts/check-migration-downgrades.sh.
+# Editing one of the files below requires removing it from this list and
+# adding its downgrade in the same PR (constitution VI) -- doing so is
+# exactly what makes the check below start requiring one.
+#
+# One path per line, relative to infra/migrations/.
+auth/001_create_credentials.sql
+auth/002_create_refresh_tokens.sql
+auth/003_create_otp_codes.sql
+auth/004_insert_admin_user.sql
+essay/001_create_essay_submissions.sql
+gamification/001_create_ranking_and_medals.sql
+social/001_create_friendships.sql
+user/001_create_students.sql
+user/002_create_track_enrollments.sql
+user/003_create_achievements.sql
+user/004_create_xp_events.sql
+user/006_add_onboarding_completed.sql
+user/007_add_email_to_students.sql
+user/008_insert_admin_student.sql
+user/009_add_streak_gamification_columns.sql

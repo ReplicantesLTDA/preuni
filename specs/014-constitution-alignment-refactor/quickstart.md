@@ -6,17 +6,28 @@
 # 1. Shared Postgres + Redis (single instance; correction service gets its own schema)
 docker compose -f infra/docker-compose.yml up -d postgres redis
 
-# 2. Go monolith (auth, user, essay, streak, social, gamification)
+# 2. Apply migrations — both sets, against the same database (research.md #1).
+#    infra/migrations/<schema>/*.sql are plain numbered SQL files, applied in
+#    order with psql (not golang-migrate — see backend-ci.yml's comment on
+#    why infra/scripts/migrate.sh's docstring doesn't match reality).
+for schema in auth user content learning simulation dissertation essay social gamification; do
+  for f in infra/migrations/"$schema"/*.sql; do
+    [ -e "$f" ] && psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
+  done
+done
+(cd corretor-redacao && alembic upgrade head)   # creates the `correction` schema + correction_jobs bridge table
+
+# 3. Go monolith (auth, user, essay, streak, social, gamification)
 cd backend/app && go run ./cmd/server
 
-# 3. Correction service (grading engine only — no public auth surface after this refactor)
-cd corretor-redacao && make db-migrate && make up   # api + worker
+# 4. Correction service (grading engine only — no public auth surface after this refactor)
+cd corretor-redacao && make up   # api + worker
 
-# 4. Mobile app
+# 5. Mobile app
 cd mobile && pnpm install && pnpm start
 ```
 
-## Smoke-test the essay → grade loop end to end
+## Smoke-test the essay → grade → streak → ranking loop end to end
 
 ```bash
 # Submit (as an authenticated free-tier test user)
@@ -25,17 +36,31 @@ curl -X POST http://localhost:8080/v1/essays \
   -d '{"prompt_theme_title":"...","prompt_theme_context":"...","essay_text":"..."}'
 # → 202 { "id": "...", "status": "pending" }
 
-# Poll until graded
+# Poll until graded (the essay reconciler ticks every 5s — cmd/server's
+# runEssayReconciler; the correction worker itself must be running, step 4 above)
 curl http://localhost:8080/v1/essays/<id> -H "Authorization: Bearer $TOKEN"
-# → 200 { "status": "graded", "overall_score": ..., "competencies": [...] }
+# → 200 { "id": "...", "status": "graded", "grade": { "overall_score": ..., "competencies": [...] } }
 
 # Confirm second same-day submission is blocked on free tier
-curl -X POST http://localhost:8080/v1/essays -H "Authorization: Bearer $TOKEN" ... 
-# → 429 { "error_code": "quota_exhausted" }
+curl -X POST http://localhost:8080/v1/essays -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" -d '{"prompt_theme_title":"...","prompt_theme_context":"...","essay_text":"..."}'
+# → 429 { "error": { "code": "QUOTA_EXCEEDED", "message": "..." } }
 
 # Confirm streak advanced
 curl http://localhost:8080/v1/streaks/me -H "Authorization: Bearer $TOKEN"
-# → 200 { "current_streak": 1, ... }
+# → 200 { "current_streak": 1, "longest_streak": 1, ... }
+
+# Friends: send a request, accept it as the other user, then list friends
+curl -X POST http://localhost:8080/v1/friends/requests -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" -d '{"addressee_id":"<other-user-id>"}'
+curl -X POST http://localhost:8080/v1/friends/requests/<id>/accept -H "Authorization: Bearer $OTHER_TOKEN"
+curl http://localhost:8080/v1/friends -H "Authorization: Bearer $TOKEN"
+
+# Ranking + medals (weekly score updates after each grade; WeekClose runs
+# hourly via cmd/server's runWeekCloseJob and only acts once a week is over)
+curl http://localhost:8080/v1/ranking/me -H "Authorization: Bearer $TOKEN"
+curl "http://localhost:8080/v1/ranking/weekly?tier=bronze" -H "Authorization: Bearer $TOKEN"
+curl http://localhost:8080/v1/medals/me -H "Authorization: Bearer $TOKEN"
 ```
 
 ## Run the full test/coverage suite locally (mirrors CI)

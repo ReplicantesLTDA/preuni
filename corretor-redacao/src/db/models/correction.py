@@ -25,6 +25,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
+from typing import Any
 
 from src.db.models import Base
 from src.db.models.enums import CorrectionStatus
@@ -74,8 +75,8 @@ class Correction(Base):
     c3_score: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     c4_score: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     c5_score: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
-    competencies: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    eliminatory_flags: Mapped[list] = mapped_column(JSONB, nullable=False, server_default="[]")
+    competencies: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    eliminatory_flags: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, server_default="[]")
 
     # Provenance.
     prompt_version: Mapped[str | None] = mapped_column(Text, nullable=True)

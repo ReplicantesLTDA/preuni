@@ -48,9 +48,8 @@ jobs:
       - name: ruff
         run: ruff check src tests
 
-      - name: mypy (non-blocking — pre-existing debt, tracked separately from this PR's scope)
-        continue-on-error: true
-        run: mypy src tests
+      - name: mypy
+        run: mypy src
 
       - name: import-linter
         run: lint-imports
@@ -58,16 +57,24 @@ jobs:
       - name: alembic upgrade head
         run: alembic upgrade head
 
-      - name: unit tests with coverage gate
-        run: pytest tests/unit -v --cov=src --cov-report=term-missing --cov-fail-under=45
+      # Constitution VI: every migration must ship a working downgrade.
+      # This proves it, not just asserts it -- downgrade every revision on
+      # a clean DB, then re-upgrade so the schema is back at head for the
+      # test steps below.
+      - name: alembic migration round-trip (downgrade base -> upgrade head)
+        run: |
+          alembic downgrade base
+          alembic upgrade head
 
-      - name: integration tests
+      - name: unit + integration tests with coverage gate
         # Not `-m integration` (the Makefile's test-int target uses that,
         # but no test in this suite is actually marked @pytest.mark.integration
         # -- pre-existing bug, same category as `lint-imports --root src`;
         # CI caught it: `-m integration` deselects all 102 tests, exit 5).
-        # Directory-based selection is what the unit-test step already uses.
-        run: pytest tests/integration -v
+        # Directory-based selection covers both dirs in one run so the
+        # coverage gate sees the real combined number (unit-only
+        # undercounts by ~18 points -- see pyproject.toml's fail_under comment).
+        run: pytest tests/unit tests/integration -v --cov=src --cov-report=term-missing
 
       - name: golden dataset (fake provider — every PR, plumbing only)
         env:

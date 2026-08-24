@@ -45,7 +45,7 @@ func setup(t *testing.T) (http.Handler, *pgxpool.Pool) {
 		S3Bucket:             "test-bucket",
 		S3Region:             "us-east-1",
 	}
-	r, _ := router.New(cfg, pool, logger.New("error"))
+	r, _, _ := router.New(cfg, pool, logger.New("error"))
 	return r, pool
 }
 

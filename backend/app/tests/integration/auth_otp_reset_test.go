@@ -1,0 +1,559 @@
+package integration_test
+
+import (
+	"bytes"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+// TestIntegration_OTPLogin_VerifySucceeds covers OTPLoginVerifyHandler's
+// success path. The request side (OTPLoginRequestHandler) generates its OTP
+// in a background goroutine, so this test bypasses it and seeds the OTP row
+// directly -- the same trick auth_flow_test.go uses for email verification.
+func TestIntegration_OTPLogin_VerifySucceeds(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, _ := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+
+	otp := "135790"
+	seedOTP(t, ctx, pool, studentID, "LOGIN_OTP", otp)
+
+	email := studentEmail(t, ctx, pool, studentID)
+	body, _ := json.Marshal(map[string]string{"email": email, "otp": otp})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/otp/verify", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("otp verify: got %d body=%s", w.Code, w.Body.String())
+	}
+
+	var resp struct {
+		AccessToken string `json:"access_token"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp.AccessToken == "" {
+		t.Fatal("expected a non-empty access_token")
+	}
+}
+
+// TestIntegration_PasswordReset_ConfirmSucceeds covers PasswordResetHandler's
+// success path (the confirm side), bypassing the async request side the
+// same way TestIntegration_OTPLogin_VerifySucceeds does.
+func TestIntegration_PasswordReset_ConfirmSucceeds(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, token := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+
+	otp := "246810"
+	seedOTP(t, ctx, pool, studentID, "PASSWORD_RESET", otp)
+
+	email := studentEmail(t, ctx, pool, studentID)
+	body, _ := json.Marshal(map[string]string{"email": email, "otp": otp, "new_password": "Reset1234!"})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/password/reset/confirm", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("password reset: got %d body=%s", w.Code, w.Body.String())
+	}
+
+	// The hash was actually updated: the new password now checks out as
+	// "current" against it via the change-password endpoint.
+	confirmBody, _ := json.Marshal(map[string]string{
+		"current_password": "Reset1234!",
+		"new_password":     "AnotherOne789",
+	})
+	confirmReq := httptest.NewRequest(http.MethodPost, "/v1/auth/password/change", bytes.NewReader(confirmBody))
+	confirmReq.Header.Set("Content-Type", "application/json")
+	confirmReq.Header.Set("Authorization", "Bearer "+token)
+	confirmW := httptest.NewRecorder()
+	r.ServeHTTP(confirmW, confirmReq)
+	if confirmW.Code != http.StatusNoContent {
+		t.Fatalf("expected the reset password to be accepted as current_password: got %d body=%s", confirmW.Code, confirmW.Body.String())
+	}
+}
+
+// TestIntegration_OTPLoginRequest_GeneratesOTPForVerifiedUser covers
+// OTPLoginRequestHandler's success branch (email found + verified), which
+// runs in a background goroutine and was otherwise only exercised via its
+// "missing email still 202s" validation branch.
+func TestIntegration_OTPLoginRequest_GeneratesOTPForVerifiedUser(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, _ := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+	markVerified(t, ctx, pool, studentID)
+	email := studentEmail(t, ctx, pool, studentID)
+
+	body, _ := json.Marshal(map[string]string{"email": email})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/otp/request", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusAccepted {
+		t.Fatalf("otp request: got %d body=%s", w.Code, w.Body.String())
+	}
+
+	waitForOTP(t, ctx, pool, studentID, "LOGIN_OTP")
+}
+
+// TestIntegration_OTPLogin_VerifyUnknownEmailIsRejected covers
+// OTPLoginVerifyHandler's FindByEmail-fails branch, previously untested.
+func TestIntegration_OTPLogin_VerifyUnknownEmailIsRejected(t *testing.T) {
+	r, _ := setup(t)
+
+	body, _ := json.Marshal(map[string]string{"email": "nobody-here@preuni.test", "otp": "123456"})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/otp/verify", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("otp verify for an unknown email: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
+// TestIntegration_PasswordResetRequest_GeneratesOTPForVerifiedUser is the
+// same coverage gap as above, for PasswordResetRequestHandler.
+func TestIntegration_PasswordResetRequest_GeneratesOTPForVerifiedUser(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, _ := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+	markVerified(t, ctx, pool, studentID)
+	email := studentEmail(t, ctx, pool, studentID)
+
+	body, _ := json.Marshal(map[string]string{"email": email})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/password/reset/request", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusAccepted {
+		t.Fatalf("password reset request: got %d body=%s", w.Code, w.Body.String())
+	}
+
+	waitForOTP(t, ctx, pool, studentID, "PASSWORD_RESET")
+}
+
+// TestIntegration_PasswordReset_UnknownEmailIsRejected covers
+// PasswordResetHandler's FindByEmail-fails branch (anti-enumeration shape:
+// same "invalid or expired code" as a bad OTP), previously untested.
+func TestIntegration_PasswordReset_UnknownEmailIsRejected(t *testing.T) {
+	r, _ := setup(t)
+
+	body, _ := json.Marshal(map[string]string{
+		"email": "nobody-here@preuni.test", "otp": "123456", "new_password": "Senha1234",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/password/reset/confirm", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("password reset for an unknown email: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
+// TestIntegration_PasswordReset_WeakNewPasswordIsRejected covers
+// PasswordResetHandler's ValidatePassword branch, previously untested.
+func TestIntegration_PasswordReset_WeakNewPasswordIsRejected(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, _ := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+	email := studentEmail(t, ctx, pool, studentID)
+
+	body, _ := json.Marshal(map[string]string{
+		"email": email, "otp": "123456", "new_password": "short",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/password/reset/confirm", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("password reset with a weak new password: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
+// TestIntegration_Login_UnknownEmailIsUnauthorized covers LoginHandler's
+// FindByEmail-fails branch, previously untested.
+func TestIntegration_Login_UnknownEmailIsUnauthorized(t *testing.T) {
+	r, _ := setup(t)
+
+	body, _ := json.Marshal(map[string]string{"email": "nobody-here@preuni.test", "password": "whatever123"})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/login", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("login with an unknown email: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
+// TestIntegration_Login_UnverifiedEmailIsForbidden covers LoginHandler's
+// EmailVerified check, previously untested for login specifically.
+func TestIntegration_Login_UnverifiedEmailIsForbidden(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, _ := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+	email := studentEmail(t, ctx, pool, studentID)
+
+	body, _ := json.Marshal(map[string]string{"email": email, "password": "P@ssw0rd123"})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/login", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("login with an unverified email: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
+// TestIntegration_Login_WrongPasswordIsUnauthorized covers LoginHandler's
+// CheckPassword-fails branch, previously untested.
+func TestIntegration_Login_WrongPasswordIsUnauthorized(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, _ := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+	markVerified(t, ctx, pool, studentID)
+	email := studentEmail(t, ctx, pool, studentID)
+
+	body, _ := json.Marshal(map[string]string{"email": email, "password": "TotallyWrong123"})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/login", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("login with the wrong password: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
+// TestIntegration_RefreshToken_RotatesAndReturnsNewTokens covers
+// RefreshTokenHandler's success path (find, rotate, issue), previously
+// only exercised via its missing-field validation branch.
+func TestIntegration_RefreshToken_RotatesAndReturnsNewTokens(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, _ := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+
+	// registerTestUser doesn't capture refresh_token, so grab it directly
+	// with a fresh registration on this same handler.
+	email := fmt.Sprintf("refresh-integ+%d@preuni.test", time.Now().UnixNano())
+	regBody, _ := json.Marshal(map[string]string{
+		"email": email, "password": "P@ssw0rd123", "display_name": "Refresh Integ",
+	})
+	regReq := httptest.NewRequest(http.MethodPost, "/v1/auth/register", bytes.NewReader(regBody))
+	regReq.Header.Set("Content-Type", "application/json")
+	regW := httptest.NewRecorder()
+	r.ServeHTTP(regW, regReq)
+	if regW.Code != http.StatusCreated {
+		t.Fatalf("register: got %d body=%s", regW.Code, regW.Body.String())
+	}
+	var reg struct {
+		StudentID    string `json:"student_id"`
+		RefreshToken string `json:"refresh_token"`
+	}
+	if err := json.Unmarshal(regW.Body.Bytes(), &reg); err != nil {
+		t.Fatal(err)
+	}
+	defer cleanupTestUser(ctx, t, pool, reg.StudentID)
+
+	body, _ := json.Marshal(map[string]string{"refresh_token": reg.RefreshToken})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/refresh", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("refresh: got %d body=%s", w.Code, w.Body.String())
+	}
+	var resp struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp.RefreshToken == "" || resp.RefreshToken == reg.RefreshToken {
+		t.Fatalf("expected a newly rotated refresh token, got %q", resp.RefreshToken)
+	}
+
+	// The old (rotated-out) refresh token no longer works.
+	oldBody, _ := json.Marshal(map[string]string{"refresh_token": reg.RefreshToken})
+	oldReq := httptest.NewRequest(http.MethodPost, "/v1/auth/refresh", bytes.NewReader(oldBody))
+	oldReq.Header.Set("Content-Type", "application/json")
+	oldW := httptest.NewRecorder()
+	r.ServeHTTP(oldW, oldReq)
+	if oldW.Code != http.StatusUnauthorized {
+		t.Fatalf("expected the rotated-out token to be rejected: got %d body=%s", oldW.Code, oldW.Body.String())
+	}
+}
+
+// TestIntegration_VerifyEmail_UnknownEmailIsRejected covers
+// VerifyEmailHandler's FindByEmail-fails branch, previously untested.
+func TestIntegration_VerifyEmail_UnknownEmailIsRejected(t *testing.T) {
+	r, _ := setup(t)
+
+	body, _ := json.Marshal(map[string]string{"email": "nobody-here@preuni.test", "otp": "123456"})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/email/verify", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("verify for an unknown email: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
+// TestIntegration_Register_WeakPasswordIsRejected covers RegisterHandler's
+// domain.NewCredentials-fails branch, previously untested.
+func TestIntegration_Register_WeakPasswordIsRejected(t *testing.T) {
+	r, _ := setup(t)
+
+	email := fmt.Sprintf("weak-pw+%d@preuni.test", time.Now().UnixNano())
+	body, _ := json.Marshal(map[string]string{
+		"email": email, "password": "short", "display_name": "Weak Pw",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/register", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("register with a weak password: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
+// TestIntegration_Register_EmptyDisplayNameIsRejected covers
+// RegisterHandler's validateDisplayName-fails branch, previously untested.
+func TestIntegration_Register_EmptyDisplayNameIsRejected(t *testing.T) {
+	r, _ := setup(t)
+
+	email := fmt.Sprintf("empty-name+%d@preuni.test", time.Now().UnixNano())
+	body, _ := json.Marshal(map[string]string{
+		"email": email, "password": "P@ssw0rd123", "display_name": "   ",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/register", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("register with an empty display name: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
+// TestIntegration_Register_DuplicateEmailIsRejected covers
+// RegisterHandler's credRepo.Create-fails (conflict) branch, previously
+// untested.
+func TestIntegration_Register_DuplicateEmailIsRejected(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, _ := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+	email := studentEmail(t, ctx, pool, studentID)
+
+	body, _ := json.Marshal(map[string]string{
+		"email": email, "password": "P@ssw0rd123", "display_name": "Duplicate",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/register", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusConflict {
+		t.Fatalf("register with a duplicate email: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
+// TestIntegration_Logout_RevokesTheGivenRefreshToken covers LogoutHandler's
+// success path, previously entirely untested.
+func TestIntegration_Logout_RevokesTheGivenRefreshToken(t *testing.T) {
+	r, _ := setup(t)
+
+	email := fmt.Sprintf("logout-integ+%d@preuni.test", time.Now().UnixNano())
+	regBody, _ := json.Marshal(map[string]string{
+		"email": email, "password": "P@ssw0rd123", "display_name": "Logout Integ",
+	})
+	regReq := httptest.NewRequest(http.MethodPost, "/v1/auth/register", bytes.NewReader(regBody))
+	regReq.Header.Set("Content-Type", "application/json")
+	regW := httptest.NewRecorder()
+	r.ServeHTTP(regW, regReq)
+	if regW.Code != http.StatusCreated {
+		t.Fatalf("register: got %d body=%s", regW.Code, regW.Body.String())
+	}
+	var reg struct {
+		StudentID    string `json:"student_id"`
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+	}
+	if err := json.Unmarshal(regW.Body.Bytes(), &reg); err != nil {
+		t.Fatal(err)
+	}
+
+	body, _ := json.Marshal(map[string]string{"refresh_token": reg.RefreshToken})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/logout", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+reg.AccessToken)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("logout: got %d body=%s", w.Code, w.Body.String())
+	}
+
+	// The revoked refresh token no longer works.
+	refreshBody, _ := json.Marshal(map[string]string{"refresh_token": reg.RefreshToken})
+	refreshReq := httptest.NewRequest(http.MethodPost, "/v1/auth/refresh", bytes.NewReader(refreshBody))
+	refreshReq.Header.Set("Content-Type", "application/json")
+	refreshW := httptest.NewRecorder()
+	r.ServeHTTP(refreshW, refreshReq)
+	if refreshW.Code != http.StatusUnauthorized {
+		t.Fatalf("expected the revoked refresh token to be rejected: got %d body=%s", refreshW.Code, refreshW.Body.String())
+	}
+}
+
+// TestIntegration_Logout_UnknownTokenStillReturns204 covers LogoutHandler's
+// "treat unknown token as already revoked" branch, previously untested.
+func TestIntegration_Logout_UnknownTokenStillReturns204(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, token := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+
+	body, _ := json.Marshal(map[string]string{"refresh_token": "not-a-real-refresh-token"})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/logout", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("logout with an unknown token: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
+// TestIntegration_DeleteAccount_EmptyBodySkipsConfirmationCheck covers
+// DeleteAccountHandler's decode-fails branch: json.NewDecoder on an empty
+// body returns an error, so the `err == nil` guard around the confirmation
+// check is skipped entirely and the account is deleted anyway. Previously
+// untested -- every other delete_account test sends a JSON body.
+func TestIntegration_DeleteAccount_EmptyBodySkipsConfirmationCheck(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, token := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+
+	req := httptest.NewRequest(http.MethodDelete, "/v1/auth/account", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("delete account with an empty body: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
+// TestIntegration_VerifyEmail_AlreadyVerifiedIsConflict covers
+// VerifyEmailHandler's "already verified" branch, which the register->verify
+// flow in auth_flow_test.go never reaches (it only verifies once).
+func TestIntegration_VerifyEmail_AlreadyVerifiedIsConflict(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, _ := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+	markVerified(t, ctx, pool, studentID)
+	email := studentEmail(t, ctx, pool, studentID)
+
+	body, _ := json.Marshal(map[string]string{"email": email, "otp": "000000"})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/email/verify", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusConflict {
+		t.Fatalf("verify for already-verified email: got %d body=%s", w.Code, w.Body.String())
+	}
+}
+
+// TestIntegration_OTPLoginRequest_NoOTPForUnverifiedEmail covers
+// OTPLoginRequestHandler's background goroutine "email found but not
+// verified" branch, previously untested.
+func TestIntegration_OTPLoginRequest_NoOTPForUnverifiedEmail(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, _ := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+	email := studentEmail(t, ctx, pool, studentID)
+
+	body, _ := json.Marshal(map[string]string{"email": email})
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/otp/request", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusAccepted {
+		t.Fatalf("otp request: got %d body=%s", w.Code, w.Body.String())
+	}
+
+	// Give the background goroutine a moment to run, then confirm it did
+	// NOT create an OTP (unverified emails never get a login code).
+	time.Sleep(50 * time.Millisecond)
+	var count int
+	if err := pool.QueryRow(ctx,
+		`SELECT count(*) FROM auth.otp_codes WHERE credential_id = $1 AND purpose = 'LOGIN_OTP'`,
+		studentID,
+	).Scan(&count); err != nil {
+		t.Fatalf("query otp count: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("expected no OTP for an unverified email, got %d", count)
+	}
+}
+
+func markVerified(t *testing.T, ctx context.Context, pool *pgxpool.Pool, credentialID string) {
+	t.Helper()
+	if _, err := pool.Exec(ctx, `UPDATE auth.credentials SET email_verified = true WHERE id = $1`, credentialID); err != nil {
+		t.Fatalf("mark verified: %v", err)
+	}
+}
+
+// waitForOTP polls for the request handlers' background goroutine to
+// persist its OTP row, up to a couple seconds.
+func waitForOTP(t *testing.T, ctx context.Context, pool *pgxpool.Pool, credentialID, purpose string) {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		var count int
+		if err := pool.QueryRow(ctx,
+			`SELECT count(*) FROM auth.otp_codes WHERE credential_id = $1 AND purpose = $2 AND used_at IS NULL`,
+			credentialID, purpose,
+		).Scan(&count); err != nil {
+			t.Fatalf("poll for otp: %v", err)
+		}
+		if count > 0 {
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Fatalf("timed out waiting for a %s otp to be generated", purpose)
+}
+
+// seedOTP inserts an OTP row directly, bypassing the async request handlers
+// that would normally create one, with a known code so the test can present
+// it back to the confirm/verify endpoint.
+func seedOTP(t *testing.T, ctx context.Context, pool *pgxpool.Pool, credentialID, purpose, code string) {
+	t.Helper()
+	sum := sha256.Sum256([]byte(code))
+	hash := hex.EncodeToString(sum[:])
+	_, err := pool.Exec(ctx,
+		`INSERT INTO auth.otp_codes (credential_id, purpose, code_hash, expires_at) VALUES ($1, $2, $3, $4)`,
+		credentialID, purpose, hash, time.Now().Add(10*time.Minute),
+	)
+	if err != nil {
+		t.Fatalf("seed otp: %v", err)
+	}
+}

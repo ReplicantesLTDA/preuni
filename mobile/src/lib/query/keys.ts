@@ -10,4 +10,7 @@ export const qk = {
   essayDetail: (id: string) => ['essay', 'detail', id] as const,
   streakMe: () => ['streak', 'me'] as const,
   friendsList: () => ['friends', 'list'] as const,
+  rankingWeekly: (tier: string) => ['ranking', 'weekly', tier] as const,
+  rankingMe: () => ['ranking', 'me'] as const,
+  medalsMe: () => ['medals', 'me'] as const,
 };

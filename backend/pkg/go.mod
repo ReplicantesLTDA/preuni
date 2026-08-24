@@ -2,6 +2,8 @@ module github.com/preuni/pkg
 
 go 1.24
 
+toolchain go1.26.6
+
 require (
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	go.uber.org/zap v1.27.0

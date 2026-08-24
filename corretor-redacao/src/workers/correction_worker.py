@@ -286,7 +286,7 @@ class CorrectionWorker:
             await engine.dispose()
             log.info("worker.stopped", extra={"worker_id": self.worker_id})
 
-    async def _run_loop(self, session_factory: async_sessionmaker) -> None:
+    async def _run_loop(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
         wake = asyncio.Event()
 
         async def _listen_task() -> None:

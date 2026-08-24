@@ -44,15 +44,27 @@ type SubmissionView struct {
 	Grade *Grade
 }
 
-// Repository is the essay domain's persistence layer.
-type Repository struct {
-	db         *pgxpool.Pool
-	streakRepo *streakrepo.Repository
+// GamificationHooks lets the essay domain trigger gamification side
+// effects (streak medals, weekly leaderboard updates) without importing
+// the gamification package's full API — gamification.Repository satisfies
+// this structurally. Best-effort: these run after the essay transaction
+// commits, so a hook failure never rolls back a submission or a grade.
+type GamificationHooks interface {
+	AwardStreakMedals(ctx context.Context, userID string, oldStreak, newStreak int) error
+	EnsureCurrentWeekEntry(ctx context.Context, userID string, now time.Time) error
 }
 
-// NewRepository constructs a Repository.
-func NewRepository(db *pgxpool.Pool, streakRepo *streakrepo.Repository) *Repository {
-	return &Repository{db: db, streakRepo: streakRepo}
+// Repository is the essay domain's persistence layer.
+type Repository struct {
+	db           *pgxpool.Pool
+	streakRepo   *streakrepo.Repository
+	gamification GamificationHooks
+}
+
+// NewRepository constructs a Repository. gamification may be nil (no
+// medal/leaderboard side effects — e.g. in tests that don't need them).
+func NewRepository(db *pgxpool.Pool, streakRepo *streakrepo.Repository, gamification GamificationHooks) *Repository {
+	return &Repository{db: db, streakRepo: streakRepo, gamification: gamification}
 }
 
 // Submit accepts an essay submission: checks the caller's daily quota
@@ -102,9 +114,11 @@ func (r *Repository) Submit(ctx context.Context, userID, themeTitle, themeContex
 		return nil, apperrors.Internal(err)
 	}
 
-	if _, err := r.streakRepo.RecordSubmission(ctx, tx, userID, now); err != nil {
+	newStreak, err := r.streakRepo.RecordSubmission(ctx, tx, userID, now)
+	if err != nil {
 		return nil, err
 	}
+	oldStreak := snap.CurrentStreak
 
 	// The only write this service is granted on the correction schema
 	// (contracts/internal-bridge.md) — INSERT-only into correction_jobs.
@@ -119,6 +133,12 @@ func (r *Repository) Submit(ctx context.Context, userID, themeTitle, themeContex
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, apperrors.Internal(err)
+	}
+
+	if r.gamification != nil && newStreak != oldStreak {
+		// Best-effort: a medal-award failure must never fail the
+		// submission that already committed successfully.
+		_ = r.gamification.AwardStreakMedals(ctx, userID, oldStreak, newStreak)
 	}
 
 	return &Submission{

@@ -11,6 +11,7 @@ import uuid
 from sqlalchemy import DateTime, Enum, ForeignKey, Index, LargeBinary, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
+from typing import Any
 
 from src.db.models import Base
 from src.db.models.enums import AuditEventType
@@ -30,7 +31,7 @@ class CorrectionAuditLog(Base):
         Enum(AuditEventType, name="audit_event_type", native_enum=True),
         nullable=False,
     )
-    event_payload: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default="{}")
+    event_payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default="{}")
     created_at: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

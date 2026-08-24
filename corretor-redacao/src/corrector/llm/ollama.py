@@ -45,7 +45,7 @@ class OllamaProvider:
         base_url: str,
         api_key: str | None,
         model_id: str,
-        transport: httpx.BaseTransport | None = None,
+        transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
@@ -188,7 +188,8 @@ def _extract_json_object(raw: str) -> dict[str, Any]:
     end = s.rfind("}")
     if start < 0 or end <= start:
         raise ValueError("no JSON object found in raw text")
-    return json.loads(s[start : end + 1])
+    parsed: dict[str, Any] = json.loads(s[start : end + 1])
+    return parsed
 
 
 __all__ = ["OllamaProvider"]

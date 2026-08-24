@@ -20,6 +20,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
+from typing import Any
 
 from src.db.models import Base
 
@@ -42,14 +43,14 @@ class GraderPass(Base):
     c3_score: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     c4_score: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     c5_score: Mapped[int] = mapped_column(SmallInteger, nullable=False)
-    competencies: Mapped[dict] = mapped_column(JSONB, nullable=False)
-    eliminatory_flags: Mapped[list] = mapped_column(JSONB, nullable=False, server_default="[]")
+    competencies: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    eliminatory_flags: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, server_default="[]")
 
     seed: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     prompt_version: Mapped[str] = mapped_column(Text, nullable=False)
     model_identifier: Mapped[str] = mapped_column(Text, nullable=False)
     output_schema_version: Mapped[str] = mapped_column(Text, nullable=False)
-    inference_params: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    inference_params: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     raw_output: Mapped[str] = mapped_column(Text, nullable=False)
     prompt_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
     completion_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)

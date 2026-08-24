@@ -32,6 +32,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: migration downgrade check (Constitution VI)
+        run: bash backend/scripts/check-migration-downgrades.sh
+
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24'
@@ -75,6 +78,18 @@ jobs:
               psql -h localhost -U preuni -d preuni -v ON_ERROR_STOP=1 -f "$f"
             done
           done
+
+      - name: migration round-trip proof (Constitution VI)
+        # No-ops today (every existing migration is grandfathered, down-
+        # less) -- starts actually proving reversibility, schema by
+        # schema, as they gain full up/down coverage. Ends with every
+        # schema back at head, so downstream steps see the same DB state
+        # as before this step regardless of whether anything ran.
+        env:
+          PGPASSWORD: preuni
+          PGUSER: preuni
+          PGDATABASE: preuni
+        run: bash backend/scripts/migrate-round-trip.sh
 
       # The essay domain writes to correction.correction_jobs (contracts/
       # internal-bridge.md) -- that schema is owned by corretor-redacao's

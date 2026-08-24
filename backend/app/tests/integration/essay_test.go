@@ -60,6 +60,87 @@ func submitEssay(t *testing.T, r http.Handler, accessToken string) *httptest.Res
 	return w
 }
 
+// TestIntegration_ListEssays_ReturnsOwnSubmissionsOnly covers GET /v1/essays.
+func TestIntegration_ListEssays_ReturnsOwnSubmissionsOnly(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, token := registerTestUser(t, r)
+	otherID, otherToken := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+	defer cleanupTestUser(ctx, t, pool, otherID)
+
+	if w := submitEssay(t, r, token); w.Code != http.StatusAccepted {
+		t.Fatalf("submit: got %d body=%s", w.Code, w.Body.String())
+	}
+
+	listReq := httptest.NewRequest(http.MethodGet, "/v1/essays", nil)
+	listReq.Header.Set("Authorization", "Bearer "+token)
+	listW := httptest.NewRecorder()
+	r.ServeHTTP(listW, listReq)
+	if listW.Code != http.StatusOK {
+		t.Fatalf("list: got %d body=%s", listW.Code, listW.Body.String())
+	}
+	var mine []struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(listW.Body.Bytes(), &mine); err != nil {
+		t.Fatal(err)
+	}
+	if len(mine) != 1 {
+		t.Fatalf("expected exactly 1 submission for this user, got %d", len(mine))
+	}
+
+	otherListReq := httptest.NewRequest(http.MethodGet, "/v1/essays", nil)
+	otherListReq.Header.Set("Authorization", "Bearer "+otherToken)
+	otherListW := httptest.NewRecorder()
+	r.ServeHTTP(otherListW, otherListReq)
+	var theirs []struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(otherListW.Body.Bytes(), &theirs); err != nil {
+		t.Fatal(err)
+	}
+	if len(theirs) != 0 {
+		t.Fatalf("a user with no submissions must see an empty list, got %d", len(theirs))
+	}
+}
+
+// TestIntegration_SubmitEssay_CrossingSevenDaysAwardsMedal covers the
+// essay->streak->gamification wiring: a submission that advances the
+// streak from 6 to 7 must award the streak_7_day medal (best-effort hook,
+// GamificationHooks in essay.Repository.Submit).
+func TestIntegration_SubmitEssay_CrossingSevenDaysAwardsMedal(t *testing.T) {
+	r, pool := setup(t)
+	ctx := context.Background()
+	studentID, token := registerTestUser(t, r)
+	defer cleanupTestUser(ctx, t, pool, studentID)
+
+	yesterday := time.Now().UTC().AddDate(0, 0, -1).Format("2006-01-02")
+	if _, err := pool.Exec(ctx, `UPDATE users.students SET streak_count = 6, streak_last_active_date = $2 WHERE id = $1`, studentID, yesterday); err != nil {
+		t.Fatalf("seed streak: %v", err)
+	}
+
+	if w := submitEssay(t, r, token); w.Code != http.StatusAccepted {
+		t.Fatalf("submit: got %d body=%s", w.Code, w.Body.String())
+	}
+
+	var streak int
+	if err := pool.QueryRow(ctx, `SELECT streak_count FROM users.students WHERE id = $1`, studentID).Scan(&streak); err != nil {
+		t.Fatal(err)
+	}
+	if streak != 7 {
+		t.Fatalf("expected streak_count=7, got %d", streak)
+	}
+
+	var medalCount int
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM gamification.medals WHERE user_id = $1 AND type = 'streak_7_day'`, studentID).Scan(&medalCount); err != nil {
+		t.Fatal(err)
+	}
+	if medalCount != 1 {
+		t.Fatalf("expected exactly one streak_7_day medal, got %d", medalCount)
+	}
+}
+
 // TestIntegration_SubmitEssay_AcceptsImmediatelyAndIncrementsStreak covers
 // spec User Story 1, acceptance scenario 1: submission is accepted
 // immediately (202), and the streak increments in the same transaction —
@@ -154,7 +235,7 @@ func TestIntegration_SubmitEssay_ReconciliationGradesTheSubmission(t *testing.T)
 		t.Fatalf("mark job completed: %v", err)
 	}
 
-	essayRepo := essayrepo.NewRepository(pool, streakrepo.NewRepository())
+	essayRepo := essayrepo.NewRepository(pool, streakrepo.NewRepository(), nil)
 	if _, err := essayRepo.ReconcileOnce(ctx); err != nil {
 		t.Fatalf("ReconcileOnce: %v", err)
 	}
