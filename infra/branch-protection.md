@@ -35,11 +35,14 @@ gh api \
   -F "restrictions="
 ```
 
-Replace `{owner}/{repo}` with the actual GitHub org/repo. This repo's
-"main branch for PRs" is currently `001-enem-prep-platform` (per the
-project's branching convention — see recent commit history); re-run this
-against whichever branch is designated the merge target once that's settled,
-and again against `main` once the project cuts over.
+Replace `{owner}/{repo}` with the actual GitHub org/repo. `dev` is this
+repo's actual integration branch (GitHub's configured default branch,
+the target of every feature PR) and stays unprotected-in-the-formal-
+sense — day-to-day work lands there via ordinary review, not this gate.
+`main` was unused until `035-self-hosted-prod-deploy` revived it as the
+release branch that triggers production deploys (`docs/decisions/
+0002-self-hosted-nas-production.md`); this command's target of `main`
+is now correct and current, not aspirational.
 
 ## Verifying it's live
 

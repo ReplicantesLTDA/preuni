@@ -1,0 +1,57 @@
+name: deploy-prod
+
+# Runs on push to `main` only -- i.e. after the dev->main promotion PR
+# (specs/035-self-hosted-prod-deploy/research.md R3) already passed the
+# same required-status-checks + human-approval gate every PR into main
+# goes through (infra/branch-protection.md). This workflow does not
+# re-run lint/test/type-check; its only job is bringing the
+# already-validated commit up on the NAS.
+#
+# See specs/035-self-hosted-prod-deploy/contracts/deploy-pipeline.md for
+# the full trigger/runner/rollback contract this workflow implements.
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    # Targets the self-hosted runner registered on the NAS
+    # (specs/035-self-hosted-prod-deploy/tasks.md T014) -- outbound-only,
+    # so the NAS's CGNAT / lack of port forwarding doesn't block CD. If no
+    # runner with this label is online, the job queues rather than
+    # failing (GitHub Actions default behavior) -- satisfies FR-005.
+    runs-on: [self-hosted, self-hosted-nas]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build images
+        working-directory: infra
+        run: docker compose -f docker-compose.prod.yml build
+
+      - name: Bring up the stack
+        working-directory: infra
+        run: docker compose -f docker-compose.prod.yml up -d
+
+      - name: Health-check
+        # gateway publishes no host port (no accidental internet exposure --
+        # the only path in is the tunnel), so this checks from inside the
+        # compose network via `exec`, not curl against the runner's own
+        # localhost.
+        working-directory: infra
+        run: |
+          for i in $(seq 1 30); do
+            if docker compose -f docker-compose.prod.yml exec -T gateway \
+                 wget -q -O- http://localhost:8080/health > /dev/null 2>&1; then
+              echo "Gateway healthy."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Gateway did not become healthy in time." >&2
+          exit 1
+        # On failure: intentionally no cleanup/rollback step here. The
+        # previously-running containers' images are left in place (this
+        # workflow never prunes), so a manual
+        # `docker compose -f infra/docker-compose.prod.yml up -d` against
+        # the last-known-good build recovers without a rebuild -- FR-006.

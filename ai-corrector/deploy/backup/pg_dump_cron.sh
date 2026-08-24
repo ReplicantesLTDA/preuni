@@ -13,7 +13,7 @@ set -euo pipefail
 : "${BACKUP_S3_BUCKET:?BACKUP_S3_BUCKET required}"
 
 TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
-BACKUP_FILE="/tmp/corretor-${TIMESTAMP}.dump"
+BACKUP_FILE="/tmp/preuni-${TIMESTAMP}.dump"
 RETENTION_DAYS=${RETENTION_DAYS:-30}
 
 export PGPASSWORD="${POSTGRES_PASSWORD}"
