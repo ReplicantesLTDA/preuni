@@ -92,13 +92,10 @@ services:
       context: ../ai-corrector
       dockerfile: Dockerfile
     environment:
+      # Only used for `make migrate`'s one-off `alembic upgrade head` run
+      # against this image -- the FastAPI app itself is health/metrics
+      # only and never touches the database or an LLM provider.
       DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
-      LLM_PROVIDER: ${CORRECTOR_LLM_PROVIDER:-ollama}
-      OLLAMA_BASE_URL: ${CORRECTOR_OLLAMA_BASE_URL:-http://ollama:11434}
-      OLLAMA_MODEL: ${CORRECTOR_OLLAMA_MODEL:-kimi-k2:1t}
-      PROMPT_VERSION: ${CORRECTOR_PROMPT_VERSION:-v1.0.8}
-      PROMPT_TEMPERATURE: ${CORRECTOR_PROMPT_TEMPERATURE:-0.1}
-      LOG_FORMAT: json
     depends_on:
       postgres:
         condition: service_healthy
@@ -111,13 +108,14 @@ services:
     command: python -m src.workers.entrypoint
     environment:
       DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
-      LLM_PROVIDER: ${CORRECTOR_LLM_PROVIDER:-ollama}
+      # entrypoint.py picks Ollama Cloud automatically when this is set
+      # (falls back to OLLAMA_BASE_URL, a local Ollama this stack does
+      # not itself run, when empty).
+      OLLAMA_CLOUD_API_KEY: ${CORRECTOR_OLLAMA_CLOUD_API_KEY:-}
+      OLLAMA_CLOUD_BASE_URL: ${CORRECTOR_OLLAMA_CLOUD_BASE_URL:-https://ollama.com}
       OLLAMA_BASE_URL: ${CORRECTOR_OLLAMA_BASE_URL:-http://ollama:11434}
-      OLLAMA_MODEL: ${CORRECTOR_OLLAMA_MODEL:-kimi-k2:1t}
+      OLLAMA_MODEL: ${CORRECTOR_OLLAMA_MODEL:-kimi-k2.6}
       PROMPT_VERSION: ${CORRECTOR_PROMPT_VERSION:-v1.0.8}
-      PROMPT_TEMPERATURE: ${CORRECTOR_PROMPT_TEMPERATURE:-0.1}
-      WORKER_POLL_INTERVAL_SECONDS: ${CORRECTOR_WORKER_POLL_INTERVAL_SECONDS:-5}
-      LOG_FORMAT: json
     healthcheck:
       disable: true
     depends_on:

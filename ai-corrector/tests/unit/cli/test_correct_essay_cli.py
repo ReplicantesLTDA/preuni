@@ -166,7 +166,7 @@ def test_make_provider_falls_back_to_defaults_with_empty_env() -> None:
     assert isinstance(provider, OllamaProvider)
     assert provider.base_url == "https://ollama.com"
     assert provider.api_key is None
-    assert provider.model_id == "kimi-k2:1t"
+    assert provider.model_id == "kimi-k2.6"
 
 
 def test_typed_error_maps_a_generic_llm_error_by_class_name() -> None:

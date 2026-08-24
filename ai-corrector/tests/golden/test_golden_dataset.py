@@ -40,7 +40,7 @@ def _make_real_provider() -> object:
         or os.environ.get("OLLAMA_BASE_URL")
         or "https://ollama.com"
     )
-    model_id = os.environ.get("LLM_MODEL_ID") or os.environ.get("OLLAMA_MODEL") or "kimi-k2:1t"
+    model_id = os.environ.get("LLM_MODEL_ID") or os.environ.get("OLLAMA_MODEL") or "kimi-k2.6"
     if not api_key:
         pytest.skip("OLLAMA_*_API_KEY not set; skipping real-provider golden run")
     return OllamaProvider(base_url=base_url, api_key=api_key, model_id=model_id)

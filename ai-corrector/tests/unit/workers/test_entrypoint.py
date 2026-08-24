@@ -18,7 +18,7 @@ def test_build_provider_defaults_to_local_ollama_without_api_key(monkeypatch):
     provider = _build_provider()
 
     assert provider.base_url == "http://ollama:11434"
-    assert provider.model_id == "kimi-k2:1t"
+    assert provider.model_id == "kimi-k2.6"
     assert provider.api_key is None
 
 
@@ -29,7 +29,7 @@ def test_build_provider_uses_ollama_cloud_when_api_key_present(monkeypatch):
 
     provider = _build_provider()
 
-    assert provider.base_url == "https://api.ollama.ai"
+    assert provider.base_url == "https://ollama.com"
     assert provider.model_id == "custom-model"
     assert provider.api_key == "secret"
 

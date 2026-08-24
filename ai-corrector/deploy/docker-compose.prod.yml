@@ -32,8 +32,8 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       JWT_REFRESH_TOKEN_EXPIRE_DAYS: ${JWT_REFRESH_TOKEN_EXPIRE_DAYS:-7}
       OLLAMA_CLOUD_API_KEY: ${OLLAMA_CLOUD_API_KEY}
-      OLLAMA_CLOUD_BASE_URL: ${OLLAMA_CLOUD_BASE_URL:-https://api.ollama.ai}
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-kimi-k2:1t}
+      OLLAMA_CLOUD_BASE_URL: ${OLLAMA_CLOUD_BASE_URL:-https://ollama.com}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-kimi-k2.6}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USERNAME: ${SMTP_USERNAME:-}
@@ -56,8 +56,8 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-corretor}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-corretor}
       OLLAMA_CLOUD_API_KEY: ${OLLAMA_CLOUD_API_KEY}
-      OLLAMA_CLOUD_BASE_URL: ${OLLAMA_CLOUD_BASE_URL:-https://api.ollama.ai}
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-kimi-k2:1t}
+      OLLAMA_CLOUD_BASE_URL: ${OLLAMA_CLOUD_BASE_URL:-https://ollama.com}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-kimi-k2.6}
       APP_ENV: production
     depends_on:
       postgres:

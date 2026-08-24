@@ -70,7 +70,7 @@ def _make_provider(name: str, env: dict[str, str], essay_text: str) -> LLMProvid
         env.get("OLLAMA_CLOUD_BASE_URL") or env.get("OLLAMA_BASE_URL") or "https://ollama.com"
     )
     api_key = env.get("OLLAMA_CLOUD_API_KEY") or env.get("OLLAMA_API_KEY")
-    model_id = env.get("LLM_MODEL_ID") or env.get("OLLAMA_MODEL") or "kimi-k2:1t"
+    model_id = env.get("LLM_MODEL_ID") or env.get("OLLAMA_MODEL") or "kimi-k2.6"
     return OllamaProvider(base_url=base_url, api_key=api_key, model_id=model_id)
 
 
