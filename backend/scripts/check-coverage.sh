@@ -148,13 +148,21 @@
 # 0%, reached via a directly-traced repository, no HTTP route);
 # RegisterHandler's otpRepo.Create-fails branch (non-fatal, logged --
 # registration still succeeds but no verification OTP is created).
-# Floor set to 86 for headroom.
+# 86.4% -> 87.5% after: essay.Repository.Submit's remaining Nth-query
+# failure branches (alreadySubmitted check, essay_submissions INSERT,
+# RecordSubmission UPDATE, correction_jobs INSERT, tx.Commit -- Submit
+# itself went 84.4% -> 96.9%), and SMTPSender.Send (previously 0%, never
+# tested at all) via real TCP sockets -- a closed-port listener for
+# genuine dial-refused errors (implicit-TLS and STARTTLS paths, plus the
+# From-empty-fallback branch) and an accept-then-close listener for a
+# genuine TLS handshake failure. No mocking of the Sender interface, real
+# network errors. Send: 0% -> 36.7%. Floor set to 87 for headroom.
 #
 # Usage: ./check-coverage.sh (run from backend/app/)
 
 set -euo pipefail
 
-COVERAGE_FLOOR="${COVERAGE_FLOOR:-86}"
+COVERAGE_FLOOR="${COVERAGE_FLOOR:-87}"
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../app"
 
