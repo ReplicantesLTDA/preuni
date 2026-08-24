@@ -1,4 +1,0 @@
-# Design source-of-truth mockup, not app code -- excluded from GitHub's
-# language stats so they reflect the actual Go/TypeScript/Python codebase
-# instead of one 13MB static HTML file.
-wireframe.html linguist-vendored
