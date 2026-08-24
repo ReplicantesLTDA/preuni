@@ -75,8 +75,10 @@ func setupWithNthQueryFailure(t *testing.T, n int64) (http.Handler, *pgxpool.Poo
 		JWTRefreshExpiryDays: 30,
 		MailFromAddr:         "noreply@test",
 		MailFromName:         "Test",
-		S3Bucket:             "test-bucket",
-		S3Region:             "us-east-1",
+		StorageEndpoint:      "localhost:9000",
+		StorageAccessKey:     "test",
+		StorageSecretKey:     "test",
+		StorageBucket:        "test-bucket",
 	}
 	r, _, _ := router.New(cfg, pool, logger.New("error"))
 	return r, pool

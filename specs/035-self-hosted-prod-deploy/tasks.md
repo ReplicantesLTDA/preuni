@@ -111,9 +111,9 @@ runs successfully at least once.
 - [ ] T007 [MANUAL] On the TrueNAS box itself: confirm Docker/Apps
       support is enabled (Settings → Apps, or `docker compose version`
       over SSH if shell access is enabled), and identify/create the
-      dataset path `postgres` and the `backup` sidecar will write to
-      (needs to be a real NAS dataset a TrueNAS snapshot/backup task can
-      reach, per FR-008)
+      dataset paths `postgres`, `minio` (research.md R8), and the
+      `backup` sidecar will write to (each needs to be a real NAS
+      dataset a TrueNAS snapshot/backup task can reach, per FR-008)
 
 **Checkpoint**: The production stack definition exists and the NAS is
 confirmed ready to run it. User stories can now proceed.
@@ -131,17 +131,36 @@ a health endpoint under `preuni.com.br` and get a valid HTTPS response
 
 ### Implementation for User Story 1
 
-- [ ] T008 [MANUAL] [US1] In the Cloudflare dashboard: create a tunnel
-      for the `preuni.com.br` zone (token-only/remotely-managed mode,
-      research.md R1), add a public-hostname route
-      `preuni.com.br` → `http://gateway:8080` (the internal compose
-      service name/port), and copy the tunnel token
-- [ ] T009 [MANUAL] [US1] Populate the NAS-local `infra/.env` (gitignored,
-      never committed) with real production values per
-      `infra/.env.prod.example` (T003): `CLOUDFLARE_TUNNEL_TOKEN` from
-      T008, distinct production `POSTGRES_PASSWORD`, `JWT_SIGNING_KEY`
-      (≥32 chars), `CORRECTOR_OLLAMA_CLOUD_API_KEY`, and `BACKUP_*`
-      values for wherever dumps land (T007's dataset path)
+- [X] T008 [US1] Create a tunnel for the `preuni.com.br` zone
+      (token-only/remotely-managed mode, research.md R1), configure a
+      public-hostname route `preuni.com.br` → `http://gateway:8080`, and
+      get the tunnel token. Deviation: done via the Cloudflare API
+      (using the user's scoped API token, `Zone:DNS:Edit` +
+      `Account:Cloudflare Tunnel:Edit` on the `preuni.com.br` zone only)
+      rather than the dashboard by hand — same result: tunnel
+      `preuni-prod` created, ingress configured, the zone's apex `A`
+      record (Hostinger's placeholder) replaced with a `CNAME` to
+      `<tunnel_id>.cfargotunnel.com` (proxied). The connector token was
+      briefly visible in a tool response during creation — rotated
+      immediately (old tunnel deleted, new one created) rather than
+      risk reusing an exposed value; the final token was never printed
+- [X] T008a [US1] [US3] Add a second public-hostname route,
+      `storage.preuni.com.br` → `http://minio:9000`, to the same tunnel
+      (research.md R8) — MinIO's presigned upload URLs must be reachable
+      directly by the uploading client, not just internally. DNS `CNAME`
+      added the same way as T008's apex record
+- [X] T009 [US1] Get production secrets into the NAS's `infra/.env`.
+      Deviation from the original plan (hand-edit the file over SSH):
+      per research.md R7 (added mid-implementation at the user's
+      request), the real source of truth is now GitHub Actions
+      repository secrets (`PROD_*`, listed in data-model.md), and
+      `.github/workflows/deploy-prod.yml` writes `infra/.env` on the
+      NAS fresh on every deploy — nothing is hand-maintained on the NAS
+      itself anymore. What remains `[MANUAL]`: actually adding each
+      `PROD_*` secret's real value in GitHub (Settings → Secrets and
+      variables → Actions) — an agent can create/update workflow files
+      but not populate secret values, those aren't readable via the API
+      even by the agent that sets them
 - [ ] T010 [US1] First manual bring-up (before CD exists — T013 replaces
       this for every subsequent deploy):
       `docker compose -f infra/docker-compose.prod.yml up -d --build`

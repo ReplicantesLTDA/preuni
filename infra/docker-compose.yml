@@ -34,6 +34,46 @@ services:
       retries: 5
     restart: on-failure
 
+  # ── Object storage (avatars) ─────────────────────────────────────────────────
+  # MinIO -- self-hosted, S3-compatible. minio-init runs once to create the
+  # bucket and set it public-read (avatars are meant to be publicly viewable
+  # once uploaded), then exits.
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${STORAGE_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${STORAGE_SECRET_KEY:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: on-failure
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-minioadmin}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY:-minioadmin}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:-preuni-avatars}
+    entrypoint: >
+      sh -c "
+      mc alias set local http://minio:9000 $$STORAGE_ACCESS_KEY $$STORAGE_SECRET_KEY &&
+      mc mb -p local/$$STORAGE_BUCKET || true;
+      mc anonymous set download local/$$STORAGE_BUCKET
+      "
+    restart: "no"
+
   # ── API Gateway ─────────────────────────────────────────────────────────────
 
   gateway:
@@ -63,8 +103,11 @@ services:
       JWT_SIGNING_KEY: ${JWT_SIGNING_KEY}
       JWT_ACCESS_EXPIRY_SECONDS: ${JWT_ACCESS_EXPIRY_SECONDS}
       JWT_REFRESH_EXPIRY_DAYS: ${JWT_REFRESH_EXPIRY_DAYS}
-      S3_BUCKET: ${S3_BUCKET:-preuni-avatars}
-      S3_REGION: ${S3_REGION:-us-east-1}
+      STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:-localhost:9000}
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-minioadmin}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY:-minioadmin}
+      STORAGE_USE_SSL: "false"
+      STORAGE_BUCKET: ${STORAGE_BUCKET:-preuni-avatars}
       APP_VERIFICATION_BASE_URL: ${APP_VERIFICATION_BASE_URL:-https://app.preuni.com.br/verify-email}
       FROM_EMAIL: ${FROM_EMAIL}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME}
@@ -126,3 +169,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  minio_data:

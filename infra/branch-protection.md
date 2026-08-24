@@ -21,18 +21,33 @@ green plus at least one human approval.
 
 ## Apply via `gh`
 
+The nested `-f`/`-F` flag form GitHub's docs show does not actually
+validate against the current API schema (`strict` arrives as the string
+`"true"`, not a boolean; an empty `restrictions=` isn't accepted as
+null) — confirmed by trying it directly. Use a JSON payload instead:
+
 ```bash
+cat > /tmp/branch-protection.json <<'JSON'
+{
+  "required_status_checks": {
+    "strict": true,
+    "contexts": ["backend-ci / ci", "correction-service-ci / ci", "mobile-ci / ci"]
+  },
+  "enforce_admins": true,
+  "required_pull_request_reviews": {
+    "required_approving_review_count": 1
+  },
+  "restrictions": null
+}
+JSON
+
 gh api \
   --method PUT \
   -H "Accept: application/vnd.github+json" \
   "/repos/{owner}/{repo}/branches/main/protection" \
-  -f "required_status_checks[strict]=true" \
-  -f "required_status_checks[contexts][]=backend-ci / ci" \
-  -f "required_status_checks[contexts][]=correction-service-ci / ci" \
-  -f "required_status_checks[contexts][]=mobile-ci / ci" \
-  -F "enforce_admins=true" \
-  -F "required_pull_request_reviews[required_approving_review_count]=1" \
-  -F "restrictions="
+  --input /tmp/branch-protection.json
+
+rm /tmp/branch-protection.json
 ```
 
 Replace `{owner}/{repo}` with the actual GitHub org/repo. `dev` is this

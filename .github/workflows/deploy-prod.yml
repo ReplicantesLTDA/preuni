@@ -25,6 +25,81 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Write infra/.env from GitHub Actions secrets
+        # research.md R7: secrets' source of truth is GitHub, not a
+        # hand-maintained file on the NAS -- this step materializes the
+        # real infra/.env fresh on every deploy. GitHub auto-masks these
+        # values in logs once referenced via ${{ secrets.X }}; nothing in
+        # this step (or any other) should echo $ vars containing them.
+        working-directory: infra
+        env:
+          POSTGRES_USER: ${{ secrets.PROD_POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.PROD_POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.PROD_POSTGRES_DB }}
+          POSTGRES_DATA_PATH: ${{ secrets.PROD_POSTGRES_DATA_PATH }}
+          JWT_SIGNING_KEY: ${{ secrets.PROD_JWT_SIGNING_KEY }}
+          JWT_ACCESS_EXPIRY_SECONDS: ${{ secrets.PROD_JWT_ACCESS_EXPIRY_SECONDS }}
+          JWT_REFRESH_EXPIRY_DAYS: ${{ secrets.PROD_JWT_REFRESH_EXPIRY_DAYS }}
+          STORAGE_ENDPOINT: ${{ secrets.PROD_STORAGE_ENDPOINT }}
+          STORAGE_ACCESS_KEY: ${{ secrets.PROD_STORAGE_ACCESS_KEY }}
+          STORAGE_SECRET_KEY: ${{ secrets.PROD_STORAGE_SECRET_KEY }}
+          STORAGE_BUCKET: ${{ secrets.PROD_STORAGE_BUCKET }}
+          MINIO_DATA_PATH: ${{ secrets.PROD_MINIO_DATA_PATH }}
+          FROM_EMAIL: ${{ secrets.PROD_FROM_EMAIL }}
+          MAIL_FROM_NAME: ${{ secrets.PROD_MAIL_FROM_NAME }}
+          SMTP_HOST: ${{ secrets.PROD_SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.PROD_SMTP_PORT }}
+          SMTP_USER: ${{ secrets.PROD_SMTP_USER }}
+          SMTP_PASS: ${{ secrets.PROD_SMTP_PASS }}
+          APP_VERIFICATION_BASE_URL: ${{ secrets.PROD_APP_VERIFICATION_BASE_URL }}
+          CORRECTOR_OLLAMA_CLOUD_API_KEY: ${{ secrets.PROD_CORRECTOR_OLLAMA_CLOUD_API_KEY }}
+          CORRECTOR_OLLAMA_CLOUD_BASE_URL: ${{ secrets.PROD_CORRECTOR_OLLAMA_CLOUD_BASE_URL }}
+          CORRECTOR_OLLAMA_BASE_URL: ${{ secrets.PROD_CORRECTOR_OLLAMA_BASE_URL }}
+          CORRECTOR_OLLAMA_MODEL: ${{ secrets.PROD_CORRECTOR_OLLAMA_MODEL }}
+          CORRECTOR_PROMPT_VERSION: ${{ secrets.PROD_CORRECTOR_PROMPT_VERSION }}
+          CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.PROD_CLOUDFLARE_TUNNEL_TOKEN }}
+          BACKUP_S3_ENDPOINT: ${{ secrets.PROD_BACKUP_S3_ENDPOINT }}
+          BACKUP_S3_ACCESS_KEY: ${{ secrets.PROD_BACKUP_S3_ACCESS_KEY }}
+          BACKUP_S3_SECRET_KEY: ${{ secrets.PROD_BACKUP_S3_SECRET_KEY }}
+          BACKUP_S3_BUCKET: ${{ secrets.PROD_BACKUP_S3_BUCKET }}
+          BACKUP_S3_REGION: ${{ secrets.PROD_BACKUP_S3_REGION }}
+          RETENTION_DAYS: ${{ secrets.PROD_RETENTION_DAYS }}
+        run: |
+          {
+            echo "POSTGRES_USER=$POSTGRES_USER"
+            echo "POSTGRES_PASSWORD=$POSTGRES_PASSWORD"
+            echo "POSTGRES_DB=$POSTGRES_DB"
+            echo "POSTGRES_DATA_PATH=$POSTGRES_DATA_PATH"
+            echo "JWT_SIGNING_KEY=$JWT_SIGNING_KEY"
+            echo "JWT_ACCESS_EXPIRY_SECONDS=$JWT_ACCESS_EXPIRY_SECONDS"
+            echo "JWT_REFRESH_EXPIRY_DAYS=$JWT_REFRESH_EXPIRY_DAYS"
+            echo "STORAGE_ENDPOINT=$STORAGE_ENDPOINT"
+            echo "STORAGE_ACCESS_KEY=$STORAGE_ACCESS_KEY"
+            echo "STORAGE_SECRET_KEY=$STORAGE_SECRET_KEY"
+            echo "STORAGE_BUCKET=$STORAGE_BUCKET"
+            echo "MINIO_DATA_PATH=$MINIO_DATA_PATH"
+            echo "FROM_EMAIL=$FROM_EMAIL"
+            echo "MAIL_FROM_NAME=$MAIL_FROM_NAME"
+            echo "SMTP_HOST=$SMTP_HOST"
+            echo "SMTP_PORT=$SMTP_PORT"
+            echo "SMTP_USER=$SMTP_USER"
+            echo "SMTP_PASS=$SMTP_PASS"
+            echo "APP_VERIFICATION_BASE_URL=$APP_VERIFICATION_BASE_URL"
+            echo "CORRECTOR_OLLAMA_CLOUD_API_KEY=$CORRECTOR_OLLAMA_CLOUD_API_KEY"
+            echo "CORRECTOR_OLLAMA_CLOUD_BASE_URL=$CORRECTOR_OLLAMA_CLOUD_BASE_URL"
+            echo "CORRECTOR_OLLAMA_BASE_URL=$CORRECTOR_OLLAMA_BASE_URL"
+            echo "CORRECTOR_OLLAMA_MODEL=$CORRECTOR_OLLAMA_MODEL"
+            echo "CORRECTOR_PROMPT_VERSION=$CORRECTOR_PROMPT_VERSION"
+            echo "CLOUDFLARE_TUNNEL_TOKEN=$CLOUDFLARE_TUNNEL_TOKEN"
+            echo "BACKUP_S3_ENDPOINT=$BACKUP_S3_ENDPOINT"
+            echo "BACKUP_S3_ACCESS_KEY=$BACKUP_S3_ACCESS_KEY"
+            echo "BACKUP_S3_SECRET_KEY=$BACKUP_S3_SECRET_KEY"
+            echo "BACKUP_S3_BUCKET=$BACKUP_S3_BUCKET"
+            echo "BACKUP_S3_REGION=$BACKUP_S3_REGION"
+            echo "RETENTION_DAYS=$RETENTION_DAYS"
+          } > .env
+          chmod 600 .env
+
       - name: Build images
         working-directory: infra
         run: docker compose -f docker-compose.prod.yml build
