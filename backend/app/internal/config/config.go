@@ -20,6 +20,13 @@ type Config struct {
 	JWTAccessExpirySec   int
 	JWTRefreshExpiryDays int
 
+	// Google Sign-In. GoogleOAuthClientID is the OAuth client ID used as the
+	// expected "aud" claim on Google ID tokens -- empty means the feature is
+	// not configured yet and POST /v1/auth/google always rejects requests.
+	// No client secret is needed server-side: the mobile app obtains an ID
+	// token directly (expo-auth-session), never a server-exchanged auth code.
+	GoogleOAuthClientID string
+
 	// User (avatar storage -- MinIO or any S3-compatible endpoint the
 	// uploading client can reach directly; presigned URLs are generated
 	// against this, the backend never proxies upload bytes)
@@ -50,6 +57,8 @@ func Load() Config {
 		JWTSigningKey:        require("JWT_SIGNING_KEY"),
 		JWTAccessExpirySec:   envInt("JWT_ACCESS_EXPIRY_SECONDS", 3600),
 		JWTRefreshExpiryDays: envInt("JWT_REFRESH_EXPIRY_DAYS", 30),
+
+		GoogleOAuthClientID: getEnv("GOOGLE_OAUTH_CLIENT_ID", ""),
 
 		StorageEndpoint:  getEnv("STORAGE_ENDPOINT", "localhost:9000"),
 		StorageAccessKey: getEnv("STORAGE_ACCESS_KEY", ""),

@@ -68,6 +68,18 @@ export function useLogin() {
   });
 }
 
+export function useGoogleLogin() {
+  const auth = useAuthApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (idToken: string) => auth.googleLogin({ idToken }),
+    onSuccess: async (session) => {
+      await persistSession(session, () => auth.getMe());
+      await qc.invalidateQueries({ queryKey: qk.studentMe() });
+    },
+  });
+}
+
 export function useLogout() {
   const auth = useAuthApi();
   const qc = useQueryClient();

@@ -19,6 +19,8 @@ export const ptBR = {
     displayName: 'Como podemos te chamar?',
     forgotPassword: 'Esqueci minha senha',
     otpLogin: 'Entrar com código',
+    continueWithGoogle: 'Continuar com Google',
+    googleLoginFailed: 'Não foi possível entrar com o Google.',
     submit: 'Enviar',
     otpTitle: 'Confirme seu e-mail',
     otpSubtitle: 'Enviamos um código de 6 dígitos para',

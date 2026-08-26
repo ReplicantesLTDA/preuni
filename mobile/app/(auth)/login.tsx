@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button } from '@/components/Button';
@@ -6,7 +6,8 @@ import { FormField } from '@/components/FormField';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { useToast } from '@/components/Toast';
 import { useTheme } from '@/theme';
-import { useLogin } from '@/features/auth/hooks';
+import { useGoogleLogin, useLogin } from '@/features/auth/hooks';
+import { useGoogleIdTokenRequest } from '@/features/auth/useGoogleIdTokenRequest';
 import { LoginFormSchema } from '@/features/auth/validation';
 import { authErrorMessage } from '@/features/auth/errorMessages';
 import { t } from '@/lib/i18n/pt-BR';
@@ -18,9 +19,21 @@ export default function LoginScreen() {
   const { color, space, font, size } = useTheme();
   const toast = useToast();
   const login = useLogin();
+  const googleLogin = useGoogleLogin();
+  const { request: googleRequest, response: googleResponse, promptAsync: promptGoogle, configured: googleConfigured } = useGoogleIdTokenRequest();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
+
+  useEffect(() => {
+    if (googleResponse?.type !== 'success') return;
+    const idToken = googleResponse.params.id_token;
+    if (!idToken) return;
+    googleLogin.mutate(idToken, {
+      onSuccess: () => router.replace('/(tabs)/trilha'),
+      onError: () => toast.show(t.auth.googleLoginFailed, 'error'),
+    });
+  }, [googleResponse]);
 
   function onSubmit() {
     const parsed = LoginFormSchema.safeParse({ email, password });
@@ -76,6 +89,19 @@ export default function LoginScreen() {
       />
 
       <Button label={t.auth.login} onPress={onSubmit} loading={login.isPending} fullWidth />
+      {googleConfigured && (
+        <>
+          <View style={{ height: space[3] }} />
+          <Button
+            label={t.auth.continueWithGoogle}
+            variant="secondary"
+            onPress={() => promptGoogle()}
+            loading={googleLogin.isPending}
+            disabled={!googleRequest}
+            fullWidth
+          />
+        </>
+      )}
       <View style={{ height: space[3] }} />
       <Button
         label={t.auth.forgotPassword}

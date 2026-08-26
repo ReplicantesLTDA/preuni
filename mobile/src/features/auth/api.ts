@@ -31,6 +31,16 @@ export function makeAuthApi(api: ApiClient) {
       });
     },
 
+    googleLogin(input: { idToken: string }): Promise<Session> {
+      return api.request({
+        method: 'POST',
+        path: '/v1/auth/google',
+        body: { id_token: input.idToken },
+        schema: LoginResponseSchema,
+        auth: false,
+      });
+    },
+
     logout(): Promise<Empty> {
       return api.request({
         method: 'POST',

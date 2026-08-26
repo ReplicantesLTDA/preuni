@@ -23,6 +23,12 @@ type Deps struct {
 	StudentProvisioner   ports.StudentProvisioner
 	EmailSender          ports.EmailSender
 	Log                  *logger.Logger
+
+	// GoogleVerifier + GoogleOAuthClientID configure POST /v1/auth/google.
+	// An empty GoogleOAuthClientID leaves the route mounted but always
+	// rejecting requests -- see handler.NewGoogleLoginHandler.
+	GoogleVerifier      domain.GoogleIDTokenVerifier
+	GoogleOAuthClientID string
 }
 
 // Mount registers /v1/auth/* routes onto r.
@@ -30,10 +36,12 @@ func Mount(r chi.Router, d Deps) {
 	credRepo := repository.NewCredentialsRepository(d.Pool)
 	otpRepo := repository.NewOTPRepository(d.Pool)
 	refreshRepo := repository.NewRefreshTokenRepository(d.Pool)
+	oauthRepo := repository.NewOAuthIdentityRepository(d.Pool)
 	jwtSvc := domain.NewJWTService(d.JWTSigningKey, d.JWTAccessExpirySec, d.JWTRefreshExpiryDays)
 
 	registerH := handler.NewRegisterHandler(credRepo, otpRepo, refreshRepo, jwtSvc, d.StudentProvisioner, d.EmailSender, d.Log)
 	loginH := handler.NewLoginHandler(credRepo, refreshRepo, jwtSvc)
+	googleLoginH := handler.NewGoogleLoginHandler(d.GoogleVerifier, d.GoogleOAuthClientID, credRepo, oauthRepo, refreshRepo, jwtSvc, d.StudentProvisioner, d.Log)
 	refreshH := handler.NewRefreshTokenHandler(credRepo, refreshRepo, jwtSvc)
 	verifyEmailH := handler.NewVerifyEmailHandler(credRepo, otpRepo)
 	resendVerifyEmailH := handler.NewResendVerificationHandler(credRepo, otpRepo, d.EmailSender, d.Log)
@@ -52,6 +60,7 @@ func Mount(r chi.Router, d Deps) {
 	r.Route("/v1/auth", func(r chi.Router) {
 		r.Post("/register", registerH.ServeHTTP)
 		r.Post("/login", loginH.ServeHTTP)
+		r.Post("/google", googleLoginH.ServeHTTP)
 		r.Post("/refresh", refreshH.ServeHTTP)
 		r.Post("/email/verify", verifyEmailH.ServeHTTP)
 		r.Post("/email/verify-resend", resendVerifyEmailH.ServeHTTP)

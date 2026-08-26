@@ -39,6 +39,7 @@ them visibly distinct from any dev/CI secret that might exist.
 | `PROD_POSTGRES_DATA_PATH` | `postgres` (bind mount) | Real NAS dataset path (tasks.md T007) — not secret data, but NAS-specific, so kept alongside the rest rather than baked into the compose file |
 | `PROD_JWT_SIGNING_KEY` | `monolith` | Distinct value from dev's, ≥32 chars per existing config validation |
 | `PROD_JWT_ACCESS_EXPIRY_SECONDS` / `PROD_JWT_REFRESH_EXPIRY_DAYS` | `monolith` | |
+| `PROD_GOOGLE_OAUTH_CLIENT_ID` | `monolith` | OAuth client ID only, no secret needed (issue #39) — empty leaves `POST /v1/auth/google` dormant |
 | `PROD_STORAGE_ENDPOINT` | `monolith` | `storage.preuni.com.br` — the second public tunnel hostname (tasks.md T008a), not `minio:9000` |
 | `PROD_STORAGE_ACCESS_KEY` / `PROD_STORAGE_SECRET_KEY` | `monolith`, `minio` (as `MINIO_ROOT_USER`/`MINIO_ROOT_PASSWORD`), `minio-init` | Same value on both sides — MinIO's root credentials double as the S3-API access/secret key |
 | `PROD_STORAGE_BUCKET` | `monolith`, `minio-init` | |
