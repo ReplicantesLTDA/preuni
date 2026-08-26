@@ -55,6 +55,8 @@ func New(cfg config.Config, pool *pgxpool.Pool, log *logger.Logger) (chi.Router,
 		StudentProvisioner:   provisioner,
 		EmailSender:          emailSender,
 		Log:                  log,
+		GoogleVerifier:       adapters.NewGoogleVerifier(),
+		GoogleOAuthClientID:  cfg.GoogleOAuthClientID,
 	})
 
 	storageClient, err := storage.New(storage.Config{

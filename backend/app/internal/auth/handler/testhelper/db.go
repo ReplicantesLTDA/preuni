@@ -89,6 +89,7 @@ func cleanupTables(t *testing.T, pool *pgxpool.Pool) {
 	tables := []string{
 		"auth.otp_codes",
 		"auth.refresh_tokens",
+		"auth.oauth_identities",
 		"auth.credentials",
 	}
 	for _, tbl := range tables {
