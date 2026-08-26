@@ -59,6 +59,22 @@ func validClaims() jwt.MapClaims {
 	}
 }
 
+func TestNewGoogleVerifier_ReturnsUsableClient(t *testing.T) {
+	v := NewGoogleVerifier()
+	assert.NotNil(t, v)
+	assert.Equal(t, googleCertsURL, v.certsURL)
+}
+
+func TestGoogleJWKToRSAPublicKey_ErrorsOnInvalidN(t *testing.T) {
+	_, err := googleJWKToRSAPublicKey(googleJWK{Kid: "k", N: "not-valid-base64url!!", E: "AQAB"})
+	assert.Error(t, err)
+}
+
+func TestGoogleJWKToRSAPublicKey_ErrorsOnInvalidE(t *testing.T) {
+	_, err := googleJWKToRSAPublicKey(googleJWK{Kid: "k", N: "AQAB", E: "not-valid-base64url!!"})
+	assert.Error(t, err)
+}
+
 func TestGoogleVerifier_Verify_AcceptsValidToken(t *testing.T) {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err)
