@@ -25,9 +25,9 @@ func NewCredentialsRepository(db *pgxpool.Pool) *CredentialsRepository {
 // Returns ErrConflict if the email is already taken.
 func (r *CredentialsRepository) Create(ctx context.Context, creds *domain.Credentials) error {
 	_, err := r.db.Exec(ctx, `
-		INSERT INTO auth.credentials (id, email, password_hash, email_verified, created_at, updated_at)
-		VALUES ($1, lower($2), $3, false, now(), now())
-	`, creds.ID, creds.Email, creds.PasswordHash)
+		INSERT INTO auth.credentials (id, email, password_hash, email_verified, email_verified_at, created_at, updated_at)
+		VALUES ($1, lower($2), $3, $4, $5, now(), now())
+	`, creds.ID, creds.Email, creds.PasswordHash, creds.EmailVerified, creds.EmailVerifiedAt)
 	if err != nil {
 		if isDuplicateKeyError(err) {
 			return apperrors.Conflict("email address is already registered")

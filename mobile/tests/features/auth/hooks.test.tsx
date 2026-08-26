@@ -1,7 +1,7 @@
 import { renderHook, waitFor } from '@testing-library/react-native';
 import { fetchMock } from '../../lib/mockFetch';
 import { buildWrapper } from '../../lib/queryWrapper';
-import { useLogin, useStudentMe, useVerifyEmail } from '@/features/auth/hooks';
+import { useGoogleLogin, useLogin, useLogout, useStudentMe, useVerifyEmail } from '@/features/auth/hooks';
 import { useSessionStore } from '@/stores/sessionStore';
 
 const STUDENT_BODY = {
@@ -34,6 +34,52 @@ describe('persistSession (via useLogin)', () => {
 
     await waitFor(() => expect(useSessionStore.getState().status).toBe('authed'));
     expect(useSessionStore.getState().student?.displayName).toBe('Maria');
+  });
+});
+
+describe('persistSession (via useGoogleLogin)', () => {
+  it('uses the student embedded in the session response without an extra getMe call', async () => {
+    fetchMock.on('POST', '/v1/auth/google', {
+      status: 200,
+      body: { access_token: 'a', refresh_token: 'b', student: STUDENT_BODY },
+    });
+
+    const { Wrapper } = buildWrapper();
+    const { result } = renderHook(() => useGoogleLogin(), { wrapper: Wrapper });
+
+    result.current.mutate('fake-google-id-token');
+
+    await waitFor(() => expect(useSessionStore.getState().status).toBe('authed'));
+    expect(useSessionStore.getState().student?.displayName).toBe('Maria');
+  });
+});
+
+describe('useLogout', () => {
+  it('clears the token store and session on success', async () => {
+    fetchMock.on('POST', '/v1/auth/logout', { status: 200, body: {} });
+    useSessionStore.setState({ status: 'authed', student: null });
+
+    const { Wrapper } = buildWrapper();
+    const { result } = renderHook(() => useLogout(), { wrapper: Wrapper });
+
+    result.current.mutate();
+
+    await waitFor(() => expect(useSessionStore.getState().status).toBe('anon'));
+  });
+
+  it('still clears the session even if the logout request fails', async () => {
+    fetchMock.on('POST', '/v1/auth/logout', {
+      status: 500,
+      bodyText: '{"error":{"code":"INTERNAL_ERROR","message":"boom"}}',
+    });
+    useSessionStore.setState({ status: 'authed', student: null });
+
+    const { Wrapper } = buildWrapper();
+    const { result } = renderHook(() => useLogout(), { wrapper: Wrapper });
+
+    result.current.mutate();
+
+    await waitFor(() => expect(useSessionStore.getState().status).toBe('anon'));
   });
 });
 
