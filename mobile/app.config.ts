@@ -34,7 +34,6 @@ const config: ExpoConfig = {
       },
     ],
     'expo-localization',
-    'expo-web-browser',
   ],
   experiments: {
     typedRoutes: true,
