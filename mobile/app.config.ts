@@ -1,0 +1,53 @@
+import type { ExpoConfig } from 'expo/config';
+
+const config: ExpoConfig = {
+  name: 'preuni',
+  slug: 'preuni-mobile',
+  scheme: 'preuni',
+  version: '0.1.0',
+  orientation: 'portrait',
+  userInterfaceStyle: 'light',
+  assetBundlePatterns: ['**/*'],
+  ios: {
+    bundleIdentifier: 'com.preuni.app',
+    supportsTablet: true,
+    infoPlist: {
+      NSPhotoLibraryUsageDescription: 'Permita acesso para escolher uma foto de avatar.',
+    },
+  },
+  android: {
+    package: 'com.preuni.app',
+    permissions: ['READ_EXTERNAL_STORAGE'],
+  },
+  web: {
+    bundler: 'metro',
+    output: 'static',
+  },
+  plugins: [
+    'expo-router',
+    'expo-font',
+    'expo-secure-store',
+    [
+      'expo-image-picker',
+      {
+        photosPermission: 'Permita acesso para escolher uma foto de avatar.',
+      },
+    ],
+    'expo-localization',
+    'expo-web-browser',
+  ],
+  experiments: {
+    typedRoutes: true,
+  },
+  extra: {
+    router: {
+      origin: false,
+    },
+    eas: {
+      // Filled in by `eas init` — see mobile/README or issue #70.
+      projectId: process.env.EAS_PROJECT_ID,
+    },
+  },
+};
+
+export default config;
